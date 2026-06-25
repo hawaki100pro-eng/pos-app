@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proforma</title>
+<link rel="stylesheet" href="print.css">
+</head>
+<body>
+
+  <div id="error-msg" class="hidden"></div>
+
+  <div id="proforma" class="hidden">
+    <button id="imprimir-btn" class="no-print">Imprimir</button>
+
+    <table class="encabezado">
+      <tr>
+        <td class="empresa">
+          <h1>HAWAKI</h1>
+          <p class="nombre-titular">CARLOS ALBERTO BARAHONA IZA</p>
+          <p><strong>Venta de Calzado</strong></p>
+          <p>Eloy Alfaro #319 y General Franco Local 5</p>
+          <p>Cel.: 0997750706 · Guayaquil – Ecuador</p>
+          <p><strong>R.U.C.: 0919343814001</strong></p>
+        </td>
+        <td class="proforma-box">
+          <div class="caja-proforma">PROFORMA</div>
+          <p class="serie">Serie 001-001</p>
+          <p class="numero" id="numero-proforma">0000000</p>
+          <table class="fecha-tabla">
+            <tr><td>DÍA</td><td>MES</td><td>AÑO</td></tr>
+            <tr><td id="fecha-dia"></td><td id="fecha-mes"></td><td id="fecha-anio"></td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table class="datos-cliente">
+      <tr><td class="label">Sr.(es)</td><td class="valor" id="cliente-nombre"></td></tr>
+      <tr><td class="label">Dirección</td><td class="valor" id="cliente-direccion"></td></tr>
+      <tr>
+        <td class="label">RUC / C.I.</td><td class="valor" id="cliente-ruc"></td>
+      </tr>
+      <tr>
+        <td class="label">Telf.</td><td class="valor" id="cliente-telefono"></td>
+      </tr>
+    </table>
+
+    <table class="items-tabla">
+      <thead>
+        <tr><th>CANT.</th><th>DESCRIPCIÓN</th><th>P. UNIT.</th><th>V. TOTAL</th></tr>
+      </thead>
+      <tbody id="items-tbody"></tbody>
+    </table>
+
+    <table class="pie">
+      <tr>
+        <td class="anotaciones">
+          <p class="label">ANOTACIONES</p>
+        </td>
+        <td class="subtotal">
+          <span>SUBTOTAL</span>
+          <span id="subtotal-valor">$0.00</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <script src="print.js"></script>
+</body>
+</html>

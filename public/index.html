@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Pantalla de login -->
+  <div id="login-screen" class="container">
+    <h1>Iniciar sesión</h1>
+    <form id="login-form">
+      <input type="text" id="login-usuario" placeholder="Usuario" required autocomplete="username">
+      <input type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password">
+      <button type="submit">Entrar</button>
+    </form>
+    <p id="login-error" class="error"></p>
+  </div>
+
+  <!-- Pantalla de vendedor -->
+  <div id="vendedor-screen" class="container hidden">
+    <div class="top-bar">
+      <h1>Punto de venta</h1>
+      <button id="logout-btn-v">Salir</button>
+    </div>
+
+    <div id="caja-cerrada-msg" class="error hidden">La caja está cerrada. Pide al administrador que abra el turno antes de vender.</div>
+
+    <div id="venta-form-wrap" class="hidden">
+      <h2>Nueva proforma</h2>
+      <label>Sr.(es)</label>
+      <input type="text" id="cliente-nombre" placeholder="Nombre del cliente (opcional)">
+      <label>Dirección</label>
+      <input type="text" id="cliente-direccion" placeholder="Dirección (opcional)">
+      <label>RUC / C.I.</label>
+      <input type="text" id="cliente-ruc" placeholder="RUC o cédula (opcional)">
+      <label>Telf.</label>
+      <input type="text" id="cliente-telefono" placeholder="Teléfono (opcional)">
+
+      <h3>Productos</h3>
+      <div id="items-lista"></div>
+      <div class="item-row-nueva">
+        <input type="text" id="item-producto" placeholder="Producto / descripción">
+        <input type="number" id="item-cantidad" placeholder="Cant." min="1" value="1">
+        <input type="number" id="item-precio" placeholder="Precio unitario" min="0" step="0.01">
+        <button id="agregar-item-btn">Agregar</button>
+      </div>
+
+      <p>Total: $<span id="carrito-total">0.00</span></p>
+      <button id="confirmar-venta-btn">Confirmar venta</button>
+      <p id="venta-msg"></p>
+      <a id="imprimir-link" class="hidden" target="_blank">Imprimir proforma</a>
+    </div>
+
+    <h2>Últimas ventas (todos los vendedores)</h2>
+    <table id="mis-ventas-tabla">
+      <thead><tr><th>ID</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Total</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Pantalla de admin -->
+  <div id="admin-screen" class="container hidden">
+    <div class="top-bar">
+      <h1>Panel administrador</h1>
+      <button id="logout-btn-a">Salir</button>
+    </div>
+
+    <h2>Caja</h2>
+    <div id="caja-abierta-card" class="card hidden">
+      <span class="card-label">Monto inicial</span>
+      <span class="card-value">$<span id="caja-inicial">0.00</span></span>
+      <span class="card-label">Monto actual</span>
+      <span class="card-value">$<span id="caja-actual">0.00</span></span>
+      <button id="cerrar-caja-btn">Cerrar caja</button>
+    </div>
+    <div id="caja-cerrada-card" class="hidden">
+      <p>No hay turno de caja abierto.</p>
+      <input type="number" id="monto-inicial-input" placeholder="Monto inicial" min="0" step="0.01">
+      <button id="abrir-caja-btn">Abrir caja</button>
+    </div>
+    <p id="caja-msg"></p>
+
+    <h2>Historial de ventas</h2>
+    <table id="ventas-tabla">
+      <thead>
+        <tr><th>Proforma</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>Vendedores</h2>
+    <table id="usuarios-tabla">
+      <thead><tr><th>Usuario</th><th>Rol</th><th>Activo</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="item-row-nueva">
+      <input type="text" id="nuevo-usuario" placeholder="Usuario">
+      <input type="password" id="nuevo-password" placeholder="Contraseña">
+      <select id="nuevo-rol">
+        <option value="vendedor">Vendedor</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button id="crear-usuario-btn">Crear usuario</button>
+    </div>
+    <p id="usuario-msg"></p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

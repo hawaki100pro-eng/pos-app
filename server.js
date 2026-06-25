@@ -1,0 +1,299 @@
+const express = require('express');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const bcrypt = require('bcryptjs');
+const path = require('path');
+const { pool, init } = require('./db');
+
+const app = express();
+
+app.use(express.json());
+app.use(session({
+  store: new pgSession({ pool, createTableIfMissing: true }),
+  secret: process.env.SESSION_SECRET || 'cambia-este-secreto-en-produccion',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 8 * 60 * 60 * 1000 }, // 8 horas
+}));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Middlewares de autenticación/autorización ---
+
+function requireLogin(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ error: 'Debes iniciar sesión' });
+  }
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.session.user.rol !== 'admin') {
+    return res.status(403).json({ error: 'Solo el administrador puede hacer esto' });
+  }
+  next();
+}
+
+async function getTurnoAbierto() {
+  const r = await pool.query(`SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1`);
+  return r.rows[0] || null;
+}
+
+// --- Auth ---
+
+app.post('/api/login', async (req, res) => {
+  const { usuario, password } = req.body;
+  const r = await pool.query('SELECT * FROM usuarios WHERE usuario = $1', [usuario]);
+  const user = r.rows[0];
+
+  if (!user || !user.activo || !bcrypt.compareSync(password, user.password_hash)) {
+    return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+  }
+
+  req.session.user = { id: user.id, usuario: user.usuario, rol: user.rol };
+  res.json({ usuario: user.usuario, rol: user.rol });
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(() => res.status(204).send());
+});
+
+app.get('/api/me', requireLogin, (req, res) => {
+  res.json(req.session.user);
+});
+
+// --- Caja: apertura, cierre y estado del turno ---
+
+app.get('/api/caja/estado', requireLogin, async (req, res) => {
+  const turno = await getTurnoAbierto();
+  res.json({ turno });
+});
+
+app.post('/api/caja/abrir', requireLogin, requireAdmin, async (req, res) => {
+  const { monto_inicial } = req.body;
+  if (monto_inicial == null || monto_inicial < 0) {
+    return res.status(400).json({ error: 'monto_inicial es obligatorio y debe ser >= 0' });
+  }
+  if (await getTurnoAbierto()) {
+    return res.status(400).json({ error: 'Ya hay un turno de caja abierto' });
+  }
+  const r = await pool.query(
+    `INSERT INTO turnos_caja (monto_inicial, monto_actual, abierto_por) VALUES ($1, $2, $3) RETURNING *`,
+    [monto_inicial, monto_inicial, req.session.user.id]
+  );
+  res.status(201).json(r.rows[0]);
+});
+
+app.post('/api/caja/cerrar', requireLogin, requireAdmin, async (req, res) => {
+  const turno = await getTurnoAbierto();
+  if (!turno) {
+    return res.status(400).json({ error: 'No hay un turno de caja abierto' });
+  }
+  const r = await pool.query(
+    `UPDATE turnos_caja SET estado = 'cerrado', fecha_cierre = NOW() WHERE id = $1 RETURNING *`,
+    [turno.id]
+  );
+  res.json(r.rows[0]);
+});
+
+app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
+  const r = await pool.query(`
+    SELECT t.*, u.usuario AS abierto_por_usuario
+    FROM turnos_caja t
+    JOIN usuarios u ON u.id = t.abierto_por
+    ORDER BY t.id DESC
+  `);
+  res.json(r.rows);
+});
+
+// --- Ventas (proforma libre) ---
+// Body: { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: [{ producto, cantidad, precio_unitario }] }
+
+function formatNumeroProforma(numero) {
+  return String(numero).padStart(7, '0');
+}
+
+app.post('/api/ventas', requireLogin, async (req, res) => {
+  const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Debes incluir al menos un producto' });
+  }
+  for (const item of items) {
+    if (!item.producto || !item.cantidad || item.cantidad <= 0 || item.precio_unitario == null || item.precio_unitario < 0) {
+      return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
+    }
+  }
+
+  const turno = await getTurnoAbierto();
+  if (!turno) {
+    return res.status(400).json({ error: 'No hay caja abierta. Pide al administrador que abra el turno.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const total = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
+
+    const contador = await client.query("SELECT valor FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
+    const numeroProforma = parseInt(contador.rows[0].valor, 10) + 1;
+    await client.query("UPDATE configuracion SET valor = $1 WHERE clave = 'ultimo_numero_proforma'", [String(numeroProforma)]);
+
+    const ventaResult = await client.query(
+      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, total, numero_proforma)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, total, numeroProforma]
+    );
+    const ventaId = ventaResult.rows[0].id;
+
+    for (const item of items) {
+      await client.query(
+        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)',
+        [ventaId, item.producto, item.cantidad, item.precio_unitario]
+      );
+    }
+
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [total, turno.id]);
+
+    await client.query('COMMIT');
+    res.status(201).json({ ventaId, total, numero_proforma: formatNumeroProforma(numeroProforma) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Ventas recientes de todos los vendedores (cualquier vendedor puede reimprimir la proforma de un compañero)
+app.get('/api/ventas/recientes', requireLogin, async (req, res) => {
+  const r = await pool.query(`
+    SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, u.usuario AS vendedor
+    FROM ventas v
+    JOIN usuarios u ON u.id = v.usuario_id
+    ORDER BY v.id DESC
+    LIMIT 30
+  `);
+  res.json(r.rows);
+});
+
+// Detalle completo de una venta, para la vista de impresión de la proforma.
+app.get('/api/ventas/:id', requireLogin, async (req, res) => {
+  const r = await pool.query(
+    `SELECT v.*, u.usuario AS vendedor FROM ventas v JOIN usuarios u ON u.id = v.usuario_id WHERE v.id = $1`,
+    [req.params.id]
+  );
+  const venta = r.rows[0];
+  if (!venta) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+  venta.numero_proforma = formatNumeroProforma(venta.numero_proforma || venta.id);
+  const detalle = await pool.query('SELECT producto, cantidad, precio_unitario FROM detalle_venta WHERE venta_id = $1', [venta.id]);
+  venta.detalle = detalle.rows;
+  res.json(venta);
+});
+
+// --- Dashboard del admin ---
+
+app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
+  const turno = await getTurnoAbierto();
+  const numVentasR = await pool.query('SELECT COUNT(*) AS c FROM ventas');
+  const ventasR = await pool.query(`
+    SELECT v.id, v.numero_proforma, v.cliente, v.fecha, v.total, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
+           u.usuario AS vendedor, au.usuario AS anulada_por_usuario
+    FROM ventas v
+    JOIN usuarios u ON u.id = v.usuario_id
+    LEFT JOIN usuarios au ON au.id = v.anulada_por
+    ORDER BY v.id DESC
+    LIMIT 100
+  `);
+
+  const ventas = ventasR.rows;
+  for (const v of ventas) {
+    v.numero_proforma = formatNumeroProforma(v.numero_proforma || v.id);
+    const detalle = await pool.query('SELECT producto, cantidad, precio_unitario FROM detalle_venta WHERE venta_id = $1', [v.id]);
+    v.detalle = detalle.rows;
+  }
+
+  res.json({ turno, numVentas: parseInt(numVentasR.rows[0].c, 10), ventas });
+});
+
+// --- Anulación de ventas (no se borran, queda nota con fecha y motivo) ---
+
+app.post('/api/ventas/:id/anular', requireLogin, requireAdmin, async (req, res) => {
+  const { motivo } = req.body;
+  if (!motivo || !motivo.trim()) {
+    return res.status(400).json({ error: 'Debes indicar el motivo de la anulación' });
+  }
+
+  const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
+  const venta = ventaR.rows[0];
+  if (!venta) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+  if (venta.anulada) {
+    return res.status(400).json({ error: 'Esta venta ya está anulada' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE ventas SET anulada = 1, fecha_anulacion = NOW(), motivo_anulacion = $1, anulada_por = $2 WHERE id = $3`,
+      [motivo.trim(), req.session.user.id, venta.id]
+    );
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    return res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+
+  const actualizada = await pool.query('SELECT * FROM ventas WHERE id = $1', [venta.id]);
+  res.json(actualizada.rows[0]);
+});
+
+// --- Gestión de usuarios (vendedores) por el admin ---
+
+app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
+  const r = await pool.query('SELECT id, usuario, rol, activo FROM usuarios ORDER BY id');
+  res.json(r.rows);
+});
+
+app.post('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
+  const { usuario, password, rol } = req.body;
+  if (!usuario || !password || !['admin', 'vendedor'].includes(rol)) {
+    return res.status(400).json({ error: 'usuario, password y rol (admin/vendedor) son obligatorios' });
+  }
+  try {
+    const hash = bcrypt.hashSync(password, 10);
+    const r = await pool.query(
+      'INSERT INTO usuarios (usuario, password_hash, rol) VALUES ($1, $2, $3) RETURNING id, usuario, rol, activo',
+      [usuario, hash, rol]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: `Ya existe el usuario "${usuario}"` });
+  }
+});
+
+app.post('/api/usuarios/:id/activo', requireLogin, requireAdmin, async (req, res) => {
+  const { activo } = req.body;
+  await pool.query('UPDATE usuarios SET activo = $1 WHERE id = $2', [activo ? 1 : 0, req.params.id]);
+  const r = await pool.query('SELECT id, usuario, rol, activo FROM usuarios WHERE id = $1', [req.params.id]);
+  res.json(r.rows[0]);
+});
+
+const PORT = process.env.PORT || 3001;
+
+init()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`POS corriendo en puerto ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Error al inicializar la base de datos:', err);
+    process.exit(1);
+  });
