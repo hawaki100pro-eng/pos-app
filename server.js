@@ -112,6 +112,51 @@ app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
   res.json(r.rows);
 });
 
+// --- Gastos: descuentan directamente de la caja del turno abierto (solo admin/dueño) ---
+
+app.post('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
+  const { descripcion, monto } = req.body;
+  if (!descripcion || !descripcion.trim() || monto == null || monto <= 0) {
+    return res.status(400).json({ error: 'descripcion y monto (mayor a 0) son obligatorios' });
+  }
+
+  const turno = await getTurnoAbierto();
+  if (!turno) {
+    return res.status(400).json({ error: 'No hay caja abierta. Abre un turno antes de registrar un gasto.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const r = await client.query(
+      'INSERT INTO gastos (turno_id, usuario_id, descripcion, monto) VALUES ($1, $2, $3, $4) RETURNING *',
+      [turno.id, req.session.user.id, descripcion.trim(), monto]
+    );
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [monto, turno.id]);
+    await client.query('COMMIT');
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Gastos del turno abierto actual (o, si no hay turno abierto, los últimos registrados)
+app.get('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
+  const turno = await getTurnoAbierto();
+  const r = turno
+    ? await pool.query(
+        `SELECT g.*, u.usuario AS registrado_por FROM gastos g JOIN usuarios u ON u.id = g.usuario_id WHERE g.turno_id = $1 ORDER BY g.id DESC`,
+        [turno.id]
+      )
+    : await pool.query(
+        `SELECT g.*, u.usuario AS registrado_por FROM gastos g JOIN usuarios u ON u.id = g.usuario_id ORDER BY g.id DESC LIMIT 50`
+      );
+  res.json(r.rows);
+});
+
 // --- Ventas (proforma libre) ---
 // Body: { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: [{ producto, cantidad, precio_unitario }] }
 

@@ -41,6 +41,7 @@ function mostrarPantalla(rol) {
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
     cargarDashboard();
     cargarUsuarios();
+    cargarGastos();
   } else {
     vendedorScreen.classList.remove('hidden');
     cargarEstadoCaja();
@@ -402,6 +403,51 @@ document.getElementById('cerrar-caja-btn').addEventListener('click', async () =>
   }
   msg.textContent = `Caja cerrada con $${data.monto_actual.toFixed(2)}`;
   msg.className = '';
+  cargarDashboard();
+});
+
+// --- Gastos (descuentan de la caja) ---
+
+async function cargarGastos() {
+  const res = await fetch('/api/gastos');
+  const gastos = await res.json();
+  const tbody = document.querySelector('#gastos-tabla tbody');
+  tbody.innerHTML = '';
+  gastos.forEach((g) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${g.fecha}</td><td>${g.descripcion}</td><td>$${g.monto.toFixed(2)}</td><td>${g.registrado_por}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('registrar-gasto-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('gasto-msg');
+  const descripcion = document.getElementById('gasto-descripcion').value.trim();
+  const monto = parseFloat(document.getElementById('gasto-monto').value);
+
+  if (!descripcion || isNaN(monto) || monto <= 0) {
+    msg.textContent = 'Completa descripción y un monto válido';
+    msg.className = 'error';
+    return;
+  }
+
+  const res = await fetch('/api/gastos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ descripcion, monto }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    msg.textContent = data.error;
+    msg.className = 'error';
+    return;
+  }
+
+  msg.textContent = `Gasto de $${data.monto.toFixed(2)} registrado`;
+  msg.className = '';
+  document.getElementById('gasto-descripcion').value = '';
+  document.getElementById('gasto-monto').value = '';
+  cargarGastos();
   cargarDashboard();
 });
 

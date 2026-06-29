@@ -83,6 +83,18 @@
     </div>
     <p id="caja-msg"></p>
 
+    <h2>Gastos</h2>
+    <div class="item-row-nueva">
+      <input type="text" id="gasto-descripcion" placeholder="Descripción (ej: adelanto a vendedor1, compra de agua)">
+      <input type="number" id="gasto-monto" placeholder="Monto" min="0.01" step="0.01">
+      <button id="registrar-gasto-btn">Registrar gasto</button>
+    </div>
+    <p id="gasto-msg"></p>
+    <table id="gastos-tabla">
+      <thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Registrado por</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
     <h2>Historial de ventas</h2>
     <table id="ventas-tabla">
       <thead>

@@ -57,6 +57,15 @@ async function init() {
       clave TEXT PRIMARY KEY,
       valor TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS gastos (
+      id SERIAL PRIMARY KEY,
+      turno_id INTEGER NOT NULL REFERENCES turnos_caja(id),
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+      descripcion TEXT NOT NULL,
+      monto REAL NOT NULL,
+      fecha TIMESTAMP NOT NULL DEFAULT NOW()
+    );
   `);
 
   // Migración: agrega el rol 'dueno' (admin + permisos extra de editar/eliminar ventas)
