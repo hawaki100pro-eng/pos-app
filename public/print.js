@@ -50,7 +50,16 @@
     tbody.appendChild(tr);
   }
 
-  document.getElementById('subtotal-valor').textContent = `$${venta.total.toFixed(2)}`;
+  const subtotalItems = venta.detalle.reduce((acc, item) => acc + item.cantidad * item.precio_unitario, 0);
+  document.getElementById('subtotal-valor').textContent = `$${subtotalItems.toFixed(2)}`;
+
+  if (venta.descuento_pct > 0) {
+    document.getElementById('descuento-label-print').textContent = `DESCUENTO ${venta.descuento_pct}%`;
+    document.getElementById('descuento-valor-print').textContent = `-$${(subtotalItems - venta.total).toFixed(2)}`;
+    document.getElementById('total-valor-print').textContent = `$${venta.total.toFixed(2)}`;
+    document.getElementById('descuento-row-print').classList.remove('hidden');
+    document.getElementById('total-row-print').classList.remove('hidden');
+  }
 
   if (venta.anulada) {
     const aviso = document.createElement('p');

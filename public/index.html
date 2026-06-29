@@ -39,15 +39,45 @@
       <label>Telf.</label>
       <input type="text" id="cliente-telefono" placeholder="Teléfono (opcional)">
 
-      <h3>Productos</h3>
-      <div id="items-lista"></div>
-      <div class="item-row-nueva">
-        <input type="text" id="item-producto" placeholder="Producto / descripción">
-        <input type="number" id="item-cantidad" placeholder="Cant." min="1" value="1">
-        <input type="number" id="item-precio" placeholder="Precio unitario" min="0" step="0.01">
-        <button id="agregar-item-btn">Agregar</button>
+      <div class="tabs-venta">
+        <button id="tab-libre-btn" class="tab-btn tab-activo" type="button">Proforma libre</button>
+        <button id="tab-catalogo-btn" class="tab-btn" type="button">Pedido grande</button>
       </div>
 
+      <!-- Modo: proforma libre (escribir producto a mano) -->
+      <div id="panel-libre">
+        <h3>Productos</h3>
+        <div class="item-row-nueva">
+          <input type="text" id="item-producto" placeholder="Producto / descripción">
+          <input type="number" id="item-cantidad" placeholder="Cant." min="1" value="1">
+          <input type="number" id="item-precio" placeholder="Precio unitario" min="0" step="0.01">
+          <button id="agregar-item-btn">Agregar</button>
+        </div>
+      </div>
+
+      <!-- Modo: pedido grande (buscar en catálogo, elegir colores y cantidades) -->
+      <div id="panel-catalogo" class="hidden">
+        <h3>Buscar en catálogo</h3>
+        <div class="sug-wrap">
+          <input type="text" id="cat-buscar" placeholder="Código o descripción (ej: 1021, 916M)" autocomplete="off">
+          <div class="sug-list" id="cat-sug-list"></div>
+        </div>
+        <div id="cat-colores-panel" class="hidden">
+          <label>Elige colores y cantidades</label>
+          <div id="cat-chips-wrap" class="chips"></div>
+        </div>
+        <p id="cat-msg" class="error"></p>
+      </div>
+
+      <h3>Carrito</h3>
+      <div id="items-lista"></div>
+
+      <div class="descuento-row">
+        <label>Descuento: <span id="descuento-pct-label">0%</span></label>
+        <input type="range" id="descuento-slider" min="0" max="17" step="1" value="0">
+      </div>
+
+      <p>Subtotal: $<span id="carrito-subtotal">0.00</span></p>
       <p>Total: $<span id="carrito-total">0.00</span></p>
       <button id="confirmar-venta-btn">Confirmar venta</button>
       <p id="venta-msg"></p>
@@ -107,6 +137,21 @@
       <button id="crear-usuario-btn">Crear usuario</button>
     </div>
     <p id="usuario-msg"></p>
+
+    <h2>Catálogo de productos</h2>
+    <table id="catalogo-tabla">
+      <thead><tr><th>Código</th><th>Descripción</th><th>Precio</th><th>Colores</th><th>Estado</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="item-row-nueva">
+      <input type="text" id="cat-nuevo-codigo" placeholder="Código (ej: 1021)">
+      <input type="text" id="cat-nuevo-desc" placeholder="Descripción (ej: DOC. 1021)">
+      <input type="number" id="cat-nuevo-precio" placeholder="Precio" min="0" step="0.01">
+      <input type="text" id="cat-nuevo-colores" placeholder="Colores separados por coma">
+      <label><input type="checkbox" id="cat-nuevo-agotado"> Agotado</label>
+      <button id="cat-crear-btn">Agregar producto</button>
+    </div>
+    <p id="catalogo-msg"></p>
   </div>
 
   <!-- Modal de edición de venta (solo dueño) -->
