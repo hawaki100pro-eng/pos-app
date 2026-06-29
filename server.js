@@ -27,14 +27,14 @@ function requireLogin(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!['admin', 'dueño'].includes(req.session.user.rol)) {
+  if (!['admin', 'dueno'].includes(req.session.user.rol)) {
     return res.status(403).json({ error: 'Solo el administrador puede hacer esto' });
   }
   next();
 }
 
 function requireDueño(req, res, next) {
-  if (req.session.user.rol !== 'dueño') {
+  if (req.session.user.rol !== 'dueno') {
     return res.status(403).json({ error: 'Solo el dueño puede hacer esto' });
   }
   next();
@@ -369,7 +369,7 @@ app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
 
 app.post('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
   const { usuario, password, rol } = req.body;
-  if (!usuario || !password || !['admin', 'vendedor', 'dueño'].includes(rol)) {
+  if (!usuario || !password || !['admin', 'vendedor', 'dueno'].includes(rol)) {
     return res.status(400).json({ error: 'usuario, password y rol (admin/vendedor/dueño) son obligatorios' });
   }
   try {

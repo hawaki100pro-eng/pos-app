@@ -59,10 +59,10 @@ async function init() {
     );
   `);
 
-  // Migración: agrega el rol 'dueño' (admin + permisos extra de editar/eliminar ventas)
+  // Migración: agrega el rol 'dueno' (admin + permisos extra de editar/eliminar ventas)
   await pool.query(`
     ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;
-    ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('admin', 'vendedor', 'dueño'));
+    ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('admin', 'vendedor', 'dueno'));
   `);
 
   // Migración: columnas de borrado lógico en ventas (no se borra físicamente, queda oculta pero conservada)
@@ -96,7 +96,7 @@ async function init() {
   const dueno = await pool.query('SELECT id FROM usuarios WHERE usuario = $1', ['dueno1']);
   if (dueno.rowCount === 0) {
     const hash = bcrypt.hashSync('dueno123', 10);
-    await pool.query('INSERT INTO usuarios (usuario, password_hash, rol) VALUES ($1, $2, $3)', ['dueno1', hash, 'dueño']);
+    await pool.query('INSERT INTO usuarios (usuario, password_hash, rol) VALUES ($1, $2, $3)', ['dueno1', hash, 'dueno']);
     console.log('Usuario creado -> usuario: dueno1 / password: dueno123 (rol: dueño)');
   }
 }

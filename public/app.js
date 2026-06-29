@@ -36,9 +36,9 @@ function mostrarPantalla(rol) {
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
 
-  if (rol === 'admin' || rol === 'dueño') {
+  if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
-    document.querySelector('#admin-screen h1').textContent = rol === 'dueño' ? 'Panel del dueño' : 'Panel administrador';
+    document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
     cargarDashboard();
     cargarUsuarios();
   } else {
@@ -221,7 +221,7 @@ async function cargarDashboard() {
       tdAccion.appendChild(btn);
     }
 
-    if (rolActual === 'dueño') {
+    if (rolActual === 'dueno') {
       const btnEditar = document.createElement('button');
       btnEditar.textContent = 'Editar';
       btnEditar.addEventListener('click', () => abrirEditarVenta(v));
