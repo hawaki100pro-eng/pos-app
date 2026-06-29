@@ -60,6 +60,9 @@ async function init() {
   `);
 
   // Migración: agrega el rol 'dueno' (admin + permisos extra de editar/eliminar ventas)
+  // Normaliza primero cualquier fila que haya quedado con 'dueño' (con tilde, de un intento previo)
+  // antes de aplicar la restricción nueva, para que el ALTER no falle por datos existentes.
+  await pool.query(`UPDATE usuarios SET rol = 'dueno' WHERE rol = 'dueño'`);
   await pool.query(`
     ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;
     ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('admin', 'vendedor', 'dueno'));
