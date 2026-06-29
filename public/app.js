@@ -7,6 +7,21 @@ let editandoItems = []; // ítems en edición dentro del modal de editar venta
 let editandoVentaId = null;
 let rolActual = null;
 
+// El servidor guarda y devuelve las fechas en UTC; esto las muestra en hora de Ecuador (UTC-5)
+function formatFecha(fechaStr) {
+  if (!fechaStr) return '';
+  const d = new Date(fechaStr.replace(' ', 'T') + (fechaStr.endsWith('Z') ? '' : 'Z'));
+  return d.toLocaleString('es-EC', {
+    timeZone: 'America/Guayaquil',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 // --- Login ---
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -168,7 +183,7 @@ async function cargarMisVentas() {
   ventas.forEach((v) => {
     const tr = document.createElement('tr');
     const totalTexto = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
-    tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${v.fecha}</td><td>${totalTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
+    tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${totalTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -201,10 +216,10 @@ async function cargarDashboard() {
     if (v.anulada) tr.className = 'venta-anulada';
 
     const estadoHtml = v.anulada
-      ? `<span class="badge-anulada">ANULADA</span><div class="nota-anulacion">${v.fecha_anulacion} por ${v.anulada_por_usuario}: "${v.motivo_anulacion}"</div>`
+      ? `<span class="badge-anulada">ANULADA</span><div class="nota-anulacion">${formatFecha(v.fecha_anulacion)} por ${v.anulada_por_usuario}: "${v.motivo_anulacion}"</div>`
       : 'Activa';
 
-    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${v.fecha}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${estadoHtml}</td><td></td>`;
+    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${estadoHtml}</td><td></td>`;
 
     const tdAccion = tr.lastElementChild;
     const linkImprimir = document.createElement('a');
@@ -415,7 +430,7 @@ async function cargarGastos() {
   tbody.innerHTML = '';
   gastos.forEach((g) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${g.fecha}</td><td>${g.descripcion}</td><td>$${g.monto.toFixed(2)}</td><td>${g.registrado_por}</td>`;
+    tr.innerHTML = `<td>${formatFecha(g.fecha)}</td><td>${g.descripcion}</td><td>$${g.monto.toFixed(2)}</td><td>${g.registrado_por}</td>`;
     tbody.appendChild(tr);
   });
 }

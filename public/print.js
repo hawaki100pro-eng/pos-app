@@ -21,10 +21,18 @@
 
   document.getElementById('numero-proforma').textContent = venta.numero_proforma;
 
-  const fecha = new Date(venta.fecha.replace(' ', 'T'));
-  document.getElementById('fecha-dia').textContent = String(fecha.getDate()).padStart(2, '0');
-  document.getElementById('fecha-mes').textContent = String(fecha.getMonth() + 1).padStart(2, '0');
-  document.getElementById('fecha-anio').textContent = String(fecha.getFullYear()).slice(-2);
+  // El servidor guarda la fecha en UTC; se muestra convertida a hora de Ecuador (UTC-5)
+  const fechaStr = venta.fecha.replace(' ', 'T');
+  const fechaUTC = new Date(fechaStr.endsWith('Z') ? fechaStr : fechaStr + 'Z');
+  const partesFecha = fechaUTC.toLocaleString('es-EC', {
+    timeZone: 'America/Guayaquil',
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  }).split('/');
+  document.getElementById('fecha-dia').textContent = partesFecha[0];
+  document.getElementById('fecha-mes').textContent = partesFecha[1];
+  document.getElementById('fecha-anio').textContent = partesFecha[2];
 
   document.getElementById('cliente-nombre').textContent = venta.cliente || '';
   document.getElementById('cliente-direccion').textContent = venta.cliente_direccion || '';
@@ -57,7 +65,10 @@
     aviso.style.color = '#dc2626';
     aviso.style.fontWeight = 'bold';
     aviso.style.textAlign = 'center';
-    aviso.textContent = `ANULADA el ${venta.fecha_anulacion} — ${venta.motivo_anulacion}`;
+    const fa = venta.fecha_anulacion.replace(' ', 'T');
+    const faUTC = new Date(fa.endsWith('Z') ? fa : fa + 'Z');
+    const faLocal = faUTC.toLocaleString('es-EC', { timeZone: 'America/Guayaquil', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+    aviso.textContent = `ANULADA el ${faLocal} — ${venta.motivo_anulacion}`;
     proforma.parentElement.insertBefore(aviso, proforma);
   }
 
