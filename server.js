@@ -27,8 +27,15 @@ function requireLogin(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.session.user.rol !== 'admin') {
+  if (!['admin', 'dueño'].includes(req.session.user.rol)) {
     return res.status(403).json({ error: 'Solo el administrador puede hacer esto' });
+  }
+  next();
+}
+
+function requireDueño(req, res, next) {
+  if (req.session.user.rol !== 'dueño') {
+    return res.status(403).json({ error: 'Solo el dueño puede hacer esto' });
   }
   next();
 }
@@ -170,6 +177,7 @@ app.get('/api/ventas/recientes', requireLogin, async (req, res) => {
     SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, u.usuario AS vendedor
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
+    WHERE v.eliminada = 0
     ORDER BY v.id DESC
     LIMIT 30
   `);
@@ -198,11 +206,13 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   const turno = await getTurnoAbierto();
   const numVentasR = await pool.query('SELECT COUNT(*) AS c FROM ventas');
   const ventasR = await pool.query(`
-    SELECT v.id, v.numero_proforma, v.cliente, v.fecha, v.total, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
+    SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono,
+           v.fecha, v.total, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
            u.usuario AS vendedor, au.usuario AS anulada_por_usuario
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
     LEFT JOIN usuarios au ON au.id = v.anulada_por
+    WHERE v.eliminada = 0
     ORDER BY v.id DESC
     LIMIT 100
   `);
@@ -254,6 +264,102 @@ app.post('/api/ventas/:id/anular', requireLogin, requireAdmin, async (req, res) 
   res.json(actualizada.rows[0]);
 });
 
+// --- Eliminación lógica de ventas (solo dueño): oculta del historial pero se conserva en la base de datos ---
+
+app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, res) => {
+  const { motivo } = req.body;
+  if (!motivo || !motivo.trim()) {
+    return res.status(400).json({ error: 'Debes indicar el motivo de la eliminación' });
+  }
+
+  const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
+  const venta = ventaR.rows[0];
+  if (!venta) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+  if (venta.eliminada) {
+    return res.status(400).json({ error: 'Esta venta ya fue eliminada' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE ventas SET eliminada = 1, fecha_eliminacion = NOW(), motivo_eliminacion = $1, eliminada_por = $2 WHERE id = $3`,
+      [motivo.trim(), req.session.user.id, venta.id]
+    );
+    // Si la venta no estaba anulada, su monto seguía contando en la caja: hay que restarlo al eliminarla.
+    // Si ya estaba anulada, la caja ya se había ajustado en ese momento, no se vuelve a restar.
+    if (!venta.anulada) {
+      await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    return res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+
+  res.status(204).send();
+});
+
+// --- Edición de ventas (solo dueño): reemplaza cliente e ítems, recalcula total y ajusta la caja por la diferencia ---
+
+app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
+  const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Debes incluir al menos un producto' });
+  }
+  for (const item of items) {
+    if (!item.producto || !item.cantidad || item.cantidad <= 0 || item.precio_unitario == null || item.precio_unitario < 0) {
+      return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
+    }
+  }
+
+  const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
+  const venta = ventaR.rows[0];
+  if (!venta) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+  if (venta.anulada || venta.eliminada) {
+    return res.status(400).json({ error: 'No se puede editar una venta anulada o eliminada' });
+  }
+
+  const nuevoTotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
+  const diferencia = nuevoTotal - venta.total;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query(
+      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, total = $5 WHERE id = $6`,
+      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, nuevoTotal, venta.id]
+    );
+
+    await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
+    for (const item of items) {
+      await client.query(
+        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)',
+        [venta.id, item.producto, item.cantidad, item.precio_unitario]
+      );
+    }
+
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [diferencia, venta.turno_id]);
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    return res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+
+  const actualizada = await pool.query('SELECT * FROM ventas WHERE id = $1', [venta.id]);
+  res.json(actualizada.rows[0]);
+});
+
 // --- Gestión de usuarios (vendedores) por el admin ---
 
 app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
@@ -263,8 +369,8 @@ app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
 
 app.post('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
   const { usuario, password, rol } = req.body;
-  if (!usuario || !password || !['admin', 'vendedor'].includes(rol)) {
-    return res.status(400).json({ error: 'usuario, password y rol (admin/vendedor) son obligatorios' });
+  if (!usuario || !password || !['admin', 'vendedor', 'dueño'].includes(rol)) {
+    return res.status(400).json({ error: 'usuario, password y rol (admin/vendedor/dueño) son obligatorios' });
   }
   try {
     const hash = bcrypt.hashSync(password, 10);

@@ -102,10 +102,40 @@
       <select id="nuevo-rol">
         <option value="vendedor">Vendedor</option>
         <option value="admin">Admin</option>
+        <option value="dueño">Dueño</option>
       </select>
       <button id="crear-usuario-btn">Crear usuario</button>
     </div>
     <p id="usuario-msg"></p>
+  </div>
+
+  <!-- Modal de edición de venta (solo dueño) -->
+  <div id="editar-venta-modal" class="container hidden" style="position: fixed; top: 5%; left: 50%; transform: translateX(-50%); z-index: 10; max-height: 90vh; overflow-y: auto;">
+    <div class="top-bar">
+      <h2>Editar venta</h2>
+      <button id="cerrar-editar-btn">Cerrar</button>
+    </div>
+    <label>Sr.(es)</label>
+    <input type="text" id="editar-cliente-nombre" placeholder="Nombre del cliente">
+    <label>Dirección</label>
+    <input type="text" id="editar-cliente-direccion" placeholder="Dirección">
+    <label>RUC / C.I.</label>
+    <input type="text" id="editar-cliente-ruc" placeholder="RUC o cédula">
+    <label>Telf.</label>
+    <input type="text" id="editar-cliente-telefono" placeholder="Teléfono">
+
+    <h3>Productos</h3>
+    <div id="editar-items-lista"></div>
+    <div class="item-row-nueva">
+      <input type="text" id="editar-item-producto" placeholder="Producto / descripción">
+      <input type="number" id="editar-item-cantidad" placeholder="Cant." min="1" value="1">
+      <input type="number" id="editar-item-precio" placeholder="Precio unitario" min="0" step="0.01">
+      <button id="editar-agregar-item-btn">Agregar</button>
+    </div>
+
+    <p>Total: $<span id="editar-total">0.00</span></p>
+    <button id="guardar-edicion-btn">Guardar cambios</button>
+    <p id="editar-msg"></p>
   </div>
 
   <script src="app.js"></script>
