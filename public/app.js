@@ -229,32 +229,37 @@ async function cargarDashboard() {
     tr.innerHTML = `<td>${v.numero_proforma}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${metodoTexto}</td><td>${estadoHtml}</td><td></td>`;
 
     const tdAccion = tr.lastElementChild;
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones-venta';
+    tdAccion.appendChild(acciones);
+
     const linkImprimir = document.createElement('a');
     linkImprimir.href = `print.html?id=${v.id}`;
     linkImprimir.target = '_blank';
-    linkImprimir.textContent = 'Imprimir';
-    linkImprimir.className = 'imprimir-link';
-    tdAccion.appendChild(linkImprimir);
+    linkImprimir.innerHTML = '🖨 Imprimir';
+    linkImprimir.className = 'accion-btn imprimir-link';
+    acciones.appendChild(linkImprimir);
 
     if (!v.anulada) {
       const btn = document.createElement('button');
-      btn.textContent = 'Anular';
-      btn.className = 'anular-btn';
+      btn.innerHTML = '⊘ Anular';
+      btn.className = 'accion-btn anular-btn';
       btn.addEventListener('click', () => anularVenta(v.id));
-      tdAccion.appendChild(btn);
+      acciones.appendChild(btn);
     }
 
     if (rolActual === 'dueno') {
       const btnEditar = document.createElement('button');
-      btnEditar.textContent = 'Editar';
+      btnEditar.innerHTML = '✎ Editar';
+      btnEditar.className = 'accion-btn editar-btn';
       btnEditar.addEventListener('click', () => abrirEditarVenta(v));
-      tdAccion.appendChild(btnEditar);
+      acciones.appendChild(btnEditar);
 
       const btnEliminar = document.createElement('button');
-      btnEliminar.textContent = 'Eliminar';
-      btnEliminar.className = 'anular-btn';
+      btnEliminar.innerHTML = '🗑 Eliminar';
+      btnEliminar.className = 'accion-btn anular-btn';
       btnEliminar.addEventListener('click', () => eliminarVenta(v.id));
-      tdAccion.appendChild(btnEliminar);
+      acciones.appendChild(btnEliminar);
     }
 
     tbody.appendChild(tr);
