@@ -146,10 +146,11 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   const cliente_direccion = document.getElementById('cliente-direccion').value.trim();
   const cliente_ruc = document.getElementById('cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('cliente-telefono').value.trim();
+  const metodo_pago = document.querySelector('input[name="metodo-pago"]:checked').value;
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, items }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, items, metodo_pago }),
   });
   const data = await res.json();
 
@@ -159,7 +160,7 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
     return;
   }
 
-  msg.textContent = `Venta ${data.numero_proforma} registrada por $${data.total.toFixed(2)}`;
+  msg.textContent = `Venta ${data.numero_proforma} registrada por $${data.total.toFixed(2)} (${data.metodo_pago})`;
   msg.className = '';
 
   const imprimirLink = document.getElementById('imprimir-link');
@@ -171,8 +172,10 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   document.getElementById('cliente-direccion').value = '';
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
+  document.querySelector('input[name="metodo-pago"][value="efectivo"]').checked = true;
   renderItems();
   cargarMisVentas();
+  cargarEstadoCaja();
 });
 
 async function cargarMisVentas() {
@@ -183,7 +186,8 @@ async function cargarMisVentas() {
   ventas.forEach((v) => {
     const tr = document.createElement('tr');
     const totalTexto = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
-    tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${totalTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
+    const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
+    tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${totalTexto}</td><td>${metodoTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -201,6 +205,7 @@ async function cargarDashboard() {
     cerradaCard.classList.add('hidden');
     document.getElementById('caja-inicial').textContent = data.turno.monto_inicial.toFixed(2);
     document.getElementById('caja-actual').textContent = data.turno.monto_actual.toFixed(2);
+    document.getElementById('caja-transferencias').textContent = data.totalTransferenciasTurno.toFixed(2);
   } else {
     abiertaCard.classList.add('hidden');
     cerradaCard.classList.remove('hidden');
@@ -219,7 +224,9 @@ async function cargarDashboard() {
       ? `<span class="badge-anulada">ANULADA</span><div class="nota-anulacion">${formatFecha(v.fecha_anulacion)} por ${v.anulada_por_usuario}: "${v.motivo_anulacion}"</div>`
       : 'Activa';
 
-    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${estadoHtml}</td><td></td>`;
+    const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
+
+    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${metodoTexto}</td><td>${estadoHtml}</td><td></td>`;
 
     const tdAccion = tr.lastElementChild;
     const linkImprimir = document.createElement('a');
@@ -283,6 +290,7 @@ function abrirEditarVenta(venta) {
   document.getElementById('editar-cliente-direccion').value = venta.cliente_direccion || '';
   document.getElementById('editar-cliente-ruc').value = venta.cliente_ruc || '';
   document.getElementById('editar-cliente-telefono').value = venta.cliente_telefono || '';
+  document.querySelector(`input[name="editar-metodo-pago"][value="${venta.metodo_pago || 'efectivo'}"]`).checked = true;
   document.getElementById('editar-msg').textContent = '';
   renderEditarItems();
   document.getElementById('editar-venta-modal').classList.remove('hidden');
@@ -345,11 +353,12 @@ document.getElementById('guardar-edicion-btn').addEventListener('click', async (
   const cliente_direccion = document.getElementById('editar-cliente-direccion').value.trim();
   const cliente_ruc = document.getElementById('editar-cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('editar-cliente-telefono').value.trim();
+  const metodo_pago = document.querySelector('input[name="editar-metodo-pago"]:checked').value;
 
   const res = await fetch(`/api/ventas/${editandoVentaId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: editandoItems }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: editandoItems, metodo_pago }),
   });
   const data = await res.json();
   if (!res.ok) {

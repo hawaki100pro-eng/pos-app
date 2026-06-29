@@ -49,6 +49,13 @@
       </div>
 
       <p>Total: $<span id="carrito-total">0.00</span></p>
+
+      <label>Método de pago</label>
+      <div class="metodo-pago-row">
+        <label><input type="radio" name="metodo-pago" value="efectivo" checked> Efectivo</label>
+        <label><input type="radio" name="metodo-pago" value="transferencia"> Transferencia</label>
+      </div>
+
       <button id="confirmar-venta-btn">Confirmar venta</button>
       <p id="venta-msg"></p>
       <a id="imprimir-link" class="hidden" target="_blank">Imprimir proforma</a>
@@ -56,7 +63,7 @@
 
     <h2>Últimas ventas (todos los vendedores)</h2>
     <table id="mis-ventas-tabla">
-      <thead><tr><th>ID</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Total</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Total</th><th>Método</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -74,6 +81,8 @@
       <span class="card-value">$<span id="caja-inicial">0.00</span></span>
       <span class="card-label">Monto actual</span>
       <span class="card-value">$<span id="caja-actual">0.00</span></span>
+      <span class="card-label">Transferencias (no en caja)</span>
+      <span class="card-value">$<span id="caja-transferencias">0.00</span></span>
       <button id="cerrar-caja-btn">Cerrar caja</button>
     </div>
     <div id="caja-cerrada-card" class="hidden">
@@ -98,7 +107,7 @@
     <h2>Historial de ventas</h2>
     <table id="ventas-tabla">
       <thead>
-        <tr><th>Proforma</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Estado</th><th></th></tr>
+        <tr><th>Proforma</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Método</th><th>Estado</th><th></th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -146,6 +155,13 @@
     </div>
 
     <p>Total: $<span id="editar-total">0.00</span></p>
+
+    <label>Método de pago</label>
+    <div class="metodo-pago-row">
+      <label><input type="radio" name="editar-metodo-pago" value="efectivo" checked> Efectivo</label>
+      <label><input type="radio" name="editar-metodo-pago" value="transferencia"> Transferencia</label>
+    </div>
+
     <button id="guardar-edicion-btn">Guardar cambios</button>
     <p id="editar-msg"></p>
   </div>

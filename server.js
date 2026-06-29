@@ -166,6 +166,7 @@ function formatNumeroProforma(numero) {
 
 app.post('/api/ventas', requireLogin, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
+  const metodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
   }
@@ -191,9 +192,9 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     await client.query("UPDATE configuracion SET valor = $1 WHERE clave = 'ultimo_numero_proforma'", [String(numeroProforma)]);
 
     const ventaResult = await client.query(
-      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, total, numero_proforma)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, total, numeroProforma]
+      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, total, numero_proforma, metodo_pago)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, total, numeroProforma, metodoPago]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -204,10 +205,13 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
       );
     }
 
-    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [total, turno.id]);
+    // Las transferencias no entran a la caja física: solo el efectivo suma a monto_actual
+    if (metodoPago === 'efectivo') {
+      await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [total, turno.id]);
+    }
 
     await client.query('COMMIT');
-    res.status(201).json({ ventaId, total, numero_proforma: formatNumeroProforma(numeroProforma) });
+    res.status(201).json({ ventaId, total, numero_proforma: formatNumeroProforma(numeroProforma), metodo_pago: metodoPago });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(400).json({ error: err.message });
@@ -219,7 +223,7 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
 // Ventas recientes de todos los vendedores (cualquier vendedor puede reimprimir la proforma de un compañero)
 app.get('/api/ventas/recientes', requireLogin, async (req, res) => {
   const r = await pool.query(`
-    SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, u.usuario AS vendedor
+    SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, v.metodo_pago, u.usuario AS vendedor
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
     WHERE v.eliminada = 0
@@ -252,7 +256,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   const numVentasR = await pool.query('SELECT COUNT(*) AS c FROM ventas');
   const ventasR = await pool.query(`
     SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono,
-           v.fecha, v.total, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
+           v.fecha, v.total, v.metodo_pago, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
            u.usuario AS vendedor, au.usuario AS anulada_por_usuario
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
@@ -269,7 +273,16 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
     v.detalle = detalle.rows;
   }
 
-  res.json({ turno, numVentas: parseInt(numVentasR.rows[0].c, 10), ventas });
+  let totalTransferenciasTurno = 0;
+  if (turno) {
+    const r = await pool.query(
+      `SELECT COALESCE(SUM(total), 0) AS t FROM ventas WHERE turno_id = $1 AND metodo_pago = 'transferencia' AND anulada = 0 AND eliminada = 0`,
+      [turno.id]
+    );
+    totalTransferenciasTurno = r.rows[0].t;
+  }
+
+  res.json({ turno, totalTransferenciasTurno, numVentas: parseInt(numVentasR.rows[0].c, 10), ventas });
 });
 
 // --- Anulación de ventas (no se borran, queda nota con fecha y motivo) ---
@@ -296,7 +309,10 @@ app.post('/api/ventas/:id/anular', requireLogin, requireAdmin, async (req, res) 
       `UPDATE ventas SET anulada = 1, fecha_anulacion = NOW(), motivo_anulacion = $1, anulada_por = $2 WHERE id = $3`,
       [motivo.trim(), req.session.user.id, venta.id]
     );
-    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
+    // Las transferencias nunca sumaron a la caja física, así que tampoco se restan al anular
+    if (venta.metodo_pago === 'efectivo') {
+      await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
+    }
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -333,9 +349,9 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
       `UPDATE ventas SET eliminada = 1, fecha_eliminacion = NOW(), motivo_eliminacion = $1, eliminada_por = $2 WHERE id = $3`,
       [motivo.trim(), req.session.user.id, venta.id]
     );
-    // Si la venta no estaba anulada, su monto seguía contando en la caja: hay que restarlo al eliminarla.
-    // Si ya estaba anulada, la caja ya se había ajustado en ese momento, no se vuelve a restar.
-    if (!venta.anulada) {
+    // Si la venta era en efectivo y no estaba anulada, su monto seguía contando en la caja: hay que restarlo al eliminarla.
+    // Si ya estaba anulada, o era transferencia, la caja nunca tuvo ese monto (o ya se ajustó), no se vuelve a restar.
+    if (!venta.anulada && venta.metodo_pago === 'efectivo') {
       await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
     }
     await client.query('COMMIT');
@@ -353,6 +369,7 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
 
 app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
+  const nuevoMetodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
   }
@@ -372,15 +389,18 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
   }
 
   const nuevoTotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
-  const diferencia = nuevoTotal - venta.total;
+  // El ajuste a la caja depende de cuánto aportaba ANTES (solo si era efectivo) vs cuánto aporta AHORA (solo si sigue siendo efectivo)
+  const aportabaCajaAntes = venta.metodo_pago === 'efectivo' ? venta.total : 0;
+  const aportaCajaAhora = nuevoMetodoPago === 'efectivo' ? nuevoTotal : 0;
+  const diferencia = aportaCajaAhora - aportabaCajaAntes;
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     await client.query(
-      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, total = $5 WHERE id = $6`,
-      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, nuevoTotal, venta.id]
+      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, total = $5, metodo_pago = $6 WHERE id = $7`,
+      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, nuevoTotal, nuevoMetodoPago, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
@@ -391,7 +411,9 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
       );
     }
 
-    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [diferencia, venta.turno_id]);
+    if (diferencia !== 0) {
+      await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [diferencia, venta.turno_id]);
+    }
 
     await client.query('COMMIT');
   } catch (err) {

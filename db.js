@@ -85,6 +85,11 @@ async function init() {
     ALTER TABLE ventas ADD COLUMN IF NOT EXISTS eliminada_por INTEGER REFERENCES usuarios(id);
   `);
 
+  // Migración: método de pago (efectivo/transferencia). Las transferencias no suman a la caja física.
+  await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS metodo_pago TEXT NOT NULL DEFAULT 'efectivo'`);
+  await pool.query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_metodo_pago_check`);
+  await pool.query(`ALTER TABLE ventas ADD CONSTRAINT ventas_metodo_pago_check CHECK (metodo_pago IN ('efectivo', 'transferencia'))`);
+
   const contador = await pool.query("SELECT clave FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
   if (contador.rowCount === 0) {
     await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('ultimo_numero_proforma', '7567')");

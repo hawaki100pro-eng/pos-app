@@ -59,6 +59,10 @@
   }
 
   document.getElementById('subtotal-valor').textContent = `$${venta.total.toFixed(2)}`;
+  const metodoEl = document.getElementById('metodo-pago-valor');
+  if (metodoEl) {
+    metodoEl.textContent = venta.metodo_pago === 'transferencia' ? 'TRANSFERENCIA' : 'EFECTIVO';
+  }
 
   if (venta.anulada) {
     const aviso = document.createElement('p');
