@@ -112,52 +112,6 @@ app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
   res.json(r.rows);
 });
 
-// --- Catálogo de productos (para "Pedido grande") ---
-
-app.get('/api/catalogo', requireLogin, async (req, res) => {
-  const r = await pool.query('SELECT * FROM catalogo ORDER BY codigo');
-  res.json(r.rows);
-});
-
-app.post('/api/catalogo', requireLogin, requireAdmin, async (req, res) => {
-  const { codigo, descripcion, precio, colores, agotado } = req.body;
-  if (!codigo || !descripcion || precio == null || !Array.isArray(colores) || colores.length === 0) {
-    return res.status(400).json({ error: 'codigo, descripcion, precio y al menos un color son obligatorios' });
-  }
-  try {
-    const r = await pool.query(
-      'INSERT INTO catalogo (codigo, descripcion, precio, colores, agotado) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [codigo.trim(), descripcion.trim(), precio, colores, agotado ? 1 : 0]
-    );
-    res.status(201).json(r.rows[0]);
-  } catch (err) {
-    res.status(400).json({ error: `Ya existe el código "${codigo}" en el catálogo` });
-  }
-});
-
-app.put('/api/catalogo/:id', requireLogin, requireAdmin, async (req, res) => {
-  const { descripcion, precio, colores, agotado } = req.body;
-  if (!descripcion || precio == null || !Array.isArray(colores) || colores.length === 0) {
-    return res.status(400).json({ error: 'descripcion, precio y al menos un color son obligatorios' });
-  }
-  const r = await pool.query(
-    'UPDATE catalogo SET descripcion = $1, precio = $2, colores = $3, agotado = $4 WHERE id = $5 RETURNING *',
-    [descripcion.trim(), precio, colores, agotado ? 1 : 0, req.params.id]
-  );
-  if (r.rowCount === 0) {
-    return res.status(404).json({ error: 'Producto no encontrado' });
-  }
-  res.json(r.rows[0]);
-});
-
-app.delete('/api/catalogo/:id', requireLogin, requireAdmin, async (req, res) => {
-  const r = await pool.query('DELETE FROM catalogo WHERE id = $1', [req.params.id]);
-  if (r.rowCount === 0) {
-    return res.status(404).json({ error: 'Producto no encontrado' });
-  }
-  res.status(204).send();
-});
-
 // --- Ventas (proforma libre) ---
 // Body: { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: [{ producto, cantidad, precio_unitario }] }
 
@@ -167,7 +121,6 @@ function formatNumeroProforma(numero) {
 
 app.post('/api/ventas', requireLogin, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
-  const descuentoPct = req.body.descuento_pct ? parseFloat(req.body.descuento_pct) : 0;
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
   }
@@ -175,9 +128,6 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     if (!item.producto || !item.cantidad || item.cantidad <= 0 || item.precio_unitario == null || item.precio_unitario < 0) {
       return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
     }
-  }
-  if (isNaN(descuentoPct) || descuentoPct < 0 || descuentoPct > 100) {
-    return res.status(400).json({ error: 'El descuento debe ser un porcentaje entre 0 y 100' });
   }
 
   const turno = await getTurnoAbierto();
@@ -189,17 +139,16 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const subtotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
-    const total = subtotal * (1 - descuentoPct / 100);
+    const total = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
 
     const contador = await client.query("SELECT valor FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
     const numeroProforma = parseInt(contador.rows[0].valor, 10) + 1;
     await client.query("UPDATE configuracion SET valor = $1 WHERE clave = 'ultimo_numero_proforma'", [String(numeroProforma)]);
 
     const ventaResult = await client.query(
-      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, total, numero_proforma, descuento_pct)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, total, numeroProforma, descuentoPct]
+      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, total, numero_proforma)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, total, numeroProforma]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -258,7 +207,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   const numVentasR = await pool.query('SELECT COUNT(*) AS c FROM ventas');
   const ventasR = await pool.query(`
     SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono,
-           v.fecha, v.total, v.descuento_pct, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
+           v.fecha, v.total, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
            u.usuario AS vendedor, au.usuario AS anulada_por_usuario
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
@@ -359,7 +308,6 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
 
 app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
-  const descuentoPct = req.body.descuento_pct ? parseFloat(req.body.descuento_pct) : 0;
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
   }
@@ -367,9 +315,6 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     if (!item.producto || !item.cantidad || item.cantidad <= 0 || item.precio_unitario == null || item.precio_unitario < 0) {
       return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
     }
-  }
-  if (isNaN(descuentoPct) || descuentoPct < 0 || descuentoPct > 100) {
-    return res.status(400).json({ error: 'El descuento debe ser un porcentaje entre 0 y 100' });
   }
 
   const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
@@ -381,8 +326,7 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     return res.status(400).json({ error: 'No se puede editar una venta anulada o eliminada' });
   }
 
-  const subtotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
-  const nuevoTotal = subtotal * (1 - descuentoPct / 100);
+  const nuevoTotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
   const diferencia = nuevoTotal - venta.total;
 
   const client = await pool.connect();
@@ -390,8 +334,8 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     await client.query('BEGIN');
 
     await client.query(
-      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, total = $5, descuento_pct = $6 WHERE id = $7`,
-      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, nuevoTotal, descuentoPct, venta.id]
+      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, total = $5 WHERE id = $6`,
+      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, nuevoTotal, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
