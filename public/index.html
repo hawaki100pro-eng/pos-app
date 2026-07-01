@@ -137,6 +137,23 @@
       <button id="crear-usuario-btn">Crear usuario</button>
     </div>
     <p id="usuario-msg"></p>
+
+    <h2>Catálogo / Inventario</h2>
+    <div class="item-row-nueva">
+      <input type="text" id="prod-modelo" placeholder="Modelo (ej: Sandalia Roma)" style="flex:2;min-width:140px">
+      <input type="text" id="prod-talla" placeholder="Talla (ej: 36)" style="flex:0.6;min-width:60px">
+      <input type="text" id="prod-color" placeholder="Color" style="flex:1;min-width:80px">
+      <input type="number" id="prod-precio" placeholder="Precio" min="0" step="0.01" style="flex:0.8;min-width:80px">
+      <input type="number" id="prod-stock" placeholder="Stock" min="0" step="1" style="flex:0.6;min-width:60px">
+      <button id="crear-producto-btn">Agregar</button>
+    </div>
+    <p id="producto-msg"></p>
+    <div class="table-wrap">
+      <table id="productos-tabla">
+        <thead><tr><th>Modelo</th><th>Talla</th><th>Color</th><th>Precio</th><th>Stock</th><th>Activo</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- Modal de edición de venta (solo dueño) -->

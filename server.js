@@ -520,6 +520,45 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireAdmin, async (req, res
   res.json(r.rows[0]);
 });
 
+// --- Catálogo / Inventario ---
+
+app.get('/api/productos', requireLogin, requireAdmin, async (req, res) => {
+  const r = await pool.query('SELECT * FROM productos ORDER BY modelo, color, talla');
+  res.json(r.rows);
+});
+
+app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
+  const { modelo, talla, color, precio, stock } = req.body;
+  if (!modelo?.trim() || !talla?.trim() || !color?.trim() || precio == null || precio < 0 || stock == null || stock < 0) {
+    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+  }
+  const r = await pool.query(
+    'INSERT INTO productos (modelo, talla, color, precio, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock)]
+  );
+  res.status(201).json(r.rows[0]);
+});
+
+app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
+  const { modelo, talla, color, precio, stock } = req.body;
+  if (!modelo?.trim() || !talla?.trim() || !color?.trim() || precio == null || precio < 0 || stock == null || stock < 0) {
+    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+  }
+  const r = await pool.query(
+    'UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5 WHERE id=$6 RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), req.params.id]
+  );
+  if (r.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
+  res.json(r.rows[0]);
+});
+
+app.post('/api/productos/:id/activo', requireLogin, requireAdmin, async (req, res) => {
+  const { activo } = req.body;
+  await pool.query('UPDATE productos SET activo=$1 WHERE id=$2', [activo ? 1 : 0, req.params.id]);
+  const r = await pool.query('SELECT * FROM productos WHERE id=$1', [req.params.id]);
+  res.json(r.rows[0]);
+});
+
 const PORT = process.env.PORT || 3001;
 
 init()

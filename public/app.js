@@ -57,6 +57,7 @@ function mostrarPantalla(rol) {
     cargarDashboard();
     cargarUsuarios();
     cargarGastos();
+    cargarProductos();
   } else {
     vendedorScreen.classList.remove('hidden');
     cargarEstadoCaja();
@@ -598,6 +599,124 @@ document.getElementById('crear-usuario-btn').addEventListener('click', async () 
   document.getElementById('nuevo-usuario').value = '';
   document.getElementById('nuevo-password').value = '';
   cargarUsuarios();
+});
+
+// --- Catálogo / Inventario ---
+
+async function cargarProductos() {
+  const res = await fetch('/api/productos');
+  if (!res.ok) return;
+  const productos = await res.json();
+  const tbody = document.querySelector('#productos-tabla tbody');
+  tbody.innerHTML = '';
+  productos.forEach((p) => {
+    const tr = document.createElement('tr');
+    if (!p.activo) tr.style.opacity = '0.5';
+    const stockBajo = p.stock <= 3;
+    tr.innerHTML = `
+      <td>${p.modelo}</td>
+      <td>${p.talla}</td>
+      <td>${p.color}</td>
+      <td>$${p.precio.toFixed(2)}</td>
+      <td style="${stockBajo ? 'color:#dc2626;font-weight:bold' : ''}">${p.stock}${stockBajo ? ' ⚠' : ''}</td>
+      <td>${p.activo ? 'Sí' : 'No'}</td>
+      <td></td>
+    `;
+
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones-venta';
+
+    const btnEditar = document.createElement('button');
+    btnEditar.textContent = '✎ Editar';
+    btnEditar.className = 'accion-btn editar-btn';
+    btnEditar.addEventListener('click', () => editarProducto(p));
+    acciones.appendChild(btnEditar);
+
+    const btnToggle = document.createElement('button');
+    btnToggle.textContent = p.activo ? 'Desactivar' : 'Activar';
+    btnToggle.className = 'accion-btn';
+    btnToggle.style.background = p.activo ? '#dc2626' : '#16a34a';
+    btnToggle.style.color = '#fff';
+    btnToggle.addEventListener('click', () => toggleProducto(p));
+    acciones.appendChild(btnToggle);
+
+    tr.lastElementChild.appendChild(acciones);
+    tbody.appendChild(tr);
+  });
+}
+
+async function editarProducto(p) {
+  const modelo = window.prompt('Modelo:', p.modelo);
+  if (modelo === null) return;
+  const talla = window.prompt('Talla:', p.talla);
+  if (talla === null) return;
+  const color = window.prompt('Color:', p.color);
+  if (color === null) return;
+  const precioStr = window.prompt('Precio:', p.precio);
+  if (precioStr === null) return;
+  const stockStr = window.prompt('Stock actual:', p.stock);
+  if (stockStr === null) return;
+
+  const precio = parseFloat(precioStr);
+  const stock = parseInt(stockStr, 10);
+  if (!modelo.trim() || !talla.trim() || !color.trim() || isNaN(precio) || precio < 0 || isNaN(stock) || stock < 0) {
+    alert('Datos inválidos');
+    return;
+  }
+
+  const res = await fetch(`/api/productos/${p.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modelo: modelo.trim(), talla: talla.trim(), color: color.trim(), precio, stock }),
+  });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarProductos();
+}
+
+async function toggleProducto(p) {
+  const res = await fetch(`/api/productos/${p.id}/activo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ activo: !p.activo }),
+  });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarProductos();
+}
+
+document.getElementById('crear-producto-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('producto-msg');
+  const modelo = document.getElementById('prod-modelo').value.trim();
+  const talla = document.getElementById('prod-talla').value.trim();
+  const color = document.getElementById('prod-color').value.trim();
+  const precio = parseFloat(document.getElementById('prod-precio').value);
+  const stock = parseInt(document.getElementById('prod-stock').value, 10);
+
+  if (!modelo || !talla || !color || isNaN(precio) || precio < 0 || isNaN(stock) || stock < 0) {
+    msg.textContent = 'Completa todos los campos con valores válidos';
+    msg.className = 'error';
+    return;
+  }
+
+  const res = await fetch('/api/productos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modelo, talla, color, precio, stock }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    msg.textContent = data.error;
+    msg.className = 'error';
+    return;
+  }
+
+  msg.textContent = `Producto "${data.modelo} T${data.talla} ${data.color}" agregado con stock ${data.stock}`;
+  msg.className = '';
+  document.getElementById('prod-modelo').value = '';
+  document.getElementById('prod-talla').value = '';
+  document.getElementById('prod-color').value = '';
+  document.getElementById('prod-precio').value = '';
+  document.getElementById('prod-stock').value = '';
+  cargarProductos();
 });
 
 // --- Al cargar la página, verificar si ya hay sesión activa ---

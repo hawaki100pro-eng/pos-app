@@ -66,6 +66,16 @@ async function init() {
       monto REAL NOT NULL,
       fecha TIMESTAMP NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS productos (
+      id SERIAL PRIMARY KEY,
+      modelo TEXT NOT NULL,
+      talla TEXT NOT NULL,
+      color TEXT NOT NULL,
+      precio REAL NOT NULL,
+      stock INTEGER NOT NULL DEFAULT 0,
+      activo INTEGER NOT NULL DEFAULT 1
+    );
   `);
 
   // Migración: agrega el rol 'dueno' (admin + permisos extra de editar/eliminar ventas)
