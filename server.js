@@ -155,6 +155,56 @@ app.post('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
   }
 });
 
+app.put('/api/gastos/:id', requireLogin, requireAdmin, async (req, res) => {
+  const { descripcion, monto } = req.body;
+  if (!descripcion || !descripcion.trim() || monto == null || monto <= 0) {
+    return res.status(400).json({ error: 'descripcion y monto (mayor a 0) son obligatorios' });
+  }
+
+  const gastoR = await pool.query('SELECT * FROM gastos WHERE id = $1', [req.params.id]);
+  const gasto = gastoR.rows[0];
+  if (!gasto) return res.status(404).json({ error: 'Gasto no encontrado' });
+
+  const diferencia = monto - gasto.monto; // si el monto sube, la caja baja más; si baja, la caja sube
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const r = await client.query(
+      'UPDATE gastos SET descripcion = $1, monto = $2 WHERE id = $3 RETURNING *',
+      [descripcion.trim(), monto, gasto.id]
+    );
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [diferencia, gasto.turno_id]);
+    await client.query('COMMIT');
+    res.json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+app.delete('/api/gastos/:id', requireLogin, requireAdmin, async (req, res) => {
+  const gastoR = await pool.query('SELECT * FROM gastos WHERE id = $1', [req.params.id]);
+  const gasto = gastoR.rows[0];
+  if (!gasto) return res.status(404).json({ error: 'Gasto no encontrado' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM gastos WHERE id = $1', [gasto.id]);
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [gasto.monto, gasto.turno_id]);
+    await client.query('COMMIT');
+    res.status(204).send();
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Gastos del turno abierto actual (o, si no hay turno abierto, los últimos registrados)
 app.get('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
   const turno = await getTurnoAbierto();

@@ -460,9 +460,56 @@ async function cargarGastos() {
   tbody.innerHTML = '';
   gastos.forEach((g) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${formatFecha(g.fecha)}</td><td>${g.descripcion}</td><td>$${g.monto.toFixed(2)}</td><td>${g.registrado_por}</td>`;
+    tr.innerHTML = `<td>${formatFecha(g.fecha)}</td><td>${g.descripcion}</td><td>$${g.monto.toFixed(2)}</td><td>${g.registrado_por}</td><td></td>`;
+
+    const tdAccion = tr.lastElementChild;
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones-venta';
+
+    const btnEditar = document.createElement('button');
+    btnEditar.textContent = '✎ Editar';
+    btnEditar.className = 'accion-btn editar-btn';
+    btnEditar.addEventListener('click', () => editarGasto(g));
+    acciones.appendChild(btnEditar);
+
+    const btnEliminar = document.createElement('button');
+    btnEliminar.textContent = '🗑 Eliminar';
+    btnEliminar.className = 'accion-btn anular-btn';
+    btnEliminar.addEventListener('click', () => eliminarGasto(g));
+    acciones.appendChild(btnEliminar);
+
+    tdAccion.appendChild(acciones);
     tbody.appendChild(tr);
   });
+}
+
+async function editarGasto(g) {
+  const nuevaDesc = window.prompt('Descripción:', g.descripcion);
+  if (nuevaDesc === null) return;
+  const nuevoMontoStr = window.prompt('Monto:', g.monto);
+  if (nuevoMontoStr === null) return;
+  const nuevoMonto = parseFloat(nuevoMontoStr);
+  if (!nuevaDesc.trim() || isNaN(nuevoMonto) || nuevoMonto <= 0) {
+    alert('Descripción y monto válido son obligatorios');
+    return;
+  }
+  const res = await fetch(`/api/gastos/${g.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ descripcion: nuevaDesc.trim(), monto: nuevoMonto }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error); return; }
+  cargarGastos();
+  cargarDashboard();
+}
+
+async function eliminarGasto(g) {
+  if (!confirm(`¿Eliminar gasto "${g.descripcion}" de $${g.monto.toFixed(2)}? El monto vuelve a la caja.`)) return;
+  const res = await fetch(`/api/gastos/${g.id}`, { method: 'DELETE' });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarGastos();
+  cargarDashboard();
 }
 
 document.getElementById('registrar-gasto-btn').addEventListener('click', async () => {
