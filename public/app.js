@@ -206,6 +206,7 @@ async function cargarDashboard() {
     document.getElementById('caja-inicial').textContent = data.turno.monto_inicial.toFixed(2);
     document.getElementById('caja-actual').textContent = data.turno.monto_actual.toFixed(2);
     document.getElementById('caja-transferencias').textContent = data.totalTransferenciasTurno.toFixed(2);
+    document.getElementById('vaciar-caja-btn').classList.toggle('hidden', rolActual !== 'dueno');
   } else {
     abiertaCard.classList.add('hidden');
     cerradaCard.classList.remove('hidden');
@@ -418,6 +419,21 @@ document.getElementById('abrir-caja-btn').addEventListener('click', async () => 
   msg.textContent = 'Caja abierta';
   msg.className = '';
   document.getElementById('monto-inicial-input').value = '';
+  cargarDashboard();
+});
+
+document.getElementById('vaciar-caja-btn').addEventListener('click', async () => {
+  if (!confirm('¿Seguro? Esto pone el monto inicial y actual en $0.00. La caja sigue abierta.')) return;
+  const msg = document.getElementById('caja-msg');
+  const res = await fetch('/api/caja/vaciar', { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) {
+    msg.textContent = data.error;
+    msg.className = 'error';
+    return;
+  }
+  msg.textContent = 'Caja vaciada. Todos los montos en $0.00.';
+  msg.className = '';
   cargarDashboard();
 });
 

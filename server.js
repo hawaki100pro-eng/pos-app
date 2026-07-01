@@ -102,6 +102,18 @@ app.post('/api/caja/cerrar', requireLogin, requireAdmin, async (req, res) => {
   res.json(r.rows[0]);
 });
 
+app.post('/api/caja/vaciar', requireLogin, requireDueño, async (req, res) => {
+  const turno = await getTurnoAbierto();
+  if (!turno) {
+    return res.status(400).json({ error: 'No hay un turno de caja abierto' });
+  }
+  const r = await pool.query(
+    `UPDATE turnos_caja SET monto_inicial = 0, monto_actual = 0 WHERE id = $1 RETURNING *`,
+    [turno.id]
+  );
+  res.json(r.rows[0]);
+});
+
 app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
   const r = await pool.query(`
     SELECT t.*, u.usuario AS abierto_por_usuario
