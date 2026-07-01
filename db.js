@@ -95,6 +95,9 @@ async function init() {
     ALTER TABLE ventas ADD COLUMN IF NOT EXISTS eliminada_por INTEGER REFERENCES usuarios(id);
   `);
 
+  // Migración: producto_id en detalle_venta para vincular ítems del catálogo
+  await pool.query(`ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS producto_id INTEGER REFERENCES productos(id)`);
+
   // Migración: método de pago (efectivo/transferencia). Las transferencias no suman a la caja física.
   await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS metodo_pago TEXT NOT NULL DEFAULT 'efectivo'`);
   await pool.query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_metodo_pago_check`);

@@ -46,6 +46,7 @@
         <input type="number" id="item-cantidad" placeholder="Cant." min="1" value="1">
         <input type="number" id="item-precio" placeholder="Precio unitario" min="0" step="0.01">
         <button id="agregar-item-btn">Agregar</button>
+        <button id="buscar-catalogo-btn" type="button" style="background:#6b7280;">📦 Catálogo</button>
       </div>
 
       <p>Total: $<span id="carrito-total">0.00</span></p>
@@ -151,6 +152,21 @@
     <div class="table-wrap">
       <table id="productos-tabla">
         <thead><tr><th>Modelo</th><th>Talla</th><th>Color</th><th>Precio</th><th>Stock</th><th>Activo</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal catálogo para vendedor -->
+  <div id="catalogo-modal" class="container hidden" style="position:fixed;top:5%;left:50%;transform:translateX(-50%);z-index:10;max-height:90vh;overflow-y:auto;min-width:320px;width:95%;max-width:600px;">
+    <div class="top-bar">
+      <h2>Seleccionar producto</h2>
+      <button id="cerrar-catalogo-btn">Cerrar</button>
+    </div>
+    <input type="text" id="catalogo-buscar" placeholder="Buscar por modelo, talla o color...">
+    <div class="table-wrap" style="margin-top:12px;">
+      <table id="catalogo-tabla">
+        <thead><tr><th>Modelo</th><th>Talla</th><th>Color</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>

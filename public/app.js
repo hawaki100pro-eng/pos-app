@@ -95,7 +95,8 @@ async function cargarEstadoCaja() {
 }
 
 document.getElementById('agregar-item-btn').addEventListener('click', () => {
-  const producto = document.getElementById('item-producto').value.trim();
+  const inputProducto = document.getElementById('item-producto');
+  const producto = inputProducto.value.trim();
   const cantidad = parseFloat(document.getElementById('item-cantidad').value);
   const precio_unitario = parseFloat(document.getElementById('item-precio').value);
 
@@ -105,13 +106,75 @@ document.getElementById('agregar-item-btn').addEventListener('click', () => {
     return;
   }
 
-  items.push({ producto, cantidad, precio_unitario });
-  document.getElementById('item-producto').value = '';
+  const producto_id = inputProducto.dataset.productoId ? parseInt(inputProducto.dataset.productoId) : null;
+  items.push({ producto, cantidad, precio_unitario, producto_id });
+  inputProducto.value = '';
+  inputProducto.dataset.productoId = '';
   document.getElementById('item-cantidad').value = '1';
   document.getElementById('item-precio').value = '';
   document.getElementById('venta-msg').textContent = '';
   renderItems();
 });
+
+// --- Modal catálogo ---
+
+let productosDisponibles = [];
+
+document.getElementById('buscar-catalogo-btn').addEventListener('click', async () => {
+  const res = await fetch('/api/productos/disponibles');
+  productosDisponibles = await res.json();
+  document.getElementById('catalogo-buscar').value = '';
+  renderCatalogoModal(productosDisponibles);
+  document.getElementById('catalogo-modal').classList.remove('hidden');
+});
+
+document.getElementById('cerrar-catalogo-btn').addEventListener('click', () => {
+  document.getElementById('catalogo-modal').classList.add('hidden');
+});
+
+document.getElementById('catalogo-buscar').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  const filtrados = productosDisponibles.filter((p) =>
+    p.modelo.toLowerCase().includes(q) ||
+    p.talla.toLowerCase().includes(q) ||
+    p.color.toLowerCase().includes(q)
+  );
+  renderCatalogoModal(filtrados);
+});
+
+function renderCatalogoModal(productos) {
+  const tbody = document.querySelector('#catalogo-tabla tbody');
+  tbody.innerHTML = '';
+  if (productos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">Sin resultados</td></tr>';
+    return;
+  }
+  productos.forEach((p) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p.modelo}</td>
+      <td>${p.talla}</td>
+      <td>${p.color}</td>
+      <td>$${p.precio.toFixed(2)}</td>
+      <td>${p.stock}</td>
+      <td></td>
+    `;
+    const btn = document.createElement('button');
+    btn.textContent = 'Seleccionar';
+    btn.className = 'accion-btn editar-btn';
+    btn.addEventListener('click', () => {
+      const inputProducto = document.getElementById('item-producto');
+      inputProducto.value = `${p.modelo} T${p.talla} ${p.color}`;
+      inputProducto.dataset.productoId = p.id;
+      document.getElementById('item-precio').value = p.precio;
+      document.getElementById('item-cantidad').value = 1;
+      document.getElementById('catalogo-modal').classList.add('hidden');
+      document.getElementById('item-cantidad').focus();
+    });
+    tr.lastElementChild.appendChild(btn);
+    tbody.appendChild(tr);
+  });
+}
 
 function renderItems() {
   const cont = document.getElementById('items-lista');

@@ -262,9 +262,16 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
 
     for (const item of items) {
       await client.query(
-        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)',
-        [ventaId, item.producto, item.cantidad, item.precio_unitario]
+        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario, producto_id) VALUES ($1, $2, $3, $4, $5)',
+        [ventaId, item.producto, item.cantidad, item.precio_unitario, item.producto_id || null]
       );
+      if (item.producto_id) {
+        const stockR = await client.query('SELECT stock FROM productos WHERE id = $1 FOR UPDATE', [item.producto_id]);
+        if (!stockR.rows[0] || stockR.rows[0].stock < item.cantidad) {
+          throw new Error(`Stock insuficiente para "${item.producto}"`);
+        }
+        await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.cantidad, item.producto_id]);
+      }
     }
 
     // Las transferencias no entran a la caja física: solo el efectivo suma a monto_actual
@@ -371,9 +378,13 @@ app.post('/api/ventas/:id/anular', requireLogin, requireAdmin, async (req, res) 
       `UPDATE ventas SET anulada = 1, fecha_anulacion = NOW(), motivo_anulacion = $1, anulada_por = $2 WHERE id = $3`,
       [motivo.trim(), req.session.user.id, venta.id]
     );
-    // Las transferencias nunca sumaron a la caja física, así que tampoco se restan al anular
     if (venta.metodo_pago === 'efectivo') {
       await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
+    }
+    // Restaurar stock de ítems del catálogo
+    const detalleAnular = await client.query('SELECT * FROM detalle_venta WHERE venta_id = $1 AND producto_id IS NOT NULL', [venta.id]);
+    for (const d of detalleAnular.rows) {
+      await client.query('UPDATE productos SET stock = stock + $1 WHERE id = $2', [d.cantidad, d.producto_id]);
     }
     await client.query('COMMIT');
   } catch (err) {
@@ -415,6 +426,13 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
     // Si ya estaba anulada, o era transferencia, la caja nunca tuvo ese monto (o ya se ajustó), no se vuelve a restar.
     if (!venta.anulada && venta.metodo_pago === 'efectivo') {
       await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
+    }
+    // Restaurar stock solo si no estaba anulada (si estaba anulada, el stock ya se restauró al anular)
+    if (!venta.anulada) {
+      const detalleElim = await client.query('SELECT * FROM detalle_venta WHERE venta_id = $1 AND producto_id IS NOT NULL', [venta.id]);
+      for (const d of detalleElim.rows) {
+        await client.query('UPDATE productos SET stock = stock + $1 WHERE id = $2', [d.cantidad, d.producto_id]);
+      }
     }
     await client.query('COMMIT');
   } catch (err) {
@@ -521,6 +539,14 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireAdmin, async (req, res
 });
 
 // --- Catálogo / Inventario ---
+
+// Catálogo disponible para vendedores (activo y con stock)
+app.get('/api/productos/disponibles', requireLogin, async (req, res) => {
+  const r = await pool.query(
+    `SELECT * FROM productos WHERE activo = 1 AND stock > 0 ORDER BY modelo, color, talla`
+  );
+  res.json(r.rows);
+});
 
 app.get('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   const r = await pool.query('SELECT * FROM productos ORDER BY modelo, color, talla');
