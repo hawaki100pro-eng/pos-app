@@ -701,14 +701,15 @@ async function cargarProductos() {
   productos.forEach((p) => {
     const tr = document.createElement('tr');
     if (!p.activo) tr.style.opacity = '0.5';
-    const stockBajo = p.stock <= 3;
+    const stockRojo = p.stock === 2;
+    const stockAzul = p.stock === 1;
+    const stockColor = stockRojo ? 'color:#dc2626;font-weight:bold' : stockAzul ? 'color:#0369a1;font-weight:bold' : '';
     tr.innerHTML = `
       <td>${p.modelo}</td>
       <td>${p.talla}</td>
       <td>${p.color}</td>
       <td>$${p.precio.toFixed(2)}</td>
-      <td style="${stockBajo ? 'color:#dc2626;font-weight:bold' : ''}">${p.stock}${stockBajo ? ' ⚠' : ''}</td>
-      <td>${p.activo ? 'Sí' : 'No'}</td>
+      <td style="${stockColor}">${p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
       <td></td>
     `;
 
