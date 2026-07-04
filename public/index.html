@@ -29,15 +29,23 @@
     <div id="caja-cerrada-msg" class="error hidden">La caja está cerrada. Pide al administrador que abra el turno antes de vender.</div>
 
     <div id="venta-form-wrap" class="hidden">
-      <h2>Nueva proforma</h2>
-      <label>Sr.(es)</label>
-      <input type="text" id="cliente-nombre" placeholder="Nombre del cliente (opcional)">
-      <label>Dirección</label>
-      <input type="text" id="cliente-direccion" placeholder="Dirección (opcional)">
-      <label>RUC / C.I.</label>
-      <input type="text" id="cliente-ruc" placeholder="RUC o cédula (opcional)">
-      <label>Telf.</label>
-      <input type="text" id="cliente-telefono" placeholder="Teléfono (opcional)">
+      <h2>📋 Nota de venta</h2>
+
+      <div class="tipo-cliente-row">
+        <button id="btn-consumidor-final" type="button" class="tipo-btn">Consumidor final</button>
+        <button id="btn-consumidor-datos" type="button" class="tipo-btn">Con datos</button>
+      </div>
+
+      <div id="campos-cliente" class="hidden">
+        <label>Sr.(es)</label>
+        <input type="text" id="cliente-nombre" placeholder="Nombre del cliente">
+        <label>Dirección</label>
+        <input type="text" id="cliente-direccion" placeholder="Dirección">
+        <label>RUC / C.I.</label>
+        <input type="text" id="cliente-ruc" placeholder="RUC o cédula">
+        <label>Telf.</label>
+        <input type="text" id="cliente-telefono" placeholder="Teléfono">
+      </div>
 
       <h3>Productos</h3>
       <div id="items-lista"></div>

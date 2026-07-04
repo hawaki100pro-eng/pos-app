@@ -94,6 +94,35 @@ async function cargarEstadoCaja() {
   }
 }
 
+// --- Tipo de cliente ---
+
+function resetTipoCliente() {
+  document.getElementById('campos-cliente').classList.add('hidden');
+  document.getElementById('btn-consumidor-final').classList.remove('activo');
+  document.getElementById('btn-consumidor-datos').classList.remove('activo');
+  document.getElementById('cliente-nombre').value = '';
+  document.getElementById('cliente-direccion').value = '';
+  document.getElementById('cliente-ruc').value = '';
+  document.getElementById('cliente-telefono').value = '';
+}
+
+document.getElementById('btn-consumidor-final').addEventListener('click', () => {
+  document.getElementById('campos-cliente').classList.add('hidden');
+  document.getElementById('cliente-nombre').value = 'Consumidor final';
+  document.getElementById('cliente-direccion').value = '';
+  document.getElementById('cliente-ruc').value = '';
+  document.getElementById('cliente-telefono').value = '';
+  document.getElementById('btn-consumidor-final').classList.add('activo');
+  document.getElementById('btn-consumidor-datos').classList.remove('activo');
+});
+
+document.getElementById('btn-consumidor-datos').addEventListener('click', () => {
+  document.getElementById('campos-cliente').classList.remove('hidden');
+  document.getElementById('cliente-nombre').value = '';
+  document.getElementById('btn-consumidor-datos').classList.add('activo');
+  document.getElementById('btn-consumidor-final').classList.remove('activo');
+});
+
 document.getElementById('agregar-item-btn').addEventListener('click', () => {
   const inputProducto = document.getElementById('item-producto');
   const producto = inputProducto.value.trim();
@@ -232,10 +261,7 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   imprimirLink.classList.remove('hidden');
 
   items = [];
-  document.getElementById('cliente-nombre').value = '';
-  document.getElementById('cliente-direccion').value = '';
-  document.getElementById('cliente-ruc').value = '';
-  document.getElementById('cliente-telefono').value = '';
+  resetTipoCliente();
   document.querySelector('input[name="metodo-pago"][value="efectivo"]').checked = true;
   renderItems();
   cargarMisVentas();
