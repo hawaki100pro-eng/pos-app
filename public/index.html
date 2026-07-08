@@ -26,7 +26,7 @@
       <button id="logout-btn-v">Salir</button>
     </div>
 
-    <div id="caja-cerrada-msg" class="error hidden">La caja está cerrada. Pide al administrador que abra el turno antes de vender.</div>
+    <div id="cajita-cerrada-msg" class="error hidden">La cajita está cerrada. Pide al administrador que abra el turno antes de vender.</div>
 
     <div id="venta-form-wrap" class="hidden">
       <h2>📋 Nota de venta</h2>
@@ -86,23 +86,23 @@
       <button id="logout-btn-a">Salir</button>
     </div>
 
-    <h2>Caja</h2>
-    <div id="caja-abierta-card" class="card hidden">
+    <h2>cajita</h2>
+    <div id="cajita-abierta-card" class="card hidden">
       <span class="card-label">Monto inicial</span>
-      <span class="card-value">$<span id="caja-inicial">0.00</span></span>
+      <span class="card-value">$<span id="cajita-inicial">0.00</span></span>
       <span class="card-label">Monto actual</span>
-      <span class="card-value">$<span id="caja-actual">0.00</span></span>
-      <span class="card-label">Transferencias (no en caja)</span>
-      <span class="card-value">$<span id="caja-transferencias">0.00</span></span>
-      <button id="cerrar-caja-btn">Cerrar caja</button>
-      <button id="vaciar-caja-btn" class="hidden" style="background:#dc2626;">Vaciar caja ($0)</button>
+      <span class="card-value">$<span id="cajita-actual">0.00</span></span>
+      <span class="card-label">Transferencias (no en cajita)</span>
+      <span class="card-value">$<span id="cajita-transferencias">0.00</span></span>
+      <button id="cerrar-cajita-btn">Cerrar cajita</button>
+      <button id="vaciar-cajita-btn" class="hidden" style="background:#dc2626;">Vaciar cajita ($0)</button>
     </div>
-    <div id="caja-cerrada-card" class="hidden">
-      <p>No hay turno de caja abierto.</p>
+    <div id="cajita-cerrada-card" class="hidden">
+      <p>No hay turno de cajita abierto.</p>
       <input type="number" id="monto-inicial-input" placeholder="Monto inicial" min="0" step="0.01">
-      <button id="abrir-caja-btn">Abrir caja</button>
+      <button id="abrir-cajita-btn">Abrir cajita</button>
     </div>
-    <p id="caja-msg"></p>
+    <p id="cajita-msg"></p>
 
     <h2>Gastos</h2>
     <div class="item-row-nueva">
