@@ -541,13 +541,20 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireAdmin, async (req, res
 // Catálogo disponible para vendedores (activo y con stock)
 app.get('/api/productos/disponibles', requireLogin, async (req, res) => {
   const r = await pool.query(
-    `SELECT * FROM productos WHERE activo = 1 AND stock > 0 ORDER BY modelo, color, talla`
+    `SELECT * FROM productos WHERE activo = 1 AND stock > 0 AND eliminado = 0 ORDER BY modelo, color, talla`
   );
   res.json(r.rows);
 });
 
+// El admin no ve los productos eliminados; el dueño los ve todos, con el motivo y quién los eliminó
 app.get('/api/productos', requireLogin, requireAdmin, async (req, res) => {
-  const r = await pool.query('SELECT * FROM productos ORDER BY modelo, color, talla');
+  const r = req.session.user.rol === 'dueno'
+    ? await pool.query(`
+        SELECT p.*, u.usuario AS eliminado_por_usuario
+        FROM productos p
+        LEFT JOIN usuarios u ON u.id = p.eliminado_por
+        ORDER BY p.modelo, p.color, p.talla`)
+    : await pool.query('SELECT * FROM productos WHERE eliminado = 0 ORDER BY modelo, color, talla');
   res.json(r.rows);
 });
 
@@ -581,6 +588,22 @@ app.post('/api/productos/:id/activo', requireLogin, requireAdmin, async (req, re
   await pool.query('UPDATE productos SET activo=$1 WHERE id=$2', [activo ? 1 : 0, req.params.id]);
   const r = await pool.query('SELECT * FROM productos WHERE id=$1', [req.params.id]);
   res.json(r.rows[0]);
+});
+
+// Eliminación lógica de productos: el admin corrige errores ocultándolos de su panel,
+// pero el producto se conserva y el dueño lo sigue viendo junto con el motivo escrito.
+app.post('/api/productos/:id/eliminar', requireLogin, requireAdmin, async (req, res) => {
+  const { motivo } = req.body;
+  if (!motivo || !motivo.trim()) {
+    return res.status(400).json({ error: 'Debes escribir el motivo de la eliminación (el dueño lo verá)' });
+  }
+  const r = await pool.query(
+    `UPDATE productos SET eliminado = 1, motivo_eliminacion = $1, fecha_eliminacion = NOW(), eliminado_por = $2
+     WHERE id = $3 AND eliminado = 0 RETURNING *`,
+    [motivo.trim(), req.session.user.id, req.params.id]
+  );
+  if (r.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado o ya eliminado' });
+  res.status(204).send();
 });
 
 const PORT = process.env.PORT || 3001;

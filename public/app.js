@@ -700,12 +700,16 @@ async function cargarProductos() {
   tbody.innerHTML = '';
   productos.forEach((p) => {
     const tr = document.createElement('tr');
-    if (!p.activo) tr.style.opacity = '0.5';
+    if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
     const stockRojo = p.stock === 2;
     const stockAzul = p.stock === 1;
     const stockColor = stockRojo ? 'color:#dc2626;font-weight:bold' : stockAzul ? 'color:#0369a1;font-weight:bold' : '';
+    // Solo el dueño recibe productos eliminados del servidor: se muestran con el motivo que escribió el admin
+    const notaEliminado = p.eliminado
+      ? `<div class="nota-anulacion">Eliminado ${formatFecha(p.fecha_eliminacion)} por ${p.eliminado_por_usuario || 'admin'}: "${p.motivo_eliminacion}"</div>`
+      : '';
     tr.innerHTML = `
-      <td>${p.modelo}</td>
+      <td>${p.modelo}${notaEliminado}</td>
       <td>${p.talla}</td>
       <td>${p.color}</td>
       <td>$${p.precio.toFixed(2)}</td>
@@ -716,23 +720,54 @@ async function cargarProductos() {
     const acciones = document.createElement('div');
     acciones.className = 'acciones-venta';
 
-    const btnEditar = document.createElement('button');
-    btnEditar.textContent = '✎ Editar';
-    btnEditar.className = 'accion-btn editar-btn';
-    btnEditar.addEventListener('click', () => editarProducto(p));
-    acciones.appendChild(btnEditar);
+    if (p.eliminado) {
+      const badge = document.createElement('span');
+      badge.className = 'badge-anulada';
+      badge.textContent = 'ELIMINADO';
+      acciones.appendChild(badge);
+    } else {
+      const btnEditar = document.createElement('button');
+      btnEditar.textContent = '✎ Editar';
+      btnEditar.className = 'accion-btn editar-btn';
+      btnEditar.addEventListener('click', () => editarProducto(p));
+      acciones.appendChild(btnEditar);
 
-    const btnToggle = document.createElement('button');
-    btnToggle.textContent = p.activo ? 'Desactivar' : 'Activar';
-    btnToggle.className = 'accion-btn';
-    btnToggle.style.background = p.activo ? '#dc2626' : '#16a34a';
-    btnToggle.style.color = '#fff';
-    btnToggle.addEventListener('click', () => toggleProducto(p));
-    acciones.appendChild(btnToggle);
+      const btnToggle = document.createElement('button');
+      btnToggle.textContent = p.activo ? 'Desactivar' : 'Activar';
+      btnToggle.className = 'accion-btn';
+      btnToggle.style.background = p.activo ? '#dc2626' : '#16a34a';
+      btnToggle.style.color = '#fff';
+      btnToggle.addEventListener('click', () => toggleProducto(p));
+      acciones.appendChild(btnToggle);
+
+      const btnEliminar = document.createElement('button');
+      btnEliminar.textContent = '🗑 Eliminar';
+      btnEliminar.className = 'accion-btn';
+      btnEliminar.style.background = '#a855f7';
+      btnEliminar.style.color = '#fff';
+      btnEliminar.addEventListener('click', () => eliminarProducto(p));
+      acciones.appendChild(btnEliminar);
+    }
 
     tr.lastElementChild.appendChild(acciones);
     tbody.appendChild(tr);
   });
+}
+
+async function eliminarProducto(p) {
+  const motivo = window.prompt(`¿Por qué eliminas "${p.modelo} T${p.talla} ${p.color}"? (el dueño verá este motivo)`);
+  if (motivo === null) return;
+  if (!motivo.trim()) {
+    alert('Debes escribir el motivo');
+    return;
+  }
+  const res = await fetch(`/api/productos/${p.id}/eliminar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ motivo }),
+  });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarProductos();
 }
 
 async function editarProducto(p) {

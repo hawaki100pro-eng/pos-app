@@ -98,6 +98,14 @@ async function init() {
   // Migración: producto_id en detalle_venta para vincular ítems del catálogo
   await pool.query(`ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS producto_id INTEGER REFERENCES productos(id)`);
 
+  // Migración: borrado lógico de productos (el admin lo oculta de su panel; el dueño lo sigue viendo con el motivo)
+  await pool.query(`
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS eliminado INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS motivo_eliminacion TEXT;
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS fecha_eliminacion TIMESTAMP;
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS eliminado_por INTEGER REFERENCES usuarios(id);
+  `);
+
   // Migración: método de pago (efectivo/transferencia). Las transferencias no suman a la caja física.
   await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS metodo_pago TEXT NOT NULL DEFAULT 'efectivo'`);
   await pool.query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_metodo_pago_check`);
