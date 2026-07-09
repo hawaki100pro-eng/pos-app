@@ -401,10 +401,8 @@ app.post('/api/ventas/:id/anular', requireLogin, requireAdmin, async (req, res) 
 // --- Eliminación lógica de ventas (solo dueño): oculta del historial pero se conserva en la base de datos ---
 
 app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, res) => {
-  const { motivo } = req.body;
-  if (!motivo || !motivo.trim()) {
-    return res.status(400).json({ error: 'Debes indicar el motivo de la eliminación' });
-  }
+  // El motivo es opcional: si no se indica, se registra uno genérico para conservar el rastro de auditoría
+  const motivo = ((req.body && req.body.motivo) || '').trim() || 'Eliminada por el dueño';
 
   const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
   const venta = ventaR.rows[0];

@@ -358,16 +358,11 @@ async function cargarDashboard() {
 }
 
 async function eliminarVenta(ventaId) {
-  const motivo = window.prompt('Motivo de la eliminación (queda registrado, no se puede deshacer desde la interfaz):');
-  if (motivo === null) return;
-  if (!motivo.trim()) {
-    alert('Debes indicar un motivo');
-    return;
-  }
+  if (!confirm('¿Eliminar esta venta? Se ocultará del historial (no se puede deshacer desde la interfaz).')) return;
   const res = await fetch(`/api/ventas/${ventaId}/eliminar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ motivo }),
+    body: JSON.stringify({}),
   });
   if (!res.ok) {
     const data = await res.json();
