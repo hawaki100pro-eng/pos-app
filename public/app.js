@@ -317,7 +317,12 @@ async function cargarDashboard() {
 
     const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
 
-    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${metodoTexto}</td><td>${estadoHtml}</td><td></td>`;
+    // Punto verde: venta hecha "con datos" (nombre real del cliente o RUC/dirección/teléfono), a diferencia del consumidor final
+    const conDatos = (v.cliente && v.cliente.trim() && v.cliente.trim().toLowerCase() !== 'consumidor final')
+      || v.cliente_ruc || v.cliente_direccion || v.cliente_telefono;
+    const clienteHtml = `${conDatos ? '<span class="dot-cliente-datos"></span>' : ''}${v.cliente || '-'}`;
+
+    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${clienteHtml}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${metodoTexto}</td><td>${estadoHtml}</td><td></td>`;
 
     const tdAccion = tr.lastElementChild;
     const acciones = document.createElement('div');

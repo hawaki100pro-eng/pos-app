@@ -278,3 +278,13 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   padding: 2px 8px;
   border-radius: 4px;
 }
+
+.dot-cliente-datos {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #16a34a;
+  margin-right: 6px;
+  vertical-align: middle;
+}
