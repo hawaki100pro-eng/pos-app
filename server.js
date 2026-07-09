@@ -512,7 +512,8 @@ app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
   res.json(r.rows);
 });
 
-app.post('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
+// Solo el dueño puede crear usuarios y asignar roles
+app.post('/api/usuarios', requireLogin, requireDueño, async (req, res) => {
   const { usuario, password, rol } = req.body;
   if (!usuario || !password || !['admin', 'vendedor', 'dueno'].includes(rol)) {
     return res.status(400).json({ error: 'usuario, password y rol (admin/vendedor/dueño) son obligatorios' });

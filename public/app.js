@@ -54,6 +54,8 @@ function mostrarPantalla(rol) {
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
+    // Crear usuarios y asignar roles es exclusivo del dueño
+    document.getElementById('crear-usuario-row').classList.toggle('hidden', rol !== 'dueno');
     cargarDashboard();
     cargarUsuarios();
     cargarGastos();
