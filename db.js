@@ -87,13 +87,18 @@ async function init() {
   await pool.query(`UPDATE usuarios SET rol = 'dueno' WHERE rol = 'dueño'`);
   await pool.query(`ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('admin', 'vendedor', 'dueno'))`);
 
-  // Migración: columnas de borrado lógico en ventas (no se borra físicamente, queda oculta pero conservada)
+  // Migración: columnas de borrado lógico en ventas (hoy solo se usan como legado, ver limpieza de abajo)
   await pool.query(`
     ALTER TABLE ventas ADD COLUMN IF NOT EXISTS eliminada INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE ventas ADD COLUMN IF NOT EXISTS fecha_eliminacion TIMESTAMP;
     ALTER TABLE ventas ADD COLUMN IF NOT EXISTS motivo_eliminacion TEXT;
     ALTER TABLE ventas ADD COLUMN IF NOT EXISTS eliminada_por INTEGER REFERENCES usuarios(id);
   `);
+
+  // Limpieza: la eliminación del dueño ahora es definitiva. Las ventas que quedaron ocultas
+  // con el antiguo borrado lógico se purgan de verdad (sus ajustes de caja/stock ya se hicieron al eliminarlas).
+  await pool.query(`DELETE FROM detalle_venta WHERE venta_id IN (SELECT id FROM ventas WHERE eliminada = 1)`);
+  await pool.query(`DELETE FROM ventas WHERE eliminada = 1`);
 
   // Migración: producto_id en detalle_venta para vincular ítems del catálogo
   await pool.query(`ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS producto_id INTEGER REFERENCES productos(id)`);

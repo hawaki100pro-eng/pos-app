@@ -185,7 +185,8 @@ app.put('/api/gastos/:id', requireLogin, requireAdmin, async (req, res) => {
   }
 });
 
-app.delete('/api/gastos/:id', requireLogin, requireAdmin, async (req, res) => {
+// Borrar un gasto es una eliminación permanente: solo el dueño puede hacerlo
+app.delete('/api/gastos/:id', requireLogin, requireDueño, async (req, res) => {
   const gastoR = await pool.query('SELECT * FROM gastos WHERE id = $1', [req.params.id]);
   const gasto = gastoR.rows[0];
   if (!gasto) return res.status(404).json({ error: 'Gasto no encontrado' });
@@ -398,29 +399,19 @@ app.post('/api/ventas/:id/anular', requireLogin, requireAdmin, async (req, res) 
   res.json(actualizada.rows[0]);
 });
 
-// --- Eliminación lógica de ventas (solo dueño): oculta del historial pero se conserva en la base de datos ---
+// --- Eliminación definitiva de ventas (solo dueño): se borra por completo de la base de datos ---
 
 app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, res) => {
-  // El motivo es opcional: si no se indica, se registra uno genérico para conservar el rastro de auditoría
-  const motivo = ((req.body && req.body.motivo) || '').trim() || 'Eliminada por el dueño';
-
   const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
   const venta = ventaR.rows[0];
   if (!venta) {
     return res.status(404).json({ error: 'Venta no encontrada' });
   }
-  if (venta.eliminada) {
-    return res.status(400).json({ error: 'Esta venta ya fue eliminada' });
-  }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query(
-      `UPDATE ventas SET eliminada = 1, fecha_eliminacion = NOW(), motivo_eliminacion = $1, eliminada_por = $2 WHERE id = $3`,
-      [motivo.trim(), req.session.user.id, venta.id]
-    );
-    // Si la venta era en efectivo y no estaba anulada, su monto seguía contando en la caja: hay que restarlo al eliminarla.
+    // Si la venta era en efectivo y no estaba anulada, su monto seguía contando en la caja: hay que restarlo.
     // Si ya estaba anulada, o era transferencia, la caja nunca tuvo ese monto (o ya se ajustó), no se vuelve a restar.
     if (!venta.anulada && venta.metodo_pago === 'efectivo') {
       await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
@@ -432,6 +423,8 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
         await client.query('UPDATE productos SET stock = stock + $1 WHERE id = $2', [d.cantidad, d.producto_id]);
       }
     }
+    await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
+    await client.query('DELETE FROM ventas WHERE id = $1', [venta.id]);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -589,6 +582,25 @@ app.post('/api/productos/:id/activo', requireLogin, requireAdmin, async (req, re
   await pool.query('UPDATE productos SET activo=$1 WHERE id=$2', [activo ? 1 : 0, req.params.id]);
   const r = await pool.query('SELECT * FROM productos WHERE id=$1', [req.params.id]);
   res.json(r.rows[0]);
+});
+
+// Eliminación definitiva de productos (solo dueño): se borra por completo de la base de datos.
+// Las ventas históricas no se rompen: conservan el nombre del producto en texto, solo se desvincula la referencia.
+app.delete('/api/productos/:id', requireLogin, requireDueño, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('UPDATE detalle_venta SET producto_id = NULL WHERE producto_id = $1', [req.params.id]);
+    const r = await client.query('DELETE FROM productos WHERE id = $1', [req.params.id]);
+    await client.query('COMMIT');
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.status(204).send();
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // Eliminación lógica de productos: el admin corrige errores ocultándolos de su panel,

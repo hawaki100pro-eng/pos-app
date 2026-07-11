@@ -365,7 +365,7 @@ async function cargarDashboard() {
 }
 
 async function eliminarVenta(ventaId) {
-  if (!confirm('¿Eliminar esta venta? Se ocultará del historial (no se puede deshacer desde la interfaz).')) return;
+  if (!confirm('¿Eliminar esta venta PERMANENTEMENTE? Se borra de la base de datos y no se puede recuperar.')) return;
   const res = await fetch(`/api/ventas/${ventaId}/eliminar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -564,11 +564,14 @@ async function cargarGastos() {
     btnEditar.addEventListener('click', () => editarGasto(g));
     acciones.appendChild(btnEditar);
 
-    const btnEliminar = document.createElement('button');
-    btnEliminar.textContent = '🗑 Eliminar';
-    btnEliminar.className = 'accion-btn anular-btn';
-    btnEliminar.addEventListener('click', () => eliminarGasto(g));
-    acciones.appendChild(btnEliminar);
+    // Borrar un gasto es permanente: solo el dueño ve el botón
+    if (rolActual === 'dueno') {
+      const btnEliminar = document.createElement('button');
+      btnEliminar.textContent = '🗑 Eliminar';
+      btnEliminar.className = 'accion-btn anular-btn';
+      btnEliminar.addEventListener('click', () => eliminarGasto(g));
+      acciones.appendChild(btnEliminar);
+    }
 
     tdAccion.appendChild(acciones);
     tbody.appendChild(tr);
@@ -727,6 +730,15 @@ async function cargarProductos() {
       badge.className = 'badge-anulada';
       badge.textContent = 'ELIMINADO';
       acciones.appendChild(badge);
+
+      // El dueño puede purgar definitivamente lo que el admin marcó como eliminado
+      const btnPurga = document.createElement('button');
+      btnPurga.textContent = '🗑 Eliminar definitivo';
+      btnPurga.className = 'accion-btn';
+      btnPurga.style.background = '#a855f7';
+      btnPurga.style.color = '#fff';
+      btnPurga.addEventListener('click', () => eliminarProductoDefinitivo(p));
+      acciones.appendChild(btnPurga);
     } else {
       const btnEditar = document.createElement('button');
       btnEditar.textContent = '✎ Editar';
@@ -742,18 +754,26 @@ async function cargarProductos() {
       btnToggle.addEventListener('click', () => toggleProducto(p));
       acciones.appendChild(btnToggle);
 
+      // Dueño: elimina definitivamente. Admin: solo marca como eliminado (con motivo que el dueño verá).
       const btnEliminar = document.createElement('button');
       btnEliminar.textContent = '🗑 Eliminar';
       btnEliminar.className = 'accion-btn';
       btnEliminar.style.background = '#a855f7';
       btnEliminar.style.color = '#fff';
-      btnEliminar.addEventListener('click', () => eliminarProducto(p));
+      btnEliminar.addEventListener('click', () => (rolActual === 'dueno' ? eliminarProductoDefinitivo(p) : eliminarProducto(p)));
       acciones.appendChild(btnEliminar);
     }
 
     tr.lastElementChild.appendChild(acciones);
     tbody.appendChild(tr);
   });
+}
+
+async function eliminarProductoDefinitivo(p) {
+  if (!confirm(`¿Eliminar "${p.modelo} T${p.talla} ${p.color}" PERMANENTEMENTE? Se borra de la base de datos y no se puede recuperar.`)) return;
+  const res = await fetch(`/api/productos/${p.id}`, { method: 'DELETE' });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarProductos();
 }
 
 async function eliminarProducto(p) {
