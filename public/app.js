@@ -649,20 +649,69 @@ async function cargarUsuarios() {
       <td>${u.usuario}</td>
       <td>${u.rol}</td>
       <td>${u.activo ? 'Sí' : 'No'}</td>
-      <td><button class="toggle-activo-btn" data-id="${u.id}" data-activo="${u.activo}">${u.activo ? 'Desactivar' : 'Activar'}</button></td>
+      <td></td>
     `;
-    tr.querySelector('.toggle-activo-btn').addEventListener('click', async (e) => {
-      const id = e.target.dataset.id;
-      const activoActual = e.target.dataset.activo === '1';
-      await fetch(`/api/usuarios/${id}/activo`, {
+
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones-venta';
+
+    const btnToggle = document.createElement('button');
+    btnToggle.textContent = u.activo ? 'Desactivar' : 'Activar';
+    btnToggle.className = 'toggle-activo-btn';
+    btnToggle.addEventListener('click', async () => {
+      await fetch(`/api/usuarios/${u.id}/activo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: !activoActual }),
+        body: JSON.stringify({ activo: !u.activo }),
       });
       cargarUsuarios();
     });
+    acciones.appendChild(btnToggle);
+
+    // Renombrar/cambiar rol y eliminar usuarios: exclusivo del dueño
+    if (rolActual === 'dueno') {
+      const btnRenombrar = document.createElement('button');
+      btnRenombrar.textContent = '✎ Renombrar';
+      btnRenombrar.className = 'accion-btn editar-btn';
+      btnRenombrar.addEventListener('click', () => renombrarUsuario(u));
+      acciones.appendChild(btnRenombrar);
+
+      const btnEliminar = document.createElement('button');
+      btnEliminar.textContent = '🗑 Eliminar';
+      btnEliminar.className = 'accion-btn anular-btn';
+      btnEliminar.addEventListener('click', () => eliminarUsuario(u));
+      acciones.appendChild(btnEliminar);
+    }
+
+    tr.lastElementChild.appendChild(acciones);
     tbody.appendChild(tr);
   });
+}
+
+async function renombrarUsuario(u) {
+  const nuevoNombre = window.prompt('Nuevo nombre de usuario:', u.usuario);
+  if (nuevoNombre === null) return;
+  if (!nuevoNombre.trim()) { alert('El nombre no puede estar vacío'); return; }
+  const nuevoRol = window.prompt('Rol (vendedor / admin / dueno):', u.rol);
+  if (nuevoRol === null) return;
+  if (!['vendedor', 'admin', 'dueno'].includes(nuevoRol.trim().toLowerCase())) {
+    alert('Rol inválido. Debe ser: vendedor, admin o dueno');
+    return;
+  }
+  const res = await fetch(`/api/usuarios/${u.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario: nuevoNombre.trim(), rol: nuevoRol.trim().toLowerCase() }),
+  });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarUsuarios();
+}
+
+async function eliminarUsuario(u) {
+  if (!confirm(`¿Eliminar al usuario "${u.usuario}" PERMANENTEMENTE? No se puede recuperar.`)) return;
+  const res = await fetch(`/api/usuarios/${u.id}`, { method: 'DELETE' });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarUsuarios();
 }
 
 document.getElementById('crear-usuario-btn').addEventListener('click', async () => {

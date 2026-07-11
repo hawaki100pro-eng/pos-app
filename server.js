@@ -523,6 +523,47 @@ app.post('/api/usuarios', requireLogin, requireDueño, async (req, res) => {
   }
 });
 
+// Renombrar usuario y/o cambiar su rol (solo dueño)
+app.put('/api/usuarios/:id', requireLogin, requireDueño, async (req, res) => {
+  const { usuario, rol } = req.body;
+  if (!usuario || !usuario.trim() || !['admin', 'vendedor', 'dueno'].includes(rol)) {
+    return res.status(400).json({ error: 'usuario y rol (admin/vendedor/dueño) son obligatorios' });
+  }
+  const id = parseInt(req.params.id, 10);
+  // Evita que el dueño se quite a sí mismo el rol y quede sin acceso a estas funciones
+  if (id === req.session.user.id && rol !== 'dueno') {
+    return res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
+  }
+  try {
+    const r = await pool.query(
+      'UPDATE usuarios SET usuario = $1, rol = $2 WHERE id = $3 RETURNING id, usuario, rol, activo',
+      [usuario.trim(), rol, id]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json(r.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: `Ya existe el usuario "${usuario.trim()}"` });
+  }
+});
+
+// Eliminar usuario definitivamente (solo dueño). Si el usuario tiene movimientos registrados
+// (ventas, turnos, gastos), la base de datos lo protege y se sugiere desactivarlo.
+app.delete('/api/usuarios/:id', requireLogin, requireDueño, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (id === req.session.user.id) {
+    return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+  }
+  try {
+    const r = await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({
+      error: 'Este usuario tiene ventas, turnos o gastos registrados: borrarlo dañaría el historial. Desactívalo en su lugar.',
+    });
+  }
+});
+
 app.post('/api/usuarios/:id/activo', requireLogin, requireAdmin, async (req, res) => {
   const { activo } = req.body;
   await pool.query('UPDATE usuarios SET activo = $1 WHERE id = $2', [activo ? 1 : 0, req.params.id]);
