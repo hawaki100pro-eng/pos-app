@@ -28,6 +28,8 @@
 
     <div id="caja-cerrada-msg" class="error hidden">La caja está cerrada. Pide al administrador que abra el turno antes de vender.</div>
 
+    <!-- El formulario de venta es uno solo: se mueve a la pantalla del rol que inició sesión (ver mostrarPantalla) -->
+    <div id="venta-slot-vendedor"></div>
     <div id="venta-form-wrap" class="hidden">
       <h2 style="color:#2563eb;">📋 Nota de venta</h2>
 
@@ -103,6 +105,9 @@
       <button id="abrir-caja-btn">Abrir caja</button>
     </div>
     <p id="caja-msg"></p>
+
+    <!-- Aquí se inserta el formulario de Nota de venta cuando entra un admin o el dueño -->
+    <div id="venta-slot-admin"></div>
 
     <h2>Gastos</h2>
     <div class="item-row-nueva">

@@ -51,17 +51,23 @@ function mostrarPantalla(rol) {
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
 
+  // El formulario de Nota de venta es uno solo: se coloca en la pantalla del rol que entró
+  const ventaForm = document.getElementById('venta-form-wrap');
+
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
     // Crear usuarios y asignar roles es exclusivo del dueño
     document.getElementById('crear-usuario-row').classList.toggle('hidden', rol !== 'dueno');
+    document.getElementById('venta-slot-admin').appendChild(ventaForm);
+    cargarEstadoCaja(); // muestra u oculta la Nota de venta según haya turno abierto
     cargarDashboard();
     cargarUsuarios();
     cargarGastos();
     cargarProductos();
   } else {
     vendedorScreen.classList.remove('hidden');
+    document.getElementById('venta-slot-vendedor').appendChild(ventaForm);
     cargarEstadoCaja();
     cargarMisVentas();
   }
@@ -268,6 +274,11 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   renderItems();
   cargarMisVentas();
   cargarEstadoCaja();
+  // Si vendió el admin o el dueño, refrescar su dashboard (montos de caja e historial)
+  if (rolActual === 'admin' || rolActual === 'dueno') {
+    cargarDashboard();
+    cargarProductos();
+  }
 });
 
 async function cargarMisVentas() {
@@ -512,6 +523,7 @@ document.getElementById('abrir-caja-btn').addEventListener('click', async () => 
   msg.className = '';
   document.getElementById('monto-inicial-input').value = '';
   cargarDashboard();
+  cargarEstadoCaja(); // al abrir caja aparece la Nota de venta del admin
 });
 
 document.getElementById('vaciar-caja-btn').addEventListener('click', async () => {
@@ -541,6 +553,7 @@ document.getElementById('cerrar-caja-btn').addEventListener('click', async () =>
   msg.textContent = `Caja cerrada con $${data.monto_actual.toFixed(2)}`;
   msg.className = '';
   cargarDashboard();
+  cargarEstadoCaja(); // al cerrar caja se oculta la Nota de venta del admin
 });
 
 // --- Gastos (descuentan de la caja) ---
