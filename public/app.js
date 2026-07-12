@@ -297,6 +297,24 @@ async function cargarMisVentas() {
 
 // --- Admin: dashboard, caja, usuarios ---
 
+// Ocultar/mostrar el dinero de la caja (la preferencia se recuerda en este dispositivo)
+let dineroOculto = localStorage.getItem('dineroOculto') === '1';
+
+function aplicarVisibilidadDinero() {
+  ['caja-inicial', 'caja-actual', 'caja-transferencias'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el.dataset.valor == null) return;
+    el.textContent = dineroOculto ? '••••' : el.dataset.valor;
+  });
+  document.getElementById('toggle-dinero-btn').textContent = dineroOculto ? '👁 Mostrar' : '🙈 Ocultar';
+}
+
+document.getElementById('toggle-dinero-btn').addEventListener('click', () => {
+  dineroOculto = !dineroOculto;
+  localStorage.setItem('dineroOculto', dineroOculto ? '1' : '0');
+  aplicarVisibilidadDinero();
+});
+
 async function cargarDashboard() {
   const res = await fetch('/api/dashboard');
   const data = await res.json();
@@ -306,9 +324,10 @@ async function cargarDashboard() {
   if (data.turno) {
     abiertaCard.classList.remove('hidden');
     cerradaCard.classList.add('hidden');
-    document.getElementById('caja-inicial').textContent = data.turno.monto_inicial.toFixed(2);
-    document.getElementById('caja-actual').textContent = data.turno.monto_actual.toFixed(2);
-    document.getElementById('caja-transferencias').textContent = data.totalTransferenciasTurno.toFixed(2);
+    document.getElementById('caja-inicial').dataset.valor = data.turno.monto_inicial.toFixed(2);
+    document.getElementById('caja-actual').dataset.valor = data.turno.monto_actual.toFixed(2);
+    document.getElementById('caja-transferencias').dataset.valor = data.totalTransferenciasTurno.toFixed(2);
+    aplicarVisibilidadDinero();
     document.getElementById('vaciar-caja-btn').classList.toggle('hidden', rolActual !== 'dueno');
   } else {
     abiertaCard.classList.add('hidden');
