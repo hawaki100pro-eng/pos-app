@@ -312,6 +312,16 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   margin: 0 0 14px;
 }
 
+/* Logo de la tienda con la fuente del letrero (Slackside One) */
+#logo-hawaki {
+  font-family: 'Slackside One', cursive;
+  font-size: 2.6rem;
+  color: #2563eb;
+  text-align: center;
+  margin: 10px 0 4px;
+  letter-spacing: 2px;
+}
+
 /* --- Modal de catálogo (MAGICA) --- */
 
 #catalogo-modal {
