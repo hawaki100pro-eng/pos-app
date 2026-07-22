@@ -305,6 +305,13 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   vertical-align: middle;
 }
 
+.saludo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4f46e5;
+  margin: 0 0 14px;
+}
+
 /* --- Modal de catálogo (MAGICA) --- */
 
 #catalogo-modal {

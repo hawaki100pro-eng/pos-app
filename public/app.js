@@ -42,10 +42,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 
   const user = await res.json();
-  mostrarPantalla(user.rol);
+  mostrarPantalla(user);
 });
 
-function mostrarPantalla(rol) {
+// Saludo amigable con emoji aleatorio (caritas y rositas)
+const EMOJIS_SALUDO = ['😊', '😄', '😁', '🤗', '🥰', '😎', '🌸', '🌺', '🌷', '🌹', '💐', '🌼', '✨'];
+
+function armarSaludo(usuario) {
+  const nombre = usuario.charAt(0).toUpperCase() + usuario.slice(1);
+  const emoji = EMOJIS_SALUDO[Math.floor(Math.random() * EMOJIS_SALUDO.length)];
+  return `¡Hola, ${nombre}! ${emoji}`;
+}
+
+function mostrarPantalla(user) {
+  const rol = user.rol;
   rolActual = rol;
   loginScreen.classList.add('hidden');
   vendedorScreen.classList.add('hidden');
@@ -57,6 +67,7 @@ function mostrarPantalla(rol) {
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
+    document.getElementById('saludo-admin').textContent = armarSaludo(user.usuario);
     // Crear usuarios y asignar roles es exclusivo del dueño
     document.getElementById('crear-usuario-row').classList.toggle('hidden', rol !== 'dueno');
     document.getElementById('venta-slot-admin').appendChild(ventaForm);
@@ -67,6 +78,7 @@ function mostrarPantalla(rol) {
     cargarProductos();
   } else {
     vendedorScreen.classList.remove('hidden');
+    document.getElementById('saludo-vendedor').textContent = armarSaludo(user.usuario);
     document.getElementById('venta-slot-vendedor').appendChild(ventaForm);
     cargarEstadoCaja();
     cargarMisVentas();
@@ -980,6 +992,6 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const res = await fetch('/api/me');
   if (res.ok) {
     const user = await res.json();
-    mostrarPantalla(user.rol);
+    mostrarPantalla(user);
   }
 })();
