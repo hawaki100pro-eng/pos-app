@@ -711,6 +711,14 @@ async function cargarUsuarios() {
       btnRenombrar.addEventListener('click', () => renombrarUsuario(u));
       acciones.appendChild(btnRenombrar);
 
+      const btnClave = document.createElement('button');
+      btnClave.textContent = '🔑 Clave';
+      btnClave.className = 'accion-btn';
+      btnClave.style.background = '#0369a1';
+      btnClave.style.color = '#fff';
+      btnClave.addEventListener('click', () => cambiarClaveUsuario(u));
+      acciones.appendChild(btnClave);
+
       const btnEliminar = document.createElement('button');
       btnEliminar.textContent = '🗑 Eliminar';
       btnEliminar.className = 'accion-btn anular-btn';
@@ -740,6 +748,22 @@ async function renombrarUsuario(u) {
   });
   if (!res.ok) { const d = await res.json(); alert(d.error); return; }
   cargarUsuarios();
+}
+
+async function cambiarClaveUsuario(u) {
+  const password = window.prompt(`Nueva contraseña para "${u.usuario}" (mínimo 4 caracteres):`);
+  if (password === null) return;
+  if (password.length < 4) {
+    alert('La contraseña debe tener al menos 4 caracteres');
+    return;
+  }
+  const res = await fetch(`/api/usuarios/${u.id}/password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  alert(`Contraseña de "${u.usuario}" actualizada. Anótala en un lugar seguro: no se puede volver a ver, solo asignar otra nueva.`);
 }
 
 async function eliminarUsuario(u) {

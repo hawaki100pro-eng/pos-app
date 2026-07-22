@@ -546,6 +546,19 @@ app.put('/api/usuarios/:id', requireLogin, requireDueño, async (req, res) => {
   }
 });
 
+// Cambiar la contraseña de un usuario (solo dueño). Las contraseñas nunca se guardan
+// en texto plano (solo su hash bcrypt), por eso no existe forma de "verlas": solo de asignar una nueva.
+app.post('/api/usuarios/:id/password', requireLogin, requireDueño, async (req, res) => {
+  const { password } = req.body;
+  if (!password || password.length < 4) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+  }
+  const hash = bcrypt.hashSync(password, 10);
+  const r = await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id = $2 RETURNING id, usuario', [hash, req.params.id]);
+  if (r.rowCount === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json({ ok: true, usuario: r.rows[0].usuario });
+});
+
 // Eliminar usuario definitivamente (solo dueño). Si el usuario tiene movimientos registrados
 // (ventas, turnos, gastos), la base de datos lo protege y se sugiere desactivarlo.
 app.delete('/api/usuarios/:id', requireLogin, requireDueño, async (req, res) => {
