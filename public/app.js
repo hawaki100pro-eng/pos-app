@@ -308,6 +308,8 @@ function aplicarVisibilidadDinero() {
     el.textContent = dineroOculto ? '••••' : el.dataset.valor;
   });
   document.getElementById('toggle-dinero-btn').textContent = dineroOculto ? '👁 Mostrar' : '🙈 Ocultar';
+  // Al ocultar, la tarjeta entera se colapsa a una barra delgada (ver .compacta en style.css)
+  document.getElementById('caja-abierta-card').classList.toggle('compacta', dineroOculto);
 }
 
 document.getElementById('toggle-dinero-btn').addEventListener('click', () => {

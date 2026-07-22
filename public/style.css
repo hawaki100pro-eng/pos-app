@@ -222,6 +222,22 @@ th, td {
   flex-wrap: wrap;
 }
 
+/* Modo compacto: al ocultar el dinero, la tarjeta se encoge (poca altura, casi el mismo ancho) */
+#caja-abierta-card.compacta {
+  padding: 6px 12px;
+  gap: 0;
+  width: 88%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#caja-abierta-card.compacta .card-label,
+#caja-abierta-card.compacta .card-value,
+#caja-abierta-card.compacta #cerrar-caja-btn,
+#caja-abierta-card.compacta #vaciar-caja-btn {
+  display: none;
+}
+
 #caja-cerrada-card {
   display: flex;
   align-items: center;
