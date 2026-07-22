@@ -170,13 +170,19 @@ document.getElementById('cerrar-catalogo-btn').addEventListener('click', () => {
   document.getElementById('catalogo-modal').classList.add('hidden');
 });
 
+// Minúsculas y sin tildes, para que "cafe" encuentre "Café"
+function normalizarTexto(t) {
+  return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Búsqueda por palabras: cada palabra escrita debe aparecer en algún campo del producto.
+// Así "chunky negro", "CHUNKY 37" o "a-001 38" encuentran lo esperado.
 document.getElementById('catalogo-buscar').addEventListener('input', (e) => {
-  const q = e.target.value.toLowerCase();
-  const filtrados = productosDisponibles.filter((p) =>
-    p.modelo.toLowerCase().includes(q) ||
-    p.talla.toLowerCase().includes(q) ||
-    p.color.toLowerCase().includes(q)
-  );
+  const palabras = normalizarTexto(e.target.value).split(/\s+/).filter(Boolean);
+  const filtrados = productosDisponibles.filter((p) => {
+    const texto = normalizarTexto(`${p.modelo} ${p.talla} ${p.color}`);
+    return palabras.every((palabra) => texto.includes(palabra));
+  });
   renderCatalogoModal(filtrados);
 });
 
