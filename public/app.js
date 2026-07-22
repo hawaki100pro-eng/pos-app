@@ -987,11 +987,11 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
 
   msg.textContent = `Producto "${data.modelo} T${data.talla} ${data.color}" agregado con stock ${data.stock}`;
   msg.className = '';
-  document.getElementById('prod-modelo').value = '';
-  document.getElementById('prod-talla').value = '';
-  document.getElementById('prod-color').value = '';
-  document.getElementById('prod-precio').value = '';
-  document.getElementById('prod-stock').value = '';
+  // Se conservan modelo, color, precio y stock para cargar la siguiente talla rápido:
+  // solo se selecciona la talla, listo para escribir la nueva (35 → 36 → 37...)
+  const tallaInput = document.getElementById('prod-talla');
+  tallaInput.focus();
+  tallaInput.select();
   cargarProductos();
 });
 
