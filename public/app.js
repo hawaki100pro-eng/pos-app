@@ -45,12 +45,22 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   mostrarPantalla(user);
 });
 
-// Saludo amigable con emoji aleatorio (caritas y rositas)
-const EMOJIS_SALUDO = ['😊', '😄', '😁', '🤗', '🥰', '😎', '🌸', '🌺', '🌷', '🌹', '💐', '🌼', '✨'];
+// Saludo amigable con emoji aleatorio (solo para vendedores).
+// Caras amigables para todos; las rositas solo si el nombre parece femenino.
+const EMOJIS_CARAS = ['😊', '😄', '😁', '🤗', '😎', '🙂', '😃'];
+const EMOJIS_ROSITAS = ['🌸', '🌺', '🌷', '🌹', '💐', '🌼', '🥰', '✨'];
+// Heurística: termina en "a" o está en esta lista. Agregar aquí nombres femeninos que no terminen en "a".
+const NOMBRES_FEMENINOS = ['jennifer', 'jessica', 'karen', 'katherine', 'nicole', 'lisbeth', 'estefania', 'belen', 'fernanda'];
+
+function esNombreFemenino(usuario) {
+  const n = usuario.toLowerCase().replace(/[0-9]+$/, ''); // ignora números finales (ej. jennifer1)
+  return n.endsWith('a') || NOMBRES_FEMENINOS.includes(n);
+}
 
 function armarSaludo(usuario) {
   const nombre = usuario.charAt(0).toUpperCase() + usuario.slice(1);
-  const emoji = EMOJIS_SALUDO[Math.floor(Math.random() * EMOJIS_SALUDO.length)];
+  const pool = esNombreFemenino(usuario) ? EMOJIS_CARAS.concat(EMOJIS_ROSITAS) : EMOJIS_CARAS;
+  const emoji = pool[Math.floor(Math.random() * pool.length)];
   return `¡Hola, ${nombre}! ${emoji}`;
 }
 
@@ -67,7 +77,6 @@ function mostrarPantalla(user) {
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
-    document.getElementById('saludo-admin').textContent = armarSaludo(user.usuario);
     // Crear usuarios y asignar roles es exclusivo del dueño
     document.getElementById('crear-usuario-row').classList.toggle('hidden', rol !== 'dueno');
     document.getElementById('venta-slot-admin').appendChild(ventaForm);
