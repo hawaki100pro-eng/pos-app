@@ -318,6 +318,21 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   font-size: 1.3rem;
 }
 
+/* Botón Salir al pie de la pantalla del vendedor: discreto, centrado */
+.logout-pie {
+  display: block;
+  margin: 28px auto 8px;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.logout-pie:hover { background: #4b5563; }
+
 /* Logo de la tienda con la fuente del letrero (Slackside One) */
 #logo-hawaki {
   font-family: 'Slackside One', cursive;

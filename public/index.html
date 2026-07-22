@@ -29,7 +29,6 @@
   <div id="vendedor-screen" class="container hidden">
     <div class="top-bar">
       <p id="saludo-vendedor" class="saludo"></p>
-      <button id="logout-btn-v">Salir</button>
     </div>
 
     <div id="caja-cerrada-msg" class="error hidden">La caja está cerrada. Pide al administrador que abra el turno antes de vender.</div>
@@ -85,6 +84,9 @@
         <tbody></tbody>
       </table>
     </div>
+
+    <!-- Salir va al pie: el vendedor casi nunca lo necesita durante el turno -->
+    <button id="logout-btn-v" class="logout-pie">Salir</button>
   </div>
 
   <!-- Pantalla de admin -->
