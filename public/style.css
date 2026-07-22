@@ -312,6 +312,12 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   margin: 0 0 14px;
 }
 
+/* Dentro de la barra superior (pantalla del vendedor) el saludo reemplaza al título */
+.top-bar .saludo {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
 /* Logo de la tienda con la fuente del letrero (Slackside One) */
 #logo-hawaki {
   font-family: 'Slackside One', cursive;
