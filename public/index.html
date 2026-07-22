@@ -173,18 +173,13 @@
   </div>
 
   <!-- Modal catálogo para vendedor -->
-  <div id="catalogo-modal" class="container hidden" style="position:fixed;top:5%;left:50%;transform:translateX(-50%);z-index:10;max-height:90vh;overflow-y:auto;min-width:320px;width:95%;max-width:600px;">
+  <div id="catalogo-modal" class="container hidden">
     <div class="top-bar">
       <h2>Seleccionar producto</h2>
       <button id="cerrar-catalogo-btn">Cerrar</button>
     </div>
     <input type="text" id="catalogo-buscar" placeholder="Buscar por modelo, talla o color...">
-    <div class="table-wrap" style="margin-top:12px;">
-      <table id="catalogo-tabla">
-        <thead><tr><th>Modelo</th><th>Talla</th><th>Color</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <div id="catalogo-lista" style="margin-top:12px;"></div>
   </div>
 
   <!-- Modal de edición de venta (solo dueño) -->

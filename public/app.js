@@ -181,26 +181,21 @@ document.getElementById('catalogo-buscar').addEventListener('input', (e) => {
 });
 
 function renderCatalogoModal(productos) {
-  const tbody = document.querySelector('#catalogo-tabla tbody');
-  tbody.innerHTML = '';
+  const lista = document.getElementById('catalogo-lista');
+  lista.innerHTML = '';
   if (productos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">Sin resultados</td></tr>';
+    lista.innerHTML = '<p style="text-align:center;color:#888;">Sin resultados</p>';
     return;
   }
+  // Tarjetas táctiles: se toca en cualquier parte de la tarjeta para seleccionar (pensado para móvil)
   productos.forEach((p) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${p.modelo}</td>
-      <td>${p.talla}</td>
-      <td>${p.color}</td>
-      <td>$${p.precio.toFixed(2)}</td>
-      <td>${p.stock}</td>
-      <td></td>
+    const card = document.createElement('div');
+    card.className = 'catalogo-item';
+    card.innerHTML = `
+      <div class="catalogo-item-modelo">${p.modelo}</div>
+      <div class="catalogo-item-detalle"><strong>Talla ${p.talla}</strong> · ${p.color} · $${p.precio.toFixed(2)} · Stock: ${p.stock}</div>
     `;
-    const btn = document.createElement('button');
-    btn.textContent = 'Seleccionar';
-    btn.className = 'accion-btn editar-btn';
-    btn.addEventListener('click', () => {
+    card.addEventListener('click', () => {
       const inputProducto = document.getElementById('item-producto');
       inputProducto.value = `${p.modelo} T${p.talla} ${p.color}`;
       inputProducto.dataset.productoId = p.id;
@@ -209,8 +204,7 @@ function renderCatalogoModal(productos) {
       document.getElementById('catalogo-modal').classList.add('hidden');
       document.getElementById('item-cantidad').focus();
     });
-    tr.lastElementChild.appendChild(btn);
-    tbody.appendChild(tr);
+    lista.appendChild(card);
   });
 }
 

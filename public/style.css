@@ -288,3 +288,57 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   margin-right: 6px;
   vertical-align: middle;
 }
+
+/* --- Modal de catálogo (MAGICA) --- */
+
+#catalogo-modal {
+  position: fixed;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  max-height: 90vh;
+  overflow-y: auto;
+  min-width: 320px;
+  width: 95%;
+  max-width: 600px;
+}
+
+.catalogo-item {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.catalogo-item:hover,
+.catalogo-item:active {
+  background: #eef2ff;
+  border-color: #4f46e5;
+}
+
+.catalogo-item-modelo { font-weight: 600; }
+
+.catalogo-item-detalle {
+  color: #555;
+  font-size: 0.9rem;
+  margin-top: 2px;
+}
+
+/* En pantallas de teléfono el modal ocupa toda la pantalla y las tarjetas son más grandes al tacto */
+@media (max-width: 600px) {
+  #catalogo-modal {
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .catalogo-item { padding: 14px; }
+}
