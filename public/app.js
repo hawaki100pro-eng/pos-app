@@ -163,6 +163,7 @@ document.getElementById('buscar-catalogo-btn').addEventListener('click', async (
   document.getElementById('catalogo-buscar').value = '';
   renderCatalogoModal(productosDisponibles);
   document.getElementById('catalogo-modal').classList.remove('hidden');
+  document.getElementById('catalogo-buscar').focus(); // listo para teclear el código de la etiqueta
 });
 
 document.getElementById('cerrar-catalogo-btn').addEventListener('click', () => {
