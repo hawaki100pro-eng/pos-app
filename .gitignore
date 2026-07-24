@@ -1,3 +1,4 @@
 node_modules/
 pos.db
 .env
+respaldo-pos-*.json
