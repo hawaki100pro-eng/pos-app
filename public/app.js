@@ -77,12 +77,12 @@ function mostrarPantalla(user) {
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
-    // Crear usuarios y asignar roles es exclusivo del dueño
-    document.getElementById('crear-usuario-row').classList.toggle('hidden', rol !== 'dueno');
+    // La sección de Vendedores (usuarios) completa es exclusiva del dueño
+    document.getElementById('seccion-usuarios').classList.toggle('hidden', rol !== 'dueno');
     document.getElementById('venta-slot-admin').appendChild(ventaForm);
     cargarEstadoCaja(); // muestra u oculta la Nota de venta según haya turno abierto
     cargarDashboard();
-    cargarUsuarios();
+    if (rol === 'dueno') cargarUsuarios();
     cargarGastos();
     cargarProductos();
   } else {

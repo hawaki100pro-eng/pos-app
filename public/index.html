@@ -141,25 +141,27 @@
       </table>
     </div>
 
-    <h2>Vendedores</h2>
-    <div class="table-wrap">
-      <table id="usuarios-tabla">
-        <thead><tr><th>Usuario</th><th>Rol</th><th>Activo</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- Sección de usuarios: exclusiva del dueño (ver mostrarPantalla en app.js) -->
+    <div id="seccion-usuarios" class="hidden">
+      <h2>Vendedores</h2>
+      <div class="table-wrap">
+        <table id="usuarios-tabla">
+          <thead><tr><th>Usuario</th><th>Rol</th><th>Activo</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="item-row-nueva" id="crear-usuario-row">
+        <input type="text" id="nuevo-usuario" placeholder="Usuario">
+        <input type="password" id="nuevo-password" placeholder="Contraseña">
+        <select id="nuevo-rol">
+          <option value="vendedor">Vendedor</option>
+          <option value="admin">Admin</option>
+          <option value="dueno">Dueño</option>
+        </select>
+        <button id="crear-usuario-btn">Crear usuario</button>
+      </div>
+      <p id="usuario-msg"></p>
     </div>
-    <!-- Solo visible para el dueño (ver mostrarPantalla en app.js) -->
-    <div class="item-row-nueva hidden" id="crear-usuario-row">
-      <input type="text" id="nuevo-usuario" placeholder="Usuario">
-      <input type="password" id="nuevo-password" placeholder="Contraseña">
-      <select id="nuevo-rol">
-        <option value="vendedor">Vendedor</option>
-        <option value="admin">Admin</option>
-        <option value="dueno">Dueño</option>
-      </select>
-      <button id="crear-usuario-btn">Crear usuario</button>
-    </div>
-    <p id="usuario-msg"></p>
 
     <h2>Catálogo / Inventario</h2>
     <div class="item-row-nueva">

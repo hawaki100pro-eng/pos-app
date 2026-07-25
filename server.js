@@ -500,7 +500,8 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
 
 // --- Gestión de usuarios (vendedores) por el admin ---
 
-app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
+// Toda la gestión de usuarios es exclusiva del dueño
+app.get('/api/usuarios', requireLogin, requireDueño, async (req, res) => {
   const r = await pool.query('SELECT id, usuario, rol, activo FROM usuarios ORDER BY id');
   res.json(r.rows);
 });
@@ -577,7 +578,7 @@ app.delete('/api/usuarios/:id', requireLogin, requireDueño, async (req, res) =>
   }
 });
 
-app.post('/api/usuarios/:id/activo', requireLogin, requireAdmin, async (req, res) => {
+app.post('/api/usuarios/:id/activo', requireLogin, requireDueño, async (req, res) => {
   const { activo } = req.body;
   await pool.query('UPDATE usuarios SET activo = $1 WHERE id = $2', [activo ? 1 : 0, req.params.id]);
   const r = await pool.query('SELECT id, usuario, rol, activo FROM usuarios WHERE id = $1', [req.params.id]);
