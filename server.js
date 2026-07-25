@@ -611,6 +611,23 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   if (!modelo?.trim() || !talla?.trim() || !color?.trim() || precio == null || precio < 0 || stock == null || stock < 0) {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' });
   }
+
+  // Si el producto ya existe (mismo modelo+talla+color), el stock nuevo SE SUMA al existente
+  // (llegada de mercadería). También se actualiza el precio al recién escrito y se reactiva si estaba inactivo.
+  const existente = await pool.query(
+    `SELECT * FROM productos
+     WHERE LOWER(modelo) = LOWER($1) AND LOWER(talla) = LOWER($2) AND LOWER(color) = LOWER($3) AND eliminado = 0
+     LIMIT 1`,
+    [modelo.trim(), talla.trim(), color.trim()]
+  );
+  if (existente.rows[0]) {
+    const r = await pool.query(
+      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1 WHERE id = $3 RETURNING *',
+      [Math.round(stock), precio, existente.rows[0].id]
+    );
+    return res.status(200).json({ ...r.rows[0], stock_sumado: Math.round(stock) });
+  }
+
   const r = await pool.query(
     'INSERT INTO productos (modelo, talla, color, precio, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *',
     [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock)]

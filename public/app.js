@@ -985,7 +985,9 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
     return;
   }
 
-  msg.textContent = `Producto "${data.modelo} T${data.talla} ${data.color}" agregado con stock ${data.stock}`;
+  msg.textContent = data.stock_sumado
+    ? `Ya existía "${data.modelo} T${data.talla} ${data.color}": se sumaron ${data.stock_sumado} al stock (ahora tiene ${data.stock})`
+    : `Producto "${data.modelo} T${data.talla} ${data.color}" agregado con stock ${data.stock}`;
   msg.className = '';
   // Se conservan modelo, color, precio y stock para cargar la siguiente talla rápido:
   // solo se selecciona la talla, listo para escribir la nueva (35 → 36 → 37...)
