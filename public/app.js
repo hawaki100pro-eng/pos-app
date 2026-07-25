@@ -940,6 +940,12 @@ async function editarProducto(p) {
     return;
   }
 
+  // Reducir stock es exclusivo del dueño (el servidor también lo valida)
+  if (stock < p.stock && rolActual !== 'dueno') {
+    alert(`No puedes reducir el stock (actual: ${p.stock}). Solo el dueño puede bajarlo.`);
+    return;
+  }
+
   const res = await fetch(`/api/productos/${p.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

@@ -641,11 +641,20 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   if (!modelo?.trim() || !talla?.trim() || !color?.trim() || precio == null || precio < 0 || stock == null || stock < 0) {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' });
   }
+
+  const actual = await pool.query('SELECT stock FROM productos WHERE id = $1', [req.params.id]);
+  if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
+
+  // Seguridad: reducir stock es exclusivo del dueño. El admin puede corregir datos y precio,
+  // y subir stock, pero nunca bajarlo (esa es la vía típica para desviar mercadería).
+  if (Math.round(stock) < actual.rows[0].stock && req.session.user.rol !== 'dueno') {
+    return res.status(403).json({ error: 'Reducir el stock solo puede hacerlo el dueño' });
+  }
+
   const r = await pool.query(
     'UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5 WHERE id=$6 RETURNING *',
     [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), req.params.id]
   );
-  if (r.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
   res.json(r.rows[0]);
 });
 
