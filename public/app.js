@@ -826,13 +826,50 @@ document.getElementById('crear-usuario-btn').addEventListener('click', async () 
 
 // --- Catálogo / Inventario ---
 
+let productosInventario = [];
+const gruposAbiertos = new Set(); // modelos expandidos en la vista agrupada de escritorio
+
 async function cargarProductos() {
   const res = await fetch('/api/productos');
   if (!res.ok) return;
-  const productos = await res.json();
+  productosInventario = await res.json();
+  renderInventario();
+}
+
+function renderInventario() {
   const tbody = document.querySelector('#productos-tabla tbody');
   tbody.innerHTML = '';
-  productos.forEach((p) => {
+
+  // Celular: tabla plana de siempre (esta vista no se toca)
+  if (window.innerWidth <= 700) {
+    productosInventario.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
+    return;
+  }
+
+  // Escritorio: agrupado por modelo; clic en la fila del modelo despliega sus tallas y stock
+  const grupos = new Map();
+  productosInventario.forEach((p) => {
+    if (!grupos.has(p.modelo)) grupos.set(p.modelo, []);
+    grupos.get(p.modelo).push(p);
+  });
+
+  grupos.forEach((items, modelo) => {
+    const abierto = gruposAbiertos.has(modelo);
+    const totalStock = items.reduce((acc, p) => acc + p.stock, 0);
+    const trGrupo = document.createElement('tr');
+    trGrupo.className = 'grupo-modelo';
+    trGrupo.innerHTML = `<td colspan="6">${abierto ? '▾' : '▸'} ${modelo} <span class="grupo-info">${items.length} variante(s) · stock total: ${totalStock}</span></td>`;
+    trGrupo.addEventListener('click', () => {
+      if (abierto) gruposAbiertos.delete(modelo);
+      else gruposAbiertos.add(modelo);
+      renderInventario();
+    });
+    tbody.appendChild(trGrupo);
+    if (abierto) items.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
+  });
+}
+
+function crearFilaProducto(p) {
     const tr = document.createElement('tr');
     if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
     const stockRojo = p.stock === 2;
@@ -894,8 +931,7 @@ async function cargarProductos() {
     }
 
     tr.lastElementChild.appendChild(acciones);
-    tbody.appendChild(tr);
-  });
+    return tr;
 }
 
 async function eliminarProductoDefinitivo(p) {

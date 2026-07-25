@@ -343,6 +343,25 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   letter-spacing: 2px;
 }
 
+/* Inventario en escritorio: fila de grupo por modelo (clic para desplegar tallas) */
+.grupo-modelo td {
+  background: #eef2ff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+  user-select: none;
+}
+
+.grupo-modelo:hover td { background: #e0e7ff; }
+
+.grupo-info {
+  color: #666;
+  font-weight: 400;
+  font-size: 0.85rem;
+  margin-left: 8px;
+}
+
 /* --- Modal de catálogo (MAGICA) --- */
 
 #catalogo-modal {
