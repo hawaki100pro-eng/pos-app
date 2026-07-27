@@ -365,7 +365,7 @@ async function cargarDashboard() {
       .map((d) => `${d.producto} x${d.cantidad}`)
       .join(', ');
     const tr = document.createElement('tr');
-    if (v.anulada) tr.className = 'venta-anulada';
+    tr.className = v.anulada ? 'fila-venta venta-anulada' : 'fila-venta';
 
     const estadoHtml = v.anulada
       ? `<span class="badge-anulada">ANULADA</span><div class="nota-anulacion">${formatFecha(v.fecha_anulacion)} por ${v.anulada_por_usuario}: "${v.motivo_anulacion}"</div>`
@@ -378,7 +378,9 @@ async function cargarDashboard() {
       || v.cliente_ruc || v.cliente_direccion || v.cliente_telefono;
     const clienteHtml = `${conDatos ? '<span class="dot-cliente-datos"></span>' : ''}${v.cliente || '-'}`;
 
-    tr.innerHTML = `<td>${v.numero_proforma}</td><td>${clienteHtml}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${detalleTexto}</td><td>$${v.total.toFixed(2)}</td><td>${metodoTexto}</td><td>${estadoHtml}</td><td></td>`;
+    // Cada celda lleva su clase para que en celular el CSS reordene la fila como tarjeta
+    // (ver "Historial de ventas en celular" en style.css)
+    tr.innerHTML = `<td class="celda-proforma">${v.numero_proforma}</td><td class="celda-cliente">${clienteHtml}</td><td class="celda-vendedor">${v.vendedor}</td><td class="celda-fecha">${formatFecha(v.fecha)}</td><td class="celda-productos">${detalleTexto}</td><td class="celda-total">$${v.total.toFixed(2)}</td><td class="celda-metodo">${metodoTexto}</td><td class="celda-estado">${estadoHtml}</td><td class="celda-acciones"></td>`;
 
     const tdAccion = tr.lastElementChild;
     const acciones = document.createElement('div');

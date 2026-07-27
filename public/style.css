@@ -425,6 +425,92 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
     display: block;
     padding: 6px 0 0;
   }
+
+  /* Historial de ventas en celular: la fila de 9 columnas se reordena como tarjeta.
+     El orden que se ve es: proforma y total arriba, luego cliente, vendedor y fecha,
+     los productos, el método con el estado, y al final los botones. */
+  #ventas-tabla { min-width: 0; }
+  #ventas-tabla thead { display: none; }
+
+  #ventas-tabla .fila-venta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    padding: 10px 10px 12px;
+    border-bottom: 1px solid #eee;
+  }
+
+  #ventas-tabla .fila-venta td {
+    display: block;
+    border: none;
+    padding: 0;
+  }
+
+  #ventas-tabla .celda-proforma {
+    order: 1;
+    font-weight: 700;
+  }
+
+  #ventas-tabla .celda-proforma::before {
+    content: 'Proforma ';
+    color: #888;
+    font-weight: 400;
+    font-size: 0.85rem;
+  }
+
+  #ventas-tabla .celda-total {
+    order: 2;
+    margin-left: auto;
+    font-weight: 700;
+  }
+
+  #ventas-tabla .celda-cliente {
+    order: 3;
+    flex: 1 1 100%;
+    margin-top: 4px;
+  }
+
+  #ventas-tabla .celda-vendedor,
+  #ventas-tabla .celda-fecha {
+    color: #666;
+    font-size: 0.85rem;
+  }
+
+  #ventas-tabla .celda-vendedor { order: 4; }
+
+  #ventas-tabla .celda-fecha { order: 5; }
+
+  #ventas-tabla .celda-fecha::before {
+    content: '·';
+    margin: 0 6px;
+  }
+
+  #ventas-tabla .celda-productos {
+    order: 6;
+    flex: 1 1 100%;
+    margin-top: 4px;
+    color: #555;
+    font-size: 0.85rem;
+  }
+
+  #ventas-tabla .celda-metodo {
+    order: 7;
+    margin-top: 6px;
+  }
+
+  /* Comparte renglón con el método; si la venta está anulada, la nota del motivo
+     es ancha y el propio flex-wrap la baja a su línea */
+  #ventas-tabla .celda-estado {
+    order: 8;
+    margin-top: 6px;
+    margin-left: 10px;
+  }
+
+  #ventas-tabla .celda-acciones {
+    order: 9;
+    flex: 1 1 100%;
+    margin-top: 8px;
+  }
 }
 
 /* --- Modal de catálogo (MAGICA) --- */
