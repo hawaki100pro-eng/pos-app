@@ -828,6 +828,7 @@ document.getElementById('crear-usuario-btn').addEventListener('click', async () 
 
 let productosInventario = [];
 const gruposAbiertos = new Set(); // modelos expandidos en la vista agrupada de escritorio
+const coloresAbiertos = new Set(); // colores expandidos, con clave `modelo||color`
 
 async function cargarProductos() {
   const res = await fetch('/api/productos');
@@ -846,26 +847,49 @@ function renderInventario() {
     return;
   }
 
-  // Escritorio: agrupado por modelo; clic en la fila del modelo despliega sus tallas y stock
+  // Escritorio: dos niveles. Clic en el modelo despliega sus colores; clic en un color despliega
+  // las tallas de ese color con su stock.
   const grupos = new Map();
   productosInventario.forEach((p) => {
-    if (!grupos.has(p.modelo)) grupos.set(p.modelo, []);
-    grupos.get(p.modelo).push(p);
+    if (!grupos.has(p.modelo)) grupos.set(p.modelo, new Map());
+    const porColor = grupos.get(p.modelo);
+    if (!porColor.has(p.color)) porColor.set(p.color, []);
+    porColor.get(p.color).push(p);
   });
 
-  grupos.forEach((items, modelo) => {
+  const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
+
+  grupos.forEach((porColor, modelo) => {
     const abierto = gruposAbiertos.has(modelo);
-    const totalStock = items.reduce((acc, p) => acc + p.stock, 0);
+    const todos = [].concat(...porColor.values());
     const trGrupo = document.createElement('tr');
     trGrupo.className = 'grupo-modelo';
-    trGrupo.innerHTML = `<td colspan="6">${abierto ? '▾' : '▸'} ${modelo} <span class="grupo-info">${items.length} variante(s) · stock total: ${totalStock}</span></td>`;
+    trGrupo.innerHTML = `<td colspan="6">${abierto ? '▾' : '▸'} ${modelo} <span class="grupo-info">${porColor.size} color(es) · ${todos.length} variante(s) · stock total: ${sumaStock(todos)}</span></td>`;
     trGrupo.addEventListener('click', () => {
       if (abierto) gruposAbiertos.delete(modelo);
       else gruposAbiertos.add(modelo);
       renderInventario();
     });
     tbody.appendChild(trGrupo);
-    if (abierto) items.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
+    if (!abierto) return;
+
+    porColor.forEach((items, color) => {
+      const clave = `${modelo}||${color}`;
+      const colorAbierto = coloresAbiertos.has(clave);
+      const tallas = items
+        .slice()
+        .sort((a, b) => String(a.talla).localeCompare(String(b.talla), 'es', { numeric: true }));
+      const trColor = document.createElement('tr');
+      trColor.className = 'grupo-color';
+      trColor.innerHTML = `<td colspan="6">${colorAbierto ? '▾' : '▸'} ${color} <span class="grupo-info">${tallas.length} talla(s) · stock: ${sumaStock(tallas)}</span></td>`;
+      trColor.addEventListener('click', () => {
+        if (colorAbierto) coloresAbiertos.delete(clave);
+        else coloresAbiertos.add(clave);
+        renderInventario();
+      });
+      tbody.appendChild(trColor);
+      if (colorAbierto) tallas.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
+    });
   });
 }
 

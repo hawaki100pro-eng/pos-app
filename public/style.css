@@ -355,6 +355,18 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
 .grupo-modelo:hover td { background: #e0e7ff; }
 
+/* Segundo nivel: fila de color dentro de un modelo (clic para desplegar tallas y stock) */
+.grupo-color td {
+  background: #f5f3ff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 12px 8px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+}
+
+.grupo-color:hover td { background: #ede9fe; }
+
 .grupo-info {
   color: #666;
   font-weight: 400;
