@@ -374,6 +374,59 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   margin-left: 8px;
 }
 
+/* Inventario en celular: la tabla no cabe a lo ancho, así que cada talla se muestra como
+   una tarjeta. Modelo y color se ocultan porque ya se leen en las cabeceras del grupo. */
+@media (max-width: 700px) {
+  #productos-tabla { min-width: 0; }
+  #productos-tabla thead { display: none; }
+
+  #productos-tabla .grupo-modelo td { padding: 12px 10px; }
+  #productos-tabla .grupo-color td { padding: 10px 10px 10px 24px; }
+  #productos-tabla .grupo-info {
+    display: block;
+    margin-left: 0;
+    margin-top: 2px;
+  }
+
+  #productos-tabla .fila-producto {
+    display: block;
+    padding: 8px 10px 10px 24px;
+    border-bottom: 1px solid #eee;
+  }
+
+  #productos-tabla .fila-producto td {
+    display: inline-block;
+    border: none;
+    padding: 2px 12px 2px 0;
+  }
+
+  #productos-tabla .fila-producto .celda-color { display: none; }
+
+  /* Queda vacía salvo que el producto esté eliminado; entonces muestra solo el motivo */
+  #productos-tabla .fila-producto .celda-modelo {
+    display: block;
+    padding: 0;
+  }
+
+  #productos-tabla .fila-producto .celda-modelo-texto { display: none; }
+
+  #productos-tabla .fila-producto .celda-talla::before {
+    content: 'Talla ';
+    color: #666;
+  }
+
+  #productos-tabla .fila-producto .celda-stock::before {
+    content: 'stock ';
+    color: #666;
+    font-weight: 400;
+  }
+
+  #productos-tabla .fila-producto .celda-acciones {
+    display: block;
+    padding: 6px 0 0;
+  }
+}
+
 /* --- Modal de catálogo (MAGICA) --- */
 
 #catalogo-modal {

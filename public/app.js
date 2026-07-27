@@ -841,14 +841,9 @@ function renderInventario() {
   const tbody = document.querySelector('#productos-tabla tbody');
   tbody.innerHTML = '';
 
-  // Celular: tabla plana de siempre (esta vista no se toca)
-  if (window.innerWidth <= 700) {
-    productosInventario.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
-    return;
-  }
-
-  // Escritorio: dos niveles. Clic en el modelo despliega sus colores; clic en un color despliega
-  // las tallas de ese color con su stock.
+  // Dos niveles, igual en escritorio y celular: clic en el modelo despliega sus colores;
+  // clic en un color despliega las tallas de ese color con su stock.
+  // (En celular el CSS convierte cada talla en una tarjeta para que nada quede cortado.)
   const grupos = new Map();
   productosInventario.forEach((p) => {
     if (!grupos.has(p.modelo)) grupos.set(p.modelo, new Map());
@@ -895,6 +890,7 @@ function renderInventario() {
 
 function crearFilaProducto(p) {
     const tr = document.createElement('tr');
+    tr.className = 'fila-producto';
     if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
     const stockRojo = p.stock === 2;
     const stockAzul = p.stock === 1;
@@ -903,13 +899,15 @@ function crearFilaProducto(p) {
     const notaEliminado = p.eliminado
       ? `<div class="nota-anulacion">Eliminado ${formatFecha(p.fecha_eliminacion)} por ${p.eliminado_por_usuario || 'admin'}: "${p.motivo_eliminacion}"</div>`
       : '';
+    // En celular el CSS oculta modelo y color (ya se leen en las cabeceras del grupo) y deja
+    // talla, precio y stock en una sola línea, por eso cada celda lleva su clase.
     tr.innerHTML = `
-      <td>${p.modelo}${notaEliminado}</td>
-      <td>${p.talla}</td>
-      <td>${p.color}</td>
-      <td>$${p.precio.toFixed(2)}</td>
-      <td style="${stockColor}">${p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
-      <td></td>
+      <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
+      <td class="celda-talla">${p.talla}</td>
+      <td class="celda-color">${p.color}</td>
+      <td class="celda-precio">$${p.precio.toFixed(2)}</td>
+      <td class="celda-stock" style="${stockColor}">${p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
+      <td class="celda-acciones"></td>
     `;
 
     const acciones = document.createElement('div');
