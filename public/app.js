@@ -341,6 +341,9 @@ document.getElementById('toggle-dinero-btn').addEventListener('click', () => {
   aplicarVisibilidadDinero();
 });
 
+// El filtro de periodo solo cambia lo que se muestra: ninguna venta se borra
+document.getElementById('filtro-periodo').addEventListener('change', () => cargarDashboard());
+
 // --- Refresco automático del panel (para ver las ventas de los vendedores sin recargar) ---
 
 let refrescoAutoId = null;
@@ -350,7 +353,8 @@ const REFRESCO_SEGUNDOS = 20;
 // está en segundo plano: así nunca interrumpe una tarea a medias.
 function puedeRefrescar() {
   const activo = document.activeElement;
-  if (activo && ['INPUT', 'SELECT', 'TEXTAREA'].includes(activo.tagName)) return false;
+  // Los <select> no bloquean: no se pierde nada al re-renderizar (ej. el filtro de periodo)
+  if (activo && ['INPUT', 'TEXTAREA'].includes(activo.tagName)) return false;
   if (!document.getElementById('catalogo-modal').classList.contains('hidden')) return false;
   if (!document.getElementById('editar-venta-modal').classList.contains('hidden')) return false;
   if (document.hidden) return false;
@@ -374,7 +378,8 @@ function detenerRefrescoAuto() {
 }
 
 async function cargarDashboard() {
-  const res = await fetch('/api/dashboard');
+  const periodo = document.getElementById('filtro-periodo').value;
+  const res = await fetch(`/api/dashboard?periodo=${periodo}`);
   const data = await res.json();
 
   const abiertaCard = document.getElementById('caja-abierta-card');
@@ -394,6 +399,13 @@ async function cargarDashboard() {
 
   const tbody = document.querySelector('#ventas-tabla tbody');
   tbody.innerHTML = '';
+
+  // Aviso de cuántas ventas se están viendo (las demás no se borraron, solo están filtradas)
+  const info = document.getElementById('filtro-periodo-info');
+  info.textContent = data.ventas.length === 0
+    ? `Sin ventas en este periodo (hay ${data.numVentas} en total)`
+    : `${data.ventas.length} venta(s) · ${data.numVentas} en total`;
+
   data.ventas.forEach((v) => {
     const detalleTexto = v.detalle
       .map((d) => `${d.producto} x${d.cantidad}`)

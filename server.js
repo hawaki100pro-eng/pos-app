@@ -321,9 +321,23 @@ app.get('/api/ventas/:id', requireLogin, async (req, res) => {
 
 // --- Dashboard del admin ---
 
+// Filtro de periodo del historial. Las fechas se guardan en UTC, así que se convierten
+// a hora de Ecuador antes de comparar: "hoy" es el día real del local, no el día UTC.
+const FECHA_LOCAL = `(v.fecha AT TIME ZONE 'UTC' AT TIME ZONE 'America/Guayaquil')`;
+const HOY_LOCAL = `date_trunc('day', NOW() AT TIME ZONE 'America/Guayaquil')`;
+const FILTROS_PERIODO = {
+  hoy: `AND ${FECHA_LOCAL} >= ${HOY_LOCAL}`,
+  '7dias': `AND ${FECHA_LOCAL} >= ${HOY_LOCAL} - INTERVAL '6 days'`,
+  mes: `AND ${FECHA_LOCAL} >= date_trunc('month', NOW() AT TIME ZONE 'America/Guayaquil')`,
+  todo: '',
+};
+
 app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   const turno = await getTurnoAbierto();
   const numVentasR = await pool.query('SELECT COUNT(*) AS c FROM ventas');
+
+  // Lista blanca: solo estos valores llegan a la consulta
+  const periodo = ['hoy', '7dias', 'mes', 'todo'].includes(req.query.periodo) ? req.query.periodo : 'hoy';
   const ventasR = await pool.query(`
     SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono,
            v.fecha, v.total, v.metodo_pago, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
@@ -332,6 +346,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
     JOIN usuarios u ON u.id = v.usuario_id
     LEFT JOIN usuarios au ON au.id = v.anulada_por
     WHERE v.eliminada = 0
+    ${FILTROS_PERIODO[periodo]}
     ORDER BY v.id DESC
     LIMIT 100
   `);
@@ -352,7 +367,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
     totalTransferenciasTurno = r.rows[0].t;
   }
 
-  res.json({ turno, totalTransferenciasTurno, numVentas: parseInt(numVentasR.rows[0].c, 10), ventas });
+  res.json({ turno, totalTransferenciasTurno, numVentas: parseInt(numVentasR.rows[0].c, 10), periodo, ventas });
 });
 
 // --- Anulación de ventas (no se borran, queda nota con fecha y motivo) ---

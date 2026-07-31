@@ -343,6 +343,27 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   letter-spacing: 2px;
 }
 
+/* Filtro de periodo del historial de ventas */
+.filtro-periodo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+  flex-wrap: wrap;
+}
+
+.filtro-periodo-row select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+#filtro-periodo-info {
+  color: #666;
+  font-size: 0.85rem;
+}
+
 /* Inventario en escritorio: fila de grupo por modelo (clic para desplegar tallas) */
 .grupo-modelo td {
   background: #eef2ff;

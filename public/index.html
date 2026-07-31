@@ -132,6 +132,16 @@
     </div>
 
     <h2>Historial de ventas</h2>
+    <div class="filtro-periodo-row">
+      <label for="filtro-periodo">Mostrar:</label>
+      <select id="filtro-periodo">
+        <option value="hoy">Hoy</option>
+        <option value="7dias">Últimos 7 días</option>
+        <option value="mes">Este mes</option>
+        <option value="todo">Todo el historial</option>
+      </select>
+      <span id="filtro-periodo-info"></span>
+    </div>
     <div class="table-wrap">
       <table id="ventas-tabla">
         <thead>
