@@ -85,6 +85,7 @@ function mostrarPantalla(user) {
     if (rol === 'dueno') cargarUsuarios();
     cargarGastos();
     cargarProductos();
+    iniciarRefrescoAuto(); // las ventas de los vendedores aparecen solas
   } else {
     vendedorScreen.classList.remove('hidden');
     document.getElementById('saludo-vendedor').textContent = armarSaludo(user.usuario);
@@ -96,6 +97,7 @@ function mostrarPantalla(user) {
 
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
+  detenerRefrescoAuto();
   items = [];
   loginScreen.classList.remove('hidden');
   vendedorScreen.classList.add('hidden');
@@ -338,6 +340,38 @@ document.getElementById('toggle-dinero-btn').addEventListener('click', () => {
   localStorage.setItem('dineroOculto', dineroOculto ? '1' : '0');
   aplicarVisibilidadDinero();
 });
+
+// --- Refresco automático del panel (para ver las ventas de los vendedores sin recargar) ---
+
+let refrescoAutoId = null;
+const REFRESCO_SEGUNDOS = 20;
+
+// No refresca si el usuario está escribiendo, si hay un modal abierto o si la pestaña
+// está en segundo plano: así nunca interrumpe una tarea a medias.
+function puedeRefrescar() {
+  const activo = document.activeElement;
+  if (activo && ['INPUT', 'SELECT', 'TEXTAREA'].includes(activo.tagName)) return false;
+  if (!document.getElementById('catalogo-modal').classList.contains('hidden')) return false;
+  if (!document.getElementById('editar-venta-modal').classList.contains('hidden')) return false;
+  if (document.hidden) return false;
+  return true;
+}
+
+function iniciarRefrescoAuto() {
+  detenerRefrescoAuto();
+  refrescoAutoId = setInterval(() => {
+    if (!puedeRefrescar()) return;
+    cargarDashboard();
+    cargarGastos();
+    cargarProductos();
+    cargarEstadoCaja();
+  }, REFRESCO_SEGUNDOS * 1000);
+}
+
+function detenerRefrescoAuto() {
+  if (refrescoAutoId) clearInterval(refrescoAutoId);
+  refrescoAutoId = null;
+}
 
 async function cargarDashboard() {
   const res = await fetch('/api/dashboard');
