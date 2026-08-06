@@ -38,9 +38,25 @@
     <div id="venta-form-wrap" class="hidden">
       <h2 style="color:#2563eb;">📋 Nota de venta</h2>
 
+      <!-- Los dibujos van como SVG dentro del HTML (no se descarga nada de afuera).
+           Dos personas = consumidor final (cualquiera); una persona = cliente identificado. -->
       <div class="tipo-cliente-row">
-        <button id="btn-consumidor-final" type="button" class="tipo-btn">Consumidor final</button>
-        <button id="btn-consumidor-datos" type="button" class="tipo-btn">Con datos</button>
+        <button id="btn-consumidor-final" type="button" class="tipo-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Consumidor final</span>
+        </button>
+        <button id="btn-consumidor-datos" type="button" class="tipo-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span>Con datos</span>
+        </button>
       </div>
 
       <div id="campos-cliente" class="hidden">
