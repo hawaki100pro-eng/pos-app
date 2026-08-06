@@ -27,7 +27,6 @@
   --grupo-color-hover: #ede9fe;
 
   --logo: #2563eb;         /* azul: nombre de hombre y pantalla de login */
-  --logo-femenino: #db2777; /* rosa; algo oscuro a propósito, la letra del logo es delgada */
   --gris-boton: #6b7280;
   --gris-boton-hover: #4b5563;
 
@@ -68,7 +67,6 @@
   --grupo-color-hover: #332b3f;
 
   --logo: #7ea6ff;
-  --logo-femenino: #f9a8d4; /* rosa más claro para que se lea sobre el fondo oscuro */
   --gris-boton: #574a51;
   --gris-boton-hover: #6b5c64;
 
@@ -79,6 +77,35 @@
   --badge-anulada-texto: #fca5a5;
   --badge-transfer-fondo: #14313d;
   --badge-transfer-texto: #7dd3fc;
+}
+
+/* ============================================================
+   El color de la app depende de quién entró: fucsia si el nombre
+   es de mujer, azul si es de hombre. app.js pone la clase en el
+   <body> (ver aplicarColorUsuario) y con eso cambia todo de golpe:
+   botones, tarjetas de tipo de cliente, filas del inventario y logo.
+   ============================================================ */
+body.usuario-femenino {
+  --acento: #c026d3;
+  --acento-oscuro: #a21caf;
+  --acento-texto: #a21caf;
+  --acento-suave: #fae8ff;
+  --acento-suave-2: #f5d0fe;
+  --grupo-color-fondo: #fdf4ff;
+  --grupo-color-hover: #fae8ff;
+  --logo: #a21caf; /* la letra del logo es delgada: va más oscura que los botones */
+}
+
+:root[data-tema="noche"] body.usuario-femenino {
+  /* No se aclara más: sobre un fucsia brillante la letra blanca deja de leerse */
+  --acento: #c026d3;
+  --acento-oscuro: #a21caf;
+  --acento-texto: #f0abfc;
+  --acento-suave: #3b1f3f;
+  --acento-suave-2: #4a2850;
+  --grupo-color-fondo: #33203a;
+  --grupo-color-hover: #3d2745;
+  --logo: #f0abfc;
 }
 
 * { box-sizing: border-box; }
@@ -129,16 +156,39 @@ input, select {
 }
 
 button {
-  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 22px;
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--acento);
   color: #fff;
   font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 button:hover { background: var(--acento-oscuro); }
+
+/* Los dibujos que acompañan a cada acción */
+button svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* Acción secundaria (ej. MAGICA): mismo color, pero suave, para que no compita
+   con el botón principal y aun así se note que se puede tocar */
+.btn-secundario {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+}
+
+.btn-secundario:hover { background: var(--acento-suave-2); }
 
 .error { color: #dc2626; font-weight: bold; }
 
@@ -461,9 +511,6 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   line-height: 1.2;
   transition: color 0.25s ease;
 }
-
-/* Rosa cuando entra una vendedora (lo decide aplicarColorLogo en app.js) */
-#logo-hawaki.femenino { color: var(--logo-femenino); }
 
 /* ============================================================
    Pie de página con el botón de modo noche
