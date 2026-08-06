@@ -799,7 +799,9 @@ async function cargarUsuarios() {
 
       const btnClave = document.createElement('button');
       btnClave.textContent = '🔑 Clave';
-      btnClave.className = 'accion-btn editar-btn';
+      btnClave.className = 'accion-btn';
+      btnClave.style.background = '#0369a1';
+      btnClave.style.color = '#fff';
       btnClave.addEventListener('click', () => cambiarClaveUsuario(u));
       acciones.appendChild(btnClave);
 

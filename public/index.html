@@ -36,7 +36,7 @@
     <!-- El formulario de venta es uno solo: se mueve a la pantalla del rol que inició sesión (ver mostrarPantalla) -->
     <div id="venta-slot-vendedor"></div>
     <div id="venta-form-wrap" class="hidden">
-      <h2 class="titulo-rosa">📋 Nota de venta</h2>
+      <h2 style="color:#2563eb;">📋 Nota de venta</h2>
 
       <!-- Los dibujos van como SVG dentro del HTML (no se descarga nada de afuera).
            Dos personas = consumidor final (cualquiera); una persona = cliente identificado. -->
@@ -77,7 +77,7 @@
         <input type="number" id="item-cantidad" placeholder="Cant." min="1" value="1">
         <input type="number" id="item-precio" placeholder="Precio unitario" min="0" step="0.01">
         <button id="agregar-item-btn">Agregar</button>
-        <button id="buscar-catalogo-btn" type="button" class="btn-magica">MAGICA</button>
+        <button id="buscar-catalogo-btn" type="button" style="background:#6b7280;">MAGICA</button>
       </div>
 
       <p>Total: $<span id="carrito-total">0.00</span></p>
@@ -111,9 +111,9 @@
       <h1>Panel administrador</h1>
     </div>
 
-    <h2 class="titulo-rosa">Caja con efectivo</h2>
+    <h2 style="color:#2563eb;">Caja con efectivo</h2>
     <div id="caja-abierta-card" class="card hidden">
-      <button id="toggle-dinero-btn" type="button" class="btn-toggle-seccion">Ocultar</button>
+      <button id="toggle-dinero-btn" type="button" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;align-self:center;">Ocultar</button>
       <span class="card-label">Monto inicial</span>
       <span class="card-value">$<span id="caja-inicial">0.00</span></span>
       <span class="card-label">Monto actual</span>
@@ -121,7 +121,7 @@
       <span class="card-label">Transferencias (no en caja)</span>
       <span class="card-value">$<span id="caja-transferencias">0.00</span></span>
       <button id="cerrar-caja-btn">Cerrar caja</button>
-      <button id="vaciar-caja-btn" class="hidden btn-peligro">Vaciar caja ($0)</button>
+      <button id="vaciar-caja-btn" class="hidden" style="background:#dc2626;">Vaciar caja ($0)</button>
     </div>
     <div id="caja-cerrada-card" class="hidden">
       <p>No hay turno de caja abierto.</p>

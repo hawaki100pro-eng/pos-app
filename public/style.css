@@ -1,37 +1,17 @@
-/* ============================================================
-   Paleta de la tienda. Para cambiar un tono en toda la app,
-   se cambia aquí una sola vez.
-   ============================================================ */
-:root {
-  --rosa-fondo: #ef5c98;   /* fondo de la página (igual al del mosaico de sandalias) */
-  --rosa: #db2777;         /* botones principales (tono elegido para que el texto blanco se lea bien) */
-  --rosa-oscuro: #be185d;  /* el mismo botón cuando se pasa el dedo/mouse */
-  --rosa-suave: #fbd3e3;   /* superficies rosadas: cabecera de tablas, botón MAGICA */
-  --rosa-palido: #fdeef5;  /* rosado casi blanco: filas de grupo, tarjeta elegida */
-  --rosa-borde: #f7c6da;
-  --rosa-texto: #b8306b;   /* texto oscuro sobre rosado claro */
-  --tarjeta: #fff8fb;      /* fondo de las tarjetas blancas */
-  --texto: #33262c;
-  --texto-suave: #7d6a73;
-  --borde: #f0dbe4;
-}
-
 * { box-sizing: border-box; }
 
 body {
   font-family: system-ui, sans-serif;
-  background: var(--rosa-fondo) url('fondo-sandalias.svg') repeat;
-  background-size: 460px 460px;
-  color: var(--texto);
+  background: #f4f4f9;
   margin: 0;
-  padding: 18px 14px 32px;
+  padding: 24px 16px;
 }
 
 .container {
-  background: var(--tarjeta);
-  border-radius: 18px;
-  box-shadow: 0 4px 18px rgba(140, 20, 70, 0.18);
-  padding: 22px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 24px;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -39,11 +19,6 @@ body {
 .hidden { display: none !important; }
 
 h1 { margin-top: 0; font-size: 1.4rem; }
-
-h2, h3 { color: var(--texto); }
-
-/* Títulos que van en rosado (Nota de venta, Caja con efectivo) */
-.titulo-rosa { color: var(--rosa); }
 
 .top-bar {
   display: flex;
@@ -57,50 +32,24 @@ form {
   gap: 10px;
 }
 
-input, select {
-  padding: 11px 12px;
-  border: 1.5px solid var(--rosa-borde);
-  border-radius: 10px;
-  background: #fff;
+input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   font-size: 1rem;
-  font-family: inherit;
-  color: var(--texto);
 }
-
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--rosa);
-}
-
-input::placeholder { color: #b9a6ae; }
 
 button {
-  padding: 11px 18px;
+  padding: 10px 16px;
   border: none;
-  border-radius: 10px;
-  background: var(--rosa);
+  border-radius: 4px;
+  background: #4f46e5;
   color: #fff;
   font-size: 1rem;
-  font-family: inherit;
-  font-weight: 600;
   cursor: pointer;
 }
 
-button:hover { background: var(--rosa-oscuro); }
-
-/* Botón MAGICA: rosado claro con letra oscura, para que no compita con Agregar */
-.btn-magica {
-  background: var(--rosa-suave);
-  color: var(--rosa-texto);
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.btn-magica:hover { background: #f8bed6; }
-
-/* Botones destructivos: se quedan en rojo, el color de peligro se entiende solo */
-.btn-peligro { background: #dc2626; }
-.btn-peligro:hover { background: #b91c1c; }
+button:hover { background: #4338ca; }
 
 .error { color: #dc2626; font-weight: bold; }
 
@@ -109,7 +58,7 @@ button:hover { background: var(--rosa-oscuro); }
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid #eee;
 }
 
 .producto-row input[type="number"] {
@@ -125,7 +74,7 @@ button:hover { background: var(--rosa-oscuro); }
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid #eee;
 }
 
 .resumen {
@@ -136,17 +85,17 @@ button:hover { background: var(--rosa-oscuro); }
 
 .card {
   flex: 1;
-  background: var(--rosa-palido);
-  border: 1.5px solid var(--rosa-borde);
-  border-radius: 14px;
+  background: #f9fafb;
+  border: 1px solid #eee;
+  border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.card-label { color: var(--texto-suave); font-size: 0.85rem; }
-.card-value { font-size: 1.6rem; font-weight: bold; color: var(--texto); }
+.card-label { color: #666; font-size: 0.85rem; }
+.card-value { font-size: 1.6rem; font-weight: bold; color: #111; }
 
 table {
   width: 100%;
@@ -161,22 +110,9 @@ table {
 
 th, td {
   text-align: left;
-  padding: 9px 8px;
-  border-bottom: 1px solid var(--borde);
+  padding: 8px;
+  border-bottom: 1px solid #eee;
 }
-
-/* Cabecera rosada, como en el diseño */
-thead th {
-  background: var(--rosa-suave);
-  color: var(--rosa-texto);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  border-bottom: none;
-}
-
-thead th:first-child { border-radius: 8px 0 0 8px; }
-thead th:last-child { border-radius: 0 8px 8px 0; }
 
 #admin-screen { max-width: 900px; }
 
@@ -194,7 +130,7 @@ thead th:last-child { border-radius: 0 8px 8px 0; }
 
 .nota-anulacion {
   font-size: 0.75rem;
-  color: var(--texto-suave);
+  color: #888;
   margin-top: 2px;
   max-width: 220px;
 }
@@ -228,18 +164,18 @@ thead th:last-child { border-radius: 0 8px 8px 0; }
 }
 
 .accion-btn.imprimir-link {
-  background: var(--rosa-palido);
-  color: var(--rosa-texto);
+  background: #eef2ff;
+  color: #4338ca;
 }
 
-.accion-btn.imprimir-link:hover { background: var(--rosa-suave); }
+.accion-btn.imprimir-link:hover { background: #e0e7ff; }
 
 .accion-btn.editar-btn {
-  background: var(--rosa);
+  background: #4f46e5;
   color: #fff;
 }
 
-.accion-btn.editar-btn:hover { background: var(--rosa-oscuro); }
+.accion-btn.editar-btn:hover { background: #4338ca; }
 
 @media (min-width: 640px) {
   .acciones-venta {
@@ -268,7 +204,7 @@ thead th:last-child { border-radius: 0 8px 8px 0; }
   justify-content: space-between;
   align-items: center;
   padding: 6px 0;
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid #eee;
 }
 
 .item-row button {
@@ -302,8 +238,6 @@ thead th:last-child { border-radius: 0 8px 8px 0; }
   display: none;
 }
 
-#toggle-dinero-btn { align-self: center; }
-
 #caja-cerrada-card {
   display: flex;
   align-items: center;
@@ -313,7 +247,7 @@ thead th:last-child { border-radius: 0 8px 8px 0; }
 
 #caja-cerrada-card input { max-width: 200px; }
 
-label { font-size: 0.85rem; color: var(--texto-suave); font-weight: 600; }
+label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
 .tipo-cliente-row {
   display: flex;
@@ -329,14 +263,14 @@ label { font-size: 0.85rem; color: var(--texto-suave); font-weight: 600; }
   justify-content: center;
   gap: 10px;
   background: #fff;
-  color: var(--rosa-texto);
-  border: 1.5px solid var(--rosa-borde);
+  color: #4338ca;
+  border: 1.5px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px 10px;
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.2;
-  box-shadow: 0 1px 2px rgba(140, 20, 70, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tipo-btn svg {
@@ -346,18 +280,18 @@ label { font-size: 0.85rem; color: var(--texto-suave); font-weight: 600; }
 }
 
 .tipo-btn:hover {
-  background: var(--rosa-palido);
-  border-color: var(--rosa);
+  background: #f9fafb;
+  border-color: #c7d2fe;
 }
 
 /* Elegido: se pinta el fondo y el borde, sin perder el dibujo ni el texto */
 .tipo-btn.activo {
-  background: var(--rosa-palido);
-  border-color: var(--rosa);
-  color: var(--rosa-texto);
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #4338ca;
 }
 
-.tipo-btn.activo:hover { background: var(--rosa-suave); }
+.tipo-btn.activo:hover { background: #e0e7ff; }
 
 .metodo-pago-row {
   display: flex;
@@ -373,12 +307,9 @@ label { font-size: 0.85rem; color: var(--texto-suave); font-weight: 600; }
   cursor: pointer;
 }
 
-/* Los redondeles de Efectivo/Transferencia también en rosado */
-input[type="radio"] { accent-color: var(--rosa); }
-
 .badge-transferencia {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: #e0f2fe;
+  color: #0369a1;
   font-size: 0.75rem;
   font-weight: bold;
   padding: 2px 8px;
@@ -398,7 +329,7 @@ input[type="radio"] { accent-color: var(--rosa); }
 .saludo {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--rosa);
+  color: #4f46e5;
   margin: 0 0 14px;
 }
 
@@ -412,33 +343,25 @@ input[type="radio"] { accent-color: var(--rosa); }
 .logout-pie {
   display: block;
   margin: 28px auto 8px;
-  background: #9c8790;
+  background: #6b7280;
   color: #fff;
   border: none;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 8px 24px;
   font-size: 0.9rem;
-  font-weight: 500;
   cursor: pointer;
 }
 
-.logout-pie:hover { background: #7d6a73; }
+.logout-pie:hover { background: #4b5563; }
 
-/* Logo de la tienda con la fuente del letrero (Slackside One).
-   Va sobre una pastilla blanca para que se lea encima del fondo rosado. */
+/* Logo de la tienda con la fuente del letrero (Slackside One) */
 #logo-hawaki {
   font-family: 'Slackside One', cursive;
-  font-size: 2.4rem;
-  color: var(--rosa);
+  font-size: 2.6rem;
+  color: #2563eb;
   text-align: center;
-  width: fit-content;
-  margin: 0 auto 14px;
-  padding: 4px 30px 8px;
-  background: var(--tarjeta);
-  border-radius: 999px;
-  box-shadow: 0 3px 12px rgba(140, 20, 70, 0.2);
+  margin: 10px 0 4px;
   letter-spacing: 2px;
-  line-height: 1.1;
 }
 
 /* Filtro de periodo del historial de ventas */
@@ -451,12 +374,14 @@ input[type="radio"] { accent-color: var(--rosa); }
 }
 
 .filtro-periodo-row select {
-  padding: 7px 10px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
   font-size: 0.9rem;
 }
 
 #filtro-periodo-info {
-  color: var(--texto-suave);
+  color: #666;
   font-size: 0.85rem;
 }
 
@@ -468,47 +393,44 @@ input[type="radio"] { accent-color: var(--rosa); }
   flex-wrap: wrap;
 }
 
-/* Versión chica del botón de "Ocultar" que usa la tarjeta de caja */
+/* Versión chica del botón gris de "Ocultar" que usa la tarjeta de caja */
 .btn-toggle-seccion {
-  background: #9c8790;
+  background: #6b7280;
   color: #fff;
   border: none;
-  border-radius: 999px;
-  padding: 3px 12px;
+  border-radius: 6px;
+  padding: 3px 10px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
 }
 
-.btn-toggle-seccion:hover { background: #7d6a73; }
-
-/* Inventario en escritorio: fila de grupo por modelo (clic para desplegar colores).
-   Va un tono más fuerte que la cabecera de la tabla para que no se confundan. */
+/* Inventario en escritorio: fila de grupo por modelo (clic para desplegar tallas) */
 .grupo-modelo td {
-  background: #f7bad5;
+  background: #eef2ff;
   font-weight: 600;
   cursor: pointer;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--rosa-borde);
+  border-bottom: 1px solid #ddd;
   user-select: none;
 }
 
-.grupo-modelo:hover td { background: #f4a6c9; }
+.grupo-modelo:hover td { background: #e0e7ff; }
 
 /* Segundo nivel: fila de color dentro de un modelo (clic para desplegar tallas y stock) */
 .grupo-color td {
-  background: var(--rosa-palido);
+  background: #f5f3ff;
   font-weight: 600;
   cursor: pointer;
   padding: 8px 12px 8px 32px;
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid #e5e7eb;
   user-select: none;
 }
 
-.grupo-color:hover td { background: #fbe0ec; }
+.grupo-color:hover td { background: #ede9fe; }
 
 .grupo-info {
-  color: var(--texto-suave);
+  color: #666;
   font-weight: 400;
   font-size: 0.85rem;
   margin-left: 8px;
@@ -531,7 +453,7 @@ input[type="radio"] { accent-color: var(--rosa); }
   #productos-tabla .fila-producto {
     display: block;
     padding: 8px 10px 10px 24px;
-    border-bottom: 1px solid var(--borde);
+    border-bottom: 1px solid #eee;
   }
 
   #productos-tabla .fila-producto td {
@@ -552,12 +474,12 @@ input[type="radio"] { accent-color: var(--rosa); }
 
   #productos-tabla .fila-producto .celda-talla::before {
     content: 'Talla ';
-    color: var(--texto-suave);
+    color: #666;
   }
 
   #productos-tabla .fila-producto .celda-stock::before {
     content: 'stock ';
-    color: var(--texto-suave);
+    color: #666;
     font-weight: 400;
   }
 
@@ -566,15 +488,15 @@ input[type="radio"] { accent-color: var(--rosa); }
     padding: 6px 0 0;
   }
 
+  /* Historial de ventas en celular: la fila de 9 columnas se reordena como tarjeta.
+     El orden que se ve es: proforma y total arriba, luego cliente, vendedor y fecha,
+     los productos, el método con el estado, y al final los botones. */
   /* Sigue viéndose chico, pero con alto suficiente para tocarlo con el dedo */
   .btn-toggle-seccion {
     min-height: 32px;
     padding: 3px 14px;
   }
 
-  /* Historial de ventas en celular: la fila de 9 columnas se reordena como tarjeta.
-     El orden que se ve es: proforma y total arriba, luego cliente, vendedor y fecha,
-     los productos, el método con el estado, y al final los botones. */
   #ventas-tabla { min-width: 0; }
   #ventas-tabla thead { display: none; }
 
@@ -583,7 +505,7 @@ input[type="radio"] { accent-color: var(--rosa); }
     flex-wrap: wrap;
     align-items: baseline;
     padding: 10px 10px 12px;
-    border-bottom: 1px solid var(--borde);
+    border-bottom: 1px solid #eee;
   }
 
   #ventas-tabla .fila-venta td {
@@ -599,7 +521,7 @@ input[type="radio"] { accent-color: var(--rosa); }
 
   #ventas-tabla .celda-proforma::before {
     content: 'Proforma ';
-    color: var(--texto-suave);
+    color: #888;
     font-weight: 400;
     font-size: 0.85rem;
   }
@@ -618,7 +540,7 @@ input[type="radio"] { accent-color: var(--rosa); }
 
   #ventas-tabla .celda-vendedor,
   #ventas-tabla .celda-fecha {
-    color: var(--texto-suave);
+    color: #666;
     font-size: 0.85rem;
   }
 
@@ -635,7 +557,7 @@ input[type="radio"] { accent-color: var(--rosa); }
     order: 6;
     flex: 1 1 100%;
     margin-top: 4px;
-    color: var(--texto-suave);
+    color: #555;
     font-size: 0.85rem;
   }
 
@@ -675,24 +597,23 @@ input[type="radio"] { accent-color: var(--rosa); }
 }
 
 .catalogo-item {
-  border: 1.5px solid var(--rosa-borde);
-  border-radius: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 8px;
-  background: #fff;
   cursor: pointer;
 }
 
 .catalogo-item:hover,
 .catalogo-item:active {
-  background: var(--rosa-palido);
-  border-color: var(--rosa);
+  background: #eef2ff;
+  border-color: #4f46e5;
 }
 
 .catalogo-item-modelo { font-weight: 600; }
 
 .catalogo-item-detalle {
-  color: var(--texto-suave);
+  color: #555;
   font-size: 0.9rem;
   margin-top: 2px;
 }
