@@ -1,6 +1,8 @@
 const loginScreen = document.getElementById('login-screen');
 const vendedorScreen = document.getElementById('vendedor-screen');
 const adminScreen = document.getElementById('admin-screen');
+// El logo es uno solo y va dentro del marco: se muda a la pantalla que se esté mostrando
+const logoHawaki = document.getElementById('logo-hawaki');
 
 let items = []; // { producto, cantidad, precio_unitario }
 let editandoItems = []; // ítems en edición dentro del modal de editar venta
@@ -76,6 +78,7 @@ function mostrarPantalla(user) {
 
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
+    adminScreen.prepend(logoHawaki);
     document.querySelector('#admin-screen h1').textContent = rol === 'dueno' ? 'Panel del dueño' : 'Panel administrador';
     // La sección de Vendedores (usuarios) completa es exclusiva del dueño
     document.getElementById('seccion-usuarios').classList.toggle('hidden', rol !== 'dueno');
@@ -88,6 +91,7 @@ function mostrarPantalla(user) {
     iniciarRefrescoAuto(); // las ventas de los vendedores aparecen solas
   } else {
     vendedorScreen.classList.remove('hidden');
+    vendedorScreen.prepend(logoHawaki);
     document.getElementById('saludo-vendedor').textContent = armarSaludo(user.usuario);
     document.getElementById('venta-slot-vendedor').appendChild(ventaForm);
     cargarEstadoCaja();
@@ -100,6 +104,7 @@ async function logout() {
   detenerRefrescoAuto();
   items = [];
   loginScreen.classList.remove('hidden');
+  loginScreen.prepend(logoHawaki);
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
   document.getElementById('login-usuario').value = '';

@@ -2,7 +2,7 @@
 
 body {
   font-family: system-ui, sans-serif;
-  background: #f4f4f9;
+  background: #f45e94;
   margin: 0;
   padding: 24px 16px;
 }
@@ -354,14 +354,18 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
 .logout-pie:hover { background: #4b5563; }
 
-/* Logo de la tienda con la fuente del letrero (Slackside One) */
+/* Logo de la tienda con la fuente del letrero (Slackside One).
+   Va dentro del marco, arriba del todo, con una línea que lo separa del contenido. */
 #logo-hawaki {
   font-family: 'Slackside One', cursive;
   font-size: 2.6rem;
   color: #2563eb;
   text-align: center;
-  margin: 10px 0 4px;
+  margin: -4px 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
   letter-spacing: 2px;
+  line-height: 1.2;
 }
 
 /* Filtro de periodo del historial de ventas */
