@@ -341,6 +341,23 @@ document.getElementById('toggle-dinero-btn').addEventListener('click', () => {
   aplicarVisibilidadDinero();
 });
 
+// El historial de ventas es largo, así que arranca plegado. La preferencia se recuerda
+// en este dispositivo, igual que la de ocultar el dinero de la caja.
+let historialOculto = localStorage.getItem('historialOculto') !== '0';
+
+function aplicarVisibilidadHistorial() {
+  document.getElementById('historial-wrap').classList.toggle('hidden', historialOculto);
+  document.getElementById('toggle-historial-btn').textContent = historialOculto ? '👁 Mostrar' : 'Ocultar';
+}
+
+document.getElementById('toggle-historial-btn').addEventListener('click', () => {
+  historialOculto = !historialOculto;
+  localStorage.setItem('historialOculto', historialOculto ? '1' : '0');
+  aplicarVisibilidadHistorial();
+});
+
+aplicarVisibilidadHistorial();
+
 // El filtro de periodo solo cambia lo que se muestra: ninguna venta se borra
 document.getElementById('filtro-periodo').addEventListener('change', () => cargarDashboard());
 

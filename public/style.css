@@ -364,6 +364,26 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   font-size: 0.85rem;
 }
 
+/* Título de sección con su botón de mostrar/ocultar al lado (ej: Historial de ventas) */
+.titulo-con-boton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Versión chica del botón gris de "Ocultar" que usa la tarjeta de caja */
+.btn-toggle-seccion {
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
 /* Inventario en escritorio: fila de grupo por modelo (clic para desplegar tallas) */
 .grupo-modelo td {
   background: #eef2ff;
@@ -450,6 +470,12 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   /* Historial de ventas en celular: la fila de 9 columnas se reordena como tarjeta.
      El orden que se ve es: proforma y total arriba, luego cliente, vendedor y fecha,
      los productos, el método con el estado, y al final los botones. */
+  /* Sigue viéndose chico, pero con alto suficiente para tocarlo con el dedo */
+  .btn-toggle-seccion {
+    min-height: 32px;
+    padding: 3px 14px;
+  }
+
   #ventas-tabla { min-width: 0; }
   #ventas-tabla thead { display: none; }
 

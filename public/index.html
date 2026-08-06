@@ -131,24 +131,30 @@
       </table>
     </div>
 
-    <h2>Historial de ventas</h2>
-    <div class="filtro-periodo-row">
-      <label for="filtro-periodo">Mostrar:</label>
-      <select id="filtro-periodo">
-        <option value="hoy">Hoy</option>
-        <option value="7dias">Últimos 7 días</option>
-        <option value="mes">Este mes</option>
-        <option value="todo">Todo el historial</option>
-      </select>
-      <span id="filtro-periodo-info"></span>
-    </div>
-    <div class="table-wrap">
-      <table id="ventas-tabla">
-        <thead>
-          <tr><th>Proforma</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Método</th><th>Estado</th><th></th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <h2 class="titulo-con-boton">
+      Historial de ventas
+      <button id="toggle-historial-btn" type="button" class="btn-toggle-seccion">👁 Mostrar</button>
+    </h2>
+    <!-- El filtro de periodo va dentro del envoltorio para que se pliegue junto con la tabla -->
+    <div id="historial-wrap" class="hidden">
+      <div class="filtro-periodo-row">
+        <label for="filtro-periodo">Mostrar:</label>
+        <select id="filtro-periodo">
+          <option value="hoy">Hoy</option>
+          <option value="7dias">Últimos 7 días</option>
+          <option value="mes">Este mes</option>
+          <option value="todo">Todo el historial</option>
+        </select>
+        <span id="filtro-periodo-info"></span>
+      </div>
+      <div class="table-wrap">
+        <table id="ventas-tabla">
+          <thead>
+            <tr><th>Proforma</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Método</th><th>Estado</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Sección de usuarios: exclusiva del dueño (ver mostrarPantalla en app.js) -->
