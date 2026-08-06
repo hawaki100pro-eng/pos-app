@@ -26,7 +26,8 @@
   --grupo-color-fondo: #f5f3ff;
   --grupo-color-hover: #ede9fe;
 
-  --logo: #2563eb;
+  --logo: #2563eb;         /* azul: nombre de hombre y pantalla de login */
+  --logo-femenino: #db2777; /* rosa; algo oscuro a propósito, la letra del logo es delgada */
   --gris-boton: #6b7280;
   --gris-boton-hover: #4b5563;
 
@@ -67,6 +68,7 @@
   --grupo-color-hover: #332b3f;
 
   --logo: #7ea6ff;
+  --logo-femenino: #f9a8d4; /* rosa más claro para que se lea sobre el fondo oscuro */
   --gris-boton: #574a51;
   --gris-boton-hover: #6b5c64;
 
@@ -457,7 +459,11 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   border-bottom: 1px solid var(--borde-suave);
   letter-spacing: 2px;
   line-height: 1.2;
+  transition: color 0.25s ease;
 }
+
+/* Rosa cuando entra una vendedora (lo decide aplicarColorLogo en app.js) */
+#logo-hawaki.femenino { color: var(--logo-femenino); }
 
 /* ============================================================
    Pie de página con el botón de modo noche

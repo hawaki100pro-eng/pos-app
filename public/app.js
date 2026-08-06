@@ -66,9 +66,16 @@ function armarSaludo(usuario) {
   return `¡Hola, ${nombre}! ${emoji}`;
 }
 
+// El logo se pinta rosa o azul según el nombre de quien entró, con la misma
+// regla que ya elige el emoji del saludo (ver esNombreFemenino)
+function aplicarColorLogo(usuario) {
+  logoHawaki.classList.toggle('femenino', Boolean(usuario) && esNombreFemenino(usuario));
+}
+
 function mostrarPantalla(user) {
   const rol = user.rol;
   rolActual = rol;
+  aplicarColorLogo(user.usuario);
   loginScreen.classList.add('hidden');
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
@@ -105,6 +112,7 @@ async function logout() {
   items = [];
   loginScreen.classList.remove('hidden');
   loginScreen.prepend(logoHawaki);
+  aplicarColorLogo(null); // en el login vuelve al azul de siempre
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
   document.getElementById('login-usuario').value = '';
