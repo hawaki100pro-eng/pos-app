@@ -8,6 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Slackside+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Se aplica el tema guardado ANTES de pintar la página: si no, al abrir de noche
+    // se vería un destello blanco antes de que cargue app.js.
+    try {
+      document.documentElement.dataset.tema = localStorage.getItem('tema') === 'noche' ? 'noche' : 'dia';
+    } catch (e) { /* si el navegador bloquea el almacenamiento, queda el tema de día */ }
+  </script>
 </head>
 <body>
 
@@ -261,6 +268,20 @@
     <button id="guardar-edicion-btn">Guardar cambios</button>
     <p id="editar-msg"></p>
   </div>
+
+  <!-- Pie de página: visible en todas las pantallas, también en el login -->
+  <footer class="pie-pagina">
+    <button id="tema-btn" type="button" class="btn-tema" aria-pressed="false">
+      <svg class="icono-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg class="icono-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+      </svg>
+      <span id="tema-texto">Modo noche</span>
+    </button>
+  </footer>
 
   <script src="app.js"></script>
 </body>

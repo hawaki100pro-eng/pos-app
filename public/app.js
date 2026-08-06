@@ -114,6 +114,27 @@ async function logout() {
 document.getElementById('logout-btn-v').addEventListener('click', logout);
 document.getElementById('logout-btn-a').addEventListener('click', logout);
 
+// --- Modo noche ---
+// El tema ya se aplicó en el <head> para que no parpadee; aquí solo se maneja el botón.
+// La preferencia se recuerda en este dispositivo, igual que la de ocultar el dinero.
+
+let temaNoche = document.documentElement.dataset.tema === 'noche';
+
+function aplicarTema() {
+  document.documentElement.dataset.tema = temaNoche ? 'noche' : 'dia';
+  // El botón anuncia lo que va a activar, no el estado en el que está
+  document.getElementById('tema-texto').textContent = temaNoche ? 'Modo día' : 'Modo noche';
+  document.getElementById('tema-btn').setAttribute('aria-pressed', temaNoche ? 'true' : 'false');
+}
+
+document.getElementById('tema-btn').addEventListener('click', () => {
+  temaNoche = !temaNoche;
+  localStorage.setItem('tema', temaNoche ? 'noche' : 'dia');
+  aplicarTema();
+});
+
+aplicarTema();
+
 // --- Vendedor: estado de caja y proforma ---
 
 async function cargarEstadoCaja() {
@@ -964,7 +985,8 @@ function crearFilaProducto(p) {
     if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
     const stockRojo = p.stock === 2;
     const stockAzul = p.stock === 1;
-    const stockColor = stockRojo ? 'color:#dc2626;font-weight:bold' : stockAzul ? 'color:#0369a1;font-weight:bold' : '';
+    // El color va por clase, no escrito aquí, para que el modo noche pueda aclararlo
+    const stockClase = stockRojo ? ' stock-bajo' : stockAzul ? ' stock-critico' : '';
     // Solo el dueño recibe productos eliminados del servidor: se muestran con el motivo que escribió el admin
     const notaEliminado = p.eliminado
       ? `<div class="nota-anulacion">Eliminado ${formatFecha(p.fecha_eliminacion)} por ${p.eliminado_por_usuario || 'admin'}: "${p.motivo_eliminacion}"</div>`
@@ -976,7 +998,7 @@ function crearFilaProducto(p) {
       <td class="celda-talla">${p.talla}</td>
       <td class="celda-color">${p.color}</td>
       <td class="celda-precio">$${p.precio.toFixed(2)}</td>
-      <td class="celda-stock" style="${stockColor}">${p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
+      <td class="celda-stock${stockClase}">${p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
       <td class="celda-acciones"></td>
     `;
 

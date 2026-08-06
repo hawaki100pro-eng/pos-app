@@ -1,19 +1,103 @@
+/* ============================================================
+   Colores en un solo lugar. El tema de día es exactamente el de
+   siempre; el de noche solo cambia estos valores más abajo.
+   ============================================================ */
+:root {
+  --fondo-pagina: #f45e94;
+  --superficie: #fff;        /* tarjetas y marcos */
+  --superficie-2: #f9fafb;   /* tarjeta de caja, hover suave */
+  --campo: #fff;             /* fondo de los campos de texto */
+
+  --texto: #000;
+  --texto-suave: #666;
+  --texto-suave-2: #555;
+  --texto-tenue: #888;
+
+  --borde-suave: #eee;
+  --borde-campo: #ccc;
+  --borde-tarjeta: #ddd;
+  --borde-tipo-btn: #e5e7eb;
+
+  --acento: #4f46e5;         /* botones */
+  --acento-oscuro: #4338ca;
+  --acento-texto: #4338ca;   /* texto en color de acento */
+  --acento-suave: #eef2ff;   /* fondos claros de acento */
+  --acento-suave-2: #e0e7ff;
+  --grupo-color-fondo: #f5f3ff;
+  --grupo-color-hover: #ede9fe;
+
+  --logo: #2563eb;
+  --gris-boton: #6b7280;
+  --gris-boton-hover: #4b5563;
+
+  --stock-bajo: #dc2626;     /* quedan 2 */
+  --stock-critico: #0369a1;  /* queda 1 */
+
+  --badge-anulada-fondo: #fef2f2;
+  --badge-anulada-texto: #dc2626;
+  --badge-transfer-fondo: #e0f2fe;
+  --badge-transfer-texto: #0369a1;
+}
+
+/* --- Modo noche --- */
+:root[data-tema="noche"] {
+  color-scheme: dark; /* pone en oscuro los controles del propio navegador */
+
+  --fondo-pagina: #1b1218;
+  --superficie: #241b21;
+  --superficie-2: #2c2229;
+  --campo: #1b1418;
+
+  --texto: #f2eaee;
+  --texto-suave: #b3a4ab;
+  --texto-suave-2: #c4b7bd;
+  --texto-tenue: #9b8c93;
+
+  --borde-suave: #3a2e35;
+  --borde-campo: #4a3b43;
+  --borde-tarjeta: #3a2e35;
+  --borde-tipo-btn: #3a2e35;
+
+  --acento: #6366f1;
+  --acento-oscuro: #4f46e5;
+  --acento-texto: #a5b4fc;
+  --acento-suave: #2e2a44;
+  --acento-suave-2: #383357;
+  --grupo-color-fondo: #2a2333;
+  --grupo-color-hover: #332b3f;
+
+  --logo: #7ea6ff;
+  --gris-boton: #574a51;
+  --gris-boton-hover: #6b5c64;
+
+  --stock-bajo: #f87171;
+  --stock-critico: #7dd3fc;
+
+  --badge-anulada-fondo: #3d1f22;
+  --badge-anulada-texto: #fca5a5;
+  --badge-transfer-fondo: #14313d;
+  --badge-transfer-texto: #7dd3fc;
+}
+
 * { box-sizing: border-box; }
 
 body {
   font-family: system-ui, sans-serif;
-  background: #f45e94;
+  background: var(--fondo-pagina);
+  color: var(--texto);
   margin: 0;
   padding: 24px 16px;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .container {
-  background: #fff;
+  background: var(--superficie);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 24px;
   max-width: 600px;
   margin: 0 auto;
+  transition: background-color 0.25s ease;
 }
 
 .hidden { display: none !important; }
@@ -32,24 +116,27 @@ form {
   gap: 10px;
 }
 
-input {
+input, select {
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--borde-campo);
   border-radius: 4px;
+  background: var(--campo);
+  color: var(--texto);
   font-size: 1rem;
+  font-family: inherit;
 }
 
 button {
   padding: 10px 16px;
   border: none;
   border-radius: 4px;
-  background: #4f46e5;
+  background: var(--acento);
   color: #fff;
   font-size: 1rem;
   cursor: pointer;
 }
 
-button:hover { background: #4338ca; }
+button:hover { background: var(--acento-oscuro); }
 
 .error { color: #dc2626; font-weight: bold; }
 
@@ -58,7 +145,7 @@ button:hover { background: #4338ca; }
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--borde-suave);
 }
 
 .producto-row input[type="number"] {
@@ -74,7 +161,7 @@ button:hover { background: #4338ca; }
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--borde-suave);
 }
 
 .resumen {
@@ -85,8 +172,8 @@ button:hover { background: #4338ca; }
 
 .card {
   flex: 1;
-  background: #f9fafb;
-  border: 1px solid #eee;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde-suave);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -94,8 +181,8 @@ button:hover { background: #4338ca; }
   gap: 4px;
 }
 
-.card-label { color: #666; font-size: 0.85rem; }
-.card-value { font-size: 1.6rem; font-weight: bold; color: #111; }
+.card-label { color: var(--texto-suave); font-size: 0.85rem; }
+.card-value { font-size: 1.6rem; font-weight: bold; color: var(--texto); }
 
 table {
   width: 100%;
@@ -111,7 +198,7 @@ table {
 th, td {
   text-align: left;
   padding: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--borde-suave);
 }
 
 #admin-screen { max-width: 900px; }
@@ -120,8 +207,8 @@ th, td {
 .venta-anulada td:nth-child(6) { text-decoration: line-through; }
 
 .badge-anulada {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--badge-anulada-fondo);
+  color: var(--badge-anulada-texto);
   font-size: 0.75rem;
   font-weight: bold;
   padding: 2px 8px;
@@ -130,7 +217,7 @@ th, td {
 
 .nota-anulacion {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--texto-tenue);
   margin-top: 2px;
   max-width: 220px;
 }
@@ -164,18 +251,18 @@ th, td {
 }
 
 .accion-btn.imprimir-link {
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
 }
 
-.accion-btn.imprimir-link:hover { background: #e0e7ff; }
+.accion-btn.imprimir-link:hover { background: var(--acento-suave-2); }
 
 .accion-btn.editar-btn {
-  background: #4f46e5;
+  background: var(--acento);
   color: #fff;
 }
 
-.accion-btn.editar-btn:hover { background: #4338ca; }
+.accion-btn.editar-btn:hover { background: var(--acento-oscuro); }
 
 @media (min-width: 640px) {
   .acciones-venta {
@@ -204,7 +291,7 @@ th, td {
   justify-content: space-between;
   align-items: center;
   padding: 6px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--borde-suave);
 }
 
 .item-row button {
@@ -247,7 +334,7 @@ th, td {
 
 #caja-cerrada-card input { max-width: 200px; }
 
-label { font-size: 0.85rem; color: #555; font-weight: 600; }
+label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 
 .tipo-cliente-row {
   display: flex;
@@ -262,9 +349,9 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: #fff;
-  color: #4338ca;
-  border: 1.5px solid #e5e7eb;
+  background: var(--superficie);
+  color: var(--acento-texto);
+  border: 1.5px solid var(--borde-tipo-btn);
   border-radius: 12px;
   padding: 14px 10px;
   font-size: 0.95rem;
@@ -280,18 +367,18 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 }
 
 .tipo-btn:hover {
-  background: #f9fafb;
-  border-color: #c7d2fe;
+  background: var(--superficie-2);
+  border-color: var(--acento-texto);
 }
 
 /* Elegido: se pinta el fondo y el borde, sin perder el dibujo ni el texto */
 .tipo-btn.activo {
-  background: #eef2ff;
-  border-color: #4f46e5;
-  color: #4338ca;
+  background: var(--acento-suave);
+  border-color: var(--acento);
+  color: var(--acento-texto);
 }
 
-.tipo-btn.activo:hover { background: #e0e7ff; }
+.tipo-btn.activo:hover { background: var(--acento-suave-2); }
 
 .metodo-pago-row {
   display: flex;
@@ -308,8 +395,8 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 }
 
 .badge-transferencia {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--badge-transfer-fondo);
+  color: var(--badge-transfer-texto);
   font-size: 0.75rem;
   font-weight: bold;
   padding: 2px 8px;
@@ -326,10 +413,14 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   vertical-align: middle;
 }
 
+/* Stock que se está acabando, en la tabla de inventario */
+.stock-bajo { color: var(--stock-bajo); font-weight: bold; }
+.stock-critico { color: var(--stock-critico); font-weight: bold; }
+
 .saludo {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #4f46e5;
+  color: var(--acento);
   margin: 0 0 14px;
 }
 
@@ -343,7 +434,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 .logout-pie {
   display: block;
   margin: 28px auto 8px;
-  background: #6b7280;
+  background: var(--gris-boton);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -352,20 +443,73 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   cursor: pointer;
 }
 
-.logout-pie:hover { background: #4b5563; }
+.logout-pie:hover { background: var(--gris-boton-hover); }
 
 /* Logo de la tienda con la fuente del letrero (Slackside One).
    Va dentro del marco, arriba del todo, con una línea que lo separa del contenido. */
 #logo-hawaki {
   font-family: 'Slackside One', cursive;
   font-size: 2.6rem;
-  color: #2563eb;
+  color: var(--logo);
   text-align: center;
   margin: -4px 0 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--borde-suave);
   letter-spacing: 2px;
   line-height: 1.2;
+}
+
+/* ============================================================
+   Pie de página con el botón de modo noche
+   ============================================================ */
+.pie-pagina {
+  display: flex;
+  justify-content: center;
+  margin: 22px auto 4px;
+}
+
+.btn-tema {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4b5563;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-tema:hover {
+  background: #fff;
+  color: #1f2937;
+}
+
+.btn-tema svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+/* Se muestra el dibujo de lo que se va a activar: la luna de día, el sol de noche */
+.btn-tema .icono-sol { display: none; }
+
+:root[data-tema="noche"] .btn-tema .icono-luna { display: none; }
+:root[data-tema="noche"] .btn-tema .icono-sol { display: inline; }
+
+:root[data-tema="noche"] .btn-tema {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2d7dd;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+:root[data-tema="noche"] .btn-tema:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
 /* Filtro de periodo del historial de ventas */
@@ -379,13 +523,12 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
 .filtro-periodo-row select {
   padding: 6px 10px;
-  border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.9rem;
 }
 
 #filtro-periodo-info {
-  color: #666;
+  color: var(--texto-suave);
   font-size: 0.85rem;
 }
 
@@ -399,7 +542,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
 /* Versión chica del botón gris de "Ocultar" que usa la tarjeta de caja */
 .btn-toggle-seccion {
-  background: #6b7280;
+  background: var(--gris-boton);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -409,32 +552,34 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   cursor: pointer;
 }
 
+.btn-toggle-seccion:hover { background: var(--gris-boton-hover); }
+
 /* Inventario en escritorio: fila de grupo por modelo (clic para desplegar tallas) */
 .grupo-modelo td {
-  background: #eef2ff;
+  background: var(--acento-suave);
   font-weight: 600;
   cursor: pointer;
   padding: 10px 12px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--borde-tarjeta);
   user-select: none;
 }
 
-.grupo-modelo:hover td { background: #e0e7ff; }
+.grupo-modelo:hover td { background: var(--acento-suave-2); }
 
 /* Segundo nivel: fila de color dentro de un modelo (clic para desplegar tallas y stock) */
 .grupo-color td {
-  background: #f5f3ff;
+  background: var(--grupo-color-fondo);
   font-weight: 600;
   cursor: pointer;
   padding: 8px 12px 8px 32px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--borde-tipo-btn);
   user-select: none;
 }
 
-.grupo-color:hover td { background: #ede9fe; }
+.grupo-color:hover td { background: var(--grupo-color-hover); }
 
 .grupo-info {
-  color: #666;
+  color: var(--texto-suave);
   font-weight: 400;
   font-size: 0.85rem;
   margin-left: 8px;
@@ -457,7 +602,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
   #productos-tabla .fila-producto {
     display: block;
     padding: 8px 10px 10px 24px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--borde-suave);
   }
 
   #productos-tabla .fila-producto td {
@@ -478,12 +623,12 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
   #productos-tabla .fila-producto .celda-talla::before {
     content: 'Talla ';
-    color: #666;
+    color: var(--texto-suave);
   }
 
   #productos-tabla .fila-producto .celda-stock::before {
     content: 'stock ';
-    color: #666;
+    color: var(--texto-suave);
     font-weight: 400;
   }
 
@@ -492,15 +637,15 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
     padding: 6px 0 0;
   }
 
-  /* Historial de ventas en celular: la fila de 9 columnas se reordena como tarjeta.
-     El orden que se ve es: proforma y total arriba, luego cliente, vendedor y fecha,
-     los productos, el método con el estado, y al final los botones. */
   /* Sigue viéndose chico, pero con alto suficiente para tocarlo con el dedo */
   .btn-toggle-seccion {
     min-height: 32px;
     padding: 3px 14px;
   }
 
+  /* Historial de ventas en celular: la fila de 9 columnas se reordena como tarjeta.
+     El orden que se ve es: proforma y total arriba, luego cliente, vendedor y fecha,
+     los productos, el método con el estado, y al final los botones. */
   #ventas-tabla { min-width: 0; }
   #ventas-tabla thead { display: none; }
 
@@ -509,7 +654,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
     flex-wrap: wrap;
     align-items: baseline;
     padding: 10px 10px 12px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--borde-suave);
   }
 
   #ventas-tabla .fila-venta td {
@@ -525,7 +670,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
   #ventas-tabla .celda-proforma::before {
     content: 'Proforma ';
-    color: #888;
+    color: var(--texto-tenue);
     font-weight: 400;
     font-size: 0.85rem;
   }
@@ -544,7 +689,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
   #ventas-tabla .celda-vendedor,
   #ventas-tabla .celda-fecha {
-    color: #666;
+    color: var(--texto-suave);
     font-size: 0.85rem;
   }
 
@@ -561,7 +706,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
     order: 6;
     flex: 1 1 100%;
     margin-top: 4px;
-    color: #555;
+    color: var(--texto-suave-2);
     font-size: 0.85rem;
   }
 
@@ -601,7 +746,7 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 }
 
 .catalogo-item {
-  border: 1px solid #ddd;
+  border: 1px solid var(--borde-tarjeta);
   border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 8px;
@@ -610,14 +755,14 @@ label { font-size: 0.85rem; color: #555; font-weight: 600; }
 
 .catalogo-item:hover,
 .catalogo-item:active {
-  background: #eef2ff;
-  border-color: #4f46e5;
+  background: var(--acento-suave);
+  border-color: var(--acento);
 }
 
 .catalogo-item-modelo { font-weight: 600; }
 
 .catalogo-item-detalle {
-  color: #555;
+  color: var(--texto-suave-2);
   font-size: 0.9rem;
   margin-top: 2px;
 }
