@@ -742,7 +742,7 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   }
 
   #ventas-tabla .celda-proforma::before {
-    content: 'Proforma ';
+    content: 'Nota de venta ';
     color: var(--texto-tenue);
     font-weight: 400;
     font-size: 0.85rem;

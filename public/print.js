@@ -13,7 +13,7 @@
   const res = await fetch(`/api/ventas/${id}`);
   if (!res.ok) {
     const data = await res.json();
-    errorMsg.textContent = data.error || 'No se pudo cargar la proforma';
+    errorMsg.textContent = data.error || 'No se pudo cargar la nota de venta';
     errorMsg.classList.remove('hidden');
     return;
   }
