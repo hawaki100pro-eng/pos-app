@@ -26,7 +26,7 @@
   --grupo-color-fondo: #f5f3ff;
   --grupo-color-hover: #ede9fe;
 
-  --logo: #2563eb;         /* azul: nombre de hombre y pantalla de login */
+  --fucsia-logo: #f45e94;  /* banda del logo: el mismo fucsia del fondo de día */
   --gris-boton: #6b7280;
   --gris-boton-hover: #4b5563;
 
@@ -66,7 +66,7 @@
   --grupo-color-fondo: #2a2333;
   --grupo-color-hover: #332b3f;
 
-  --logo: #7ea6ff;
+  /* --fucsia-logo no se cambia aquí: la banda del logo se queda fucsia también de noche */
   --gris-boton: #574a51;
   --gris-boton-hover: #6b5c64;
 
@@ -83,7 +83,8 @@
    El color de la app depende de quién entró: fucsia si el nombre
    es de mujer, azul si es de hombre. app.js pone la clase en el
    <body> (ver aplicarColorUsuario) y con eso cambia todo de golpe:
-   botones, tarjetas de tipo de cliente, filas del inventario y logo.
+   botones, tarjetas de tipo de cliente y filas del inventario. La banda
+   del logo no entra aquí: siempre es fucsia con la letra blanca.
    ============================================================ */
 body.usuario-femenino {
   --acento: #c026d3;
@@ -93,7 +94,6 @@ body.usuario-femenino {
   --acento-suave-2: #f5d0fe;
   --grupo-color-fondo: #fdf4ff;
   --grupo-color-hover: #fae8ff;
-  --logo: #a21caf; /* la letra del logo es delgada: va más oscura que los botones */
 }
 
 :root[data-tema="noche"] body.usuario-femenino {
@@ -105,7 +105,6 @@ body.usuario-femenino {
   --acento-suave-2: #4a2850;
   --grupo-color-fondo: #33203a;
   --grupo-color-hover: #3d2745;
-  --logo: #f0abfc;
 }
 
 * { box-sizing: border-box; }
@@ -498,18 +497,21 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .logout-pie:hover { background: var(--gris-boton-hover); }
 
 /* Logo de la tienda con la fuente del letrero (Slackside One).
-   Va dentro del marco, arriba del todo, con una línea que lo separa del contenido. */
+   Va dentro del marco, arriba del todo, como una banda fucsia con la letra
+   blanca. Los márgenes negativos se comen el padding de .container para que
+   la banda llegue de borde a borde, y las esquinas de arriba se redondean
+   igual que el marco. */
 #logo-hawaki {
   font-family: 'Slackside One', cursive;
   font-size: 2.6rem;
-  color: var(--logo);
+  color: #fff;
+  background: var(--fucsia-logo);
   text-align: center;
-  margin: -4px 0 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--borde-suave);
+  margin: -24px -24px 18px;
+  padding: 14px 16px;
+  border-radius: 8px 8px 0 0;
   letter-spacing: 2px;
   line-height: 1.2;
-  transition: color 0.25s ease;
 }
 
 /* ============================================================
