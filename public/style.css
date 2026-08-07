@@ -86,25 +86,29 @@
    botones, tarjetas de tipo de cliente y filas del inventario. La banda
    del logo no entra aquí: siempre es fucsia con la letra blanca.
    ============================================================ */
+/* Todos estos tonos son el mismo fucsia de la marca (#f45e94, matiz 338°) en
+   distintas intensidades, para que peguen con la banda del logo. El botón va
+   más oscuro que la banda porque encima lleva letra blanca y sobre el fucsia
+   claro no se leería. */
 body.usuario-femenino {
-  --acento: #c026d3;
-  --acento-oscuro: #a21caf;
-  --acento-texto: #a21caf;
-  --acento-suave: #fae8ff;
-  --acento-suave-2: #f5d0fe;
-  --grupo-color-fondo: #fdf4ff;
-  --grupo-color-hover: #fae8ff;
+  --acento: #d81b60;
+  --acento-oscuro: #ba1250;
+  --acento-texto: #ba1250;
+  --acento-suave: #fde8f0;
+  --acento-suave-2: #fbcfe0;
+  --grupo-color-fondo: #fef5f8;
+  --grupo-color-hover: #fde8f0;
 }
 
 :root[data-tema="noche"] body.usuario-femenino {
   /* No se aclara más: sobre un fucsia brillante la letra blanca deja de leerse */
-  --acento: #c026d3;
-  --acento-oscuro: #a21caf;
-  --acento-texto: #f0abfc;
-  --acento-suave: #3b1f3f;
-  --acento-suave-2: #4a2850;
-  --grupo-color-fondo: #33203a;
-  --grupo-color-hover: #3d2745;
+  --acento: #d81b60;
+  --acento-oscuro: #ba1250;
+  --acento-texto: #f9a8c9;
+  --acento-suave: #3d1f2d;
+  --acento-suave-2: #4e2637;
+  --grupo-color-fondo: #35202a;
+  --grupo-color-hover: #402734;
 }
 
 * { box-sizing: border-box; }
