@@ -46,12 +46,17 @@ table { width: 100%; border-collapse: collapse; }
 .nombre-titular { color: #1d4ed8; font-weight: bold; }
 
 .proforma-box { width: 38%; text-align: center; }
+/* "NOTA DE VENTA" es más largo que el "PROFORMA" que iba antes: se le baja
+   la letra y se le quita el espaciado para que siga entrando en una sola
+   línea en el celular, sin que el recuadro crezca de alto. */
 .caja-proforma {
   border: 2px solid #1e293b;
   font-weight: bold;
   padding: 6px;
   margin-bottom: 6px;
-  letter-spacing: 1px;
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 .serie { font-size: 0.75rem; color: #555; margin: 2px 0; }
 .numero { font-size: 1.8rem; font-weight: bold; color: #dc2626; margin: 2px 0 8px; }
