@@ -30,6 +30,11 @@
   --gris-boton: #6b7280;
   --gris-boton-hover: #4b5563;
 
+  /* Botones de tipo de cliente: van en plomo, no en el color de quien entra */
+  --tipo-btn-texto: #6b7280;
+  --tipo-btn-activo: #374151;
+  --tipo-btn-activo-hover: #4b5563;
+
   --stock-bajo: #dc2626;     /* quedan 2 */
   --stock-critico: #0369a1;  /* queda 1 */
 
@@ -69,6 +74,11 @@
   /* --fucsia-logo no se cambia aquí: la banda del logo se queda fucsia también de noche */
   --gris-boton: #574a51;
   --gris-boton-hover: #6b5c64;
+
+  /* De noche el plomo del elegido se aclara, si no se confunde con el marco */
+  --tipo-btn-texto: #b3a4ab;
+  --tipo-btn-activo: #594b54;
+  --tipo-btn-activo-hover: #6b5c64;
 
   --stock-bajo: #f87171;
   --stock-critico: #7dd3fc;
@@ -405,7 +415,7 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   justify-content: center;
   gap: 10px;
   background: var(--superficie);
-  color: var(--acento-texto);
+  color: var(--tipo-btn-texto);
   border: 1.5px solid var(--borde-tipo-btn);
   border-radius: 12px;
   padding: 14px 10px;
@@ -423,17 +433,21 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 
 .tipo-btn:hover {
   background: var(--superficie-2);
-  border-color: var(--acento-texto);
+  border-color: var(--tipo-btn-texto);
 }
 
-/* Elegido: se pinta el fondo y el borde, sin perder el dibujo ni el texto */
+/* Elegido: se rellena de plomo oscuro con la letra en blanco. Es la única
+   pieza rellena de la fila, así que se ve de un vistazo cuál está activo. */
 .tipo-btn.activo {
-  background: var(--acento-suave);
-  border-color: var(--acento);
-  color: var(--acento-texto);
+  background: var(--tipo-btn-activo);
+  border-color: var(--tipo-btn-activo);
+  color: #fff;
 }
 
-.tipo-btn.activo:hover { background: var(--acento-suave-2); }
+.tipo-btn.activo:hover {
+  background: var(--tipo-btn-activo-hover);
+  border-color: var(--tipo-btn-activo-hover);
+}
 
 .metodo-pago-row {
   display: flex;
