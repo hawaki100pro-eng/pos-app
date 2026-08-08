@@ -538,7 +538,47 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .pie-pagina {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 10px;
   margin: 22px auto 4px;
+}
+
+/* Acceso redondo a la página web de la tienda, al estilo de los íconos de redes */
+.btn-circulo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4b5563;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-circulo:hover {
+  background: #fff;
+  color: var(--acento);
+}
+
+.btn-circulo svg {
+  width: 19px;
+  height: 19px;
+}
+
+:root[data-tema="noche"] .btn-circulo {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2d7dd;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+:root[data-tema="noche"] .btn-circulo:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
 .btn-tema {
