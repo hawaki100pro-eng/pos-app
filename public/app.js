@@ -174,14 +174,14 @@ function avisoEmail(valor) {
 }
 
 // Cédula: 10 dígitos. RUC: 13. Cualquier otro largo, o algo que no sean números,
-// es un error. El aviso dice cuántos dígitos van, para que se vea qué falta.
+// es un error. El aviso dice cuántos números escribió y cuántos debería haber,
+// para que la diferencia se vea sola sin tener que contarlos en la pantalla.
 function avisoCedulaRuc(valor) {
   if (valor === '') return '';
   if (!/^[0-9]+$/.test(valor)) return 'El RUC o cédula solo lleva números, sin letras ni guiones';
   if (valor.length === 10 || valor.length === 13) return '';
-  if (valor.length < 10) return `La cédula debe tener 10 dígitos (van ${valor.length})`;
-  if (valor.length < 13) return `La cédula tiene 10 dígitos y el RUC 13 (van ${valor.length})`;
-  return `El RUC debe tener 13 dígitos (van ${valor.length})`;
+  const cuantos = valor.length === 1 ? 'Escribiste 1 número' : `Escribiste ${valor.length} números`;
+  return `${cuantos}. Deben ser 10 (cédula) o 13 (RUC).`;
 }
 
 // Los campos que se revisan, con el revisor que le toca a cada uno. El id lleva
