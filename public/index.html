@@ -134,7 +134,20 @@
 
     <h2 style="color:#2563eb;">Caja con efectivo</h2>
     <div id="caja-abierta-card" class="card hidden">
-      <button id="toggle-dinero-btn" type="button" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;align-self:center;">Ocultar</button>
+      <!-- Mismo estilo de tarjeta que los botones de tipo de cliente (.tipo-btn).
+           Lleva dos dibujos: el ojo tachado cuando el dinero se ve (para taparlo)
+           y el ojo abierto cuando está tapado. app.js decide cuál se muestra. -->
+      <button id="toggle-dinero-btn" type="button" class="tipo-btn btn-dinero">
+        <svg class="icono-ocultar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+          <path d="M1 1l22 22"/>
+        </svg>
+        <svg class="icono-ver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span id="toggle-dinero-texto">Ocultar</span>
+      </button>
       <span class="card-label">Monto inicial</span>
       <span class="card-value">$<span id="caja-inicial">0.00</span></span>
       <span class="card-label">Monto actual</span>

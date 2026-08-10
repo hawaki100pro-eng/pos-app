@@ -449,6 +449,26 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   border-color: var(--tipo-btn-activo-hover);
 }
 
+/* Botón de mostrar/ocultar el dinero de la caja. Usa la misma tarjeta que los
+   botones de tipo de cliente, pero sin estirarse: ahí son dos repartiéndose la
+   fila, y este va solo dentro de la tarjeta de caja. */
+.btn-dinero {
+  flex: 0 0 auto;
+  min-width: 150px;
+  padding: 11px 20px;
+}
+
+/* Al ocultar el dinero la tarjeta se encoge y el botón queda solo: se centra */
+#caja-abierta-card.compacta .btn-dinero {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Se muestra el dibujo de lo que va a pasar al tocarlo */
+.btn-dinero .icono-ver { display: none; }
+.btn-dinero.dinero-oculto .icono-ver { display: inline; }
+.btn-dinero.dinero-oculto .icono-ocultar { display: none; }
+
 .metodo-pago-row {
   display: flex;
   gap: 16px;
