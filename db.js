@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
-const { armarSku } = require('./sku');
+const { planearRelleno } = require('./sku');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -119,22 +119,11 @@ async function init() {
 
   // Migración: código de la etiqueta (SKU). Se rellena una sola vez para los
   // productos que ya existían; de ahí en adelante lo pone el alta de producto.
-  await pool.query('ALTER TABLE productos ADD COLUMN IF NOT EXISTS sku TEXT');
-  const sinSku = await pool.query('SELECT id, modelo, color, talla FROM productos WHERE sku IS NULL OR sku = $1', ['']);
-  if (sinSku.rowCount > 0) {
-    const usados = new Set(
-      (await pool.query('SELECT sku FROM productos WHERE sku IS NOT NULL AND sku <> $1', [''])).rows.map((r) => r.sku)
-    );
-    for (const p of sinSku.rows) {
-      // Dos colores pueden dar las mismas iniciales: se numera para no repetir
-      const base = armarSku(p);
-      let sku = base;
-      for (let n = 2; usados.has(sku); n++) sku = `${base}-${n}`;
-      usados.add(sku);
-      await pool.query('UPDATE productos SET sku = $1 WHERE id = $2', [sku, p.id]);
-    }
-    console.log(`SKU generado para ${sinSku.rowCount} producto(s) que no tenían`);
-  }
+  //
+  // Va aparte y a prueba de fallos a propósito: las etiquetas son un extra, y si
+  // algo sale mal aquí el punto de venta TIENE que arrancar igual. Antes esto
+  // estaba en el flujo principal y cualquier tropiezo dejaba la tienda sin caja.
+  await migrarSku();
 
   const contador = await pool.query("SELECT clave FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
   if (contador.rowCount === 0) {
@@ -161,6 +150,46 @@ async function init() {
     const hash = bcrypt.hashSync('dueno123', 10);
     await pool.query('INSERT INTO usuarios (usuario, password_hash, rol) VALUES ($1, $2, $3)', ['dueno1', hash, 'dueno']);
     console.log('Usuario creado -> usuario: dueno1 / password: dueno123 (rol: dueño)');
+  }
+}
+
+// Agrega la columna del SKU y la rellena para los productos que ya existían.
+//
+// Nunca lanza: si algo falla, avisa por consola y el POS sigue arrancando. Las
+// etiquetas se pueden arreglar después; que no abra la caja no es negociable.
+//
+// El relleno va en UNA sola sentencia. Antes hacía un UPDATE por producto, y con
+// un catálogo grande eso son cientos de idas y vueltas a una base que está en
+// internet: el arranque se alargaba tanto que Railway daba la app por caída.
+async function migrarSku() {
+  // Toda la migración va por UNA conexión tomada a mano. Es necesario: lock_timeout
+  // vale solo para la conexión donde se ejecuta, y si se usara el pool la siguiente
+  // consulta podría salir por otra conexión, sin el límite puesto.
+  let cliente;
+  try {
+    cliente = await pool.connect();
+    // Si otra conexión tiene tomada la tabla, esto falla rápido en vez de colgarse
+    await cliente.query("SET lock_timeout = '5s'");
+    await cliente.query('ALTER TABLE productos ADD COLUMN IF NOT EXISTS sku TEXT');
+
+    const sinSku = await cliente.query(
+      "SELECT id, modelo, color, talla FROM productos WHERE sku IS NULL OR sku = ''"
+    );
+    if (sinSku.rowCount === 0) return;
+
+    const usados = new Set(
+      (await cliente.query("SELECT sku FROM productos WHERE sku IS NOT NULL AND sku <> ''"))
+        .rows.map((r) => r.sku)
+    );
+
+    const plan = planearRelleno(sinSku.rows, [...usados]);
+    if (!plan) return;
+    await cliente.query(plan.sql, plan.parametros);
+    console.log(`SKU de etiquetas generado para ${plan.asignados.length} producto(s)`);
+  } catch (err) {
+    console.error('No se pudo preparar el SKU de las etiquetas. El POS arranca igual. Detalle:', err.message);
+  } finally {
+    if (cliente) cliente.release();
   }
 }
 

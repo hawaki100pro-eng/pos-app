@@ -45,4 +45,36 @@ async function skuUnico(pool, producto, excluirId = null) {
   return `${base}-${Date.now()}`; // salida de emergencia, no debería llegar aquí
 }
 
-module.exports = { armarSku, skuUnico, normalizar };
+// Prepara el relleno de SKU de los productos que aún no tienen, en UNA sola
+// sentencia. Se devuelve el texto SQL y sus parámetros en vez de ejecutarlo,
+// para poder comprobar aparte que la numeración de parámetros sale bien: un
+// error ahí solo se vería en producción, y ya pasó una vez.
+function planearRelleno(filas, skusUsados = []) {
+  const usados = new Set(skusUsados);
+  const valores = [];
+  const parametros = [];
+  const asignados = [];
+
+  for (const fila of filas) {
+    // Dos colores pueden dar las mismas iniciales: se numera para no repetir
+    const base = armarSku(fila);
+    let sku = base;
+    for (let n = 2; usados.has(sku); n++) sku = `${base}-${n}`;
+    usados.add(sku);
+    asignados.push({ id: fila.id, sku });
+    parametros.push(fila.id, sku);
+    valores.push(`($${parametros.length - 1}::int, $${parametros.length}::text)`);
+  }
+
+  if (valores.length === 0) return null;
+
+  return {
+    sql: `UPDATE productos SET sku = nuevos.sku
+          FROM (VALUES ${valores.join(', ')}) AS nuevos(id, sku)
+          WHERE productos.id = nuevos.id`,
+    parametros,
+    asignados,
+  };
+}
+
+module.exports = { armarSku, skuUnico, normalizar, planearRelleno };

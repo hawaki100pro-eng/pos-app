@@ -645,14 +645,23 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
     return res.status(200).json({ ...r.rows[0], stock_sumado: Math.round(stock) });
   }
 
-  // El código de la etiqueta se arma aquí y ya no cambia: la etiqueta impresa
-  // tiene que seguir sirviendo aunque después se corrija el nombre del color.
-  const sku = await skuUnico(pool, { modelo: modelo.trim(), color: color.trim(), talla: talla.trim() });
   const r = await pool.query(
-    'INSERT INTO productos (modelo, talla, color, precio, stock, sku) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), sku]
+    'INSERT INTO productos (modelo, talla, color, precio, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock)]
   );
-  res.status(201).json(r.rows[0]);
+
+  // El código de la etiqueta se pone en un segundo paso, y aparte: si fallara,
+  // el producto igual queda creado. Una etiqueta se puede arreglar después;
+  // perder el alta de mercadería, no. Una vez puesto ya no cambia, porque la
+  // etiqueta impresa tiene que seguir sirviendo aunque se corrija el color.
+  try {
+    const sku = await skuUnico(pool, { modelo: modelo.trim(), color: color.trim(), talla: talla.trim() });
+    const conSku = await pool.query('UPDATE productos SET sku = $1 WHERE id = $2 RETURNING *', [sku, r.rows[0].id]);
+    return res.status(201).json(conSku.rows[0]);
+  } catch (err) {
+    console.error('No se pudo asignar el código de etiqueta al producto nuevo:', err.message);
+    return res.status(201).json(r.rows[0]);
+  }
 });
 
 app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
