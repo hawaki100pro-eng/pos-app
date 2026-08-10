@@ -222,14 +222,14 @@ app.get('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
 });
 
 // --- Ventas (proforma libre) ---
-// Body: { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: [{ producto, cantidad, precio_unitario }] }
+// Body: { cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items: [{ producto, cantidad, precio_unitario }] }
 
 function formatNumeroProforma(numero) {
   return String(numero).padStart(7, '0');
 }
 
 app.post('/api/ventas', requireLogin, async (req, res) => {
-  const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
+  const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items } = req.body;
   const metodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
@@ -256,9 +256,9 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     await client.query("UPDATE configuracion SET valor = $1 WHERE clave = 'ultimo_numero_proforma'", [String(numeroProforma)]);
 
     const ventaResult = await client.query(
-      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, total, numero_proforma, metodo_pago)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, total, numeroProforma, metodoPago]
+      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, cliente_email || null, total, numeroProforma, metodoPago]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -340,7 +340,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   // Lista blanca: solo estos valores llegan a la consulta
   const periodo = ['hoy', '7dias', 'mes', 'todo'].includes(req.query.periodo) ? req.query.periodo : 'hoy';
   const ventasR = await pool.query(`
-    SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono,
+    SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono, v.cliente_email,
            v.fecha, v.total, v.metodo_pago, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
            u.usuario AS vendedor, au.usuario AS anulada_por_usuario
     FROM ventas v
@@ -455,7 +455,7 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
 // --- Edición de ventas (solo dueño): reemplaza cliente e ítems, recalcula total y ajusta la caja por la diferencia ---
 
 app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
-  const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, items } = req.body;
+  const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items } = req.body;
   const nuevoMetodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
@@ -486,8 +486,8 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     await client.query('BEGIN');
 
     await client.query(
-      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, total = $5, metodo_pago = $6 WHERE id = $7`,
-      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, nuevoTotal, nuevoMetodoPago, venta.id]
+      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7 WHERE id = $8`,
+      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, cliente_email || null, nuevoTotal, nuevoMetodoPago, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);

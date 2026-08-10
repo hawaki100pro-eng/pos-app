@@ -71,7 +71,7 @@
         </button>
       </div>
 
-      <div id="campos-cliente" class="hidden">
+      <div id="campos-cliente" class="campos-cliente hidden">
         <label>Sr.(es)</label>
         <input type="text" id="cliente-nombre" placeholder="Nombre del cliente">
         <label>Dirección</label>
@@ -80,6 +80,8 @@
         <input type="text" id="cliente-ruc" placeholder="RUC o cédula">
         <label>Telf.</label>
         <input type="text" id="cliente-telefono" placeholder="Teléfono">
+        <label>Correo</label>
+        <input type="email" id="cliente-email" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="correo@ejemplo.com">
       </div>
 
       <h3>Productos</h3>
@@ -281,14 +283,18 @@
       <h2>Editar venta</h2>
       <button id="cerrar-editar-btn">Cerrar</button>
     </div>
-    <label>Sr.(es)</label>
-    <input type="text" id="editar-cliente-nombre" placeholder="Nombre del cliente">
-    <label>Dirección</label>
-    <input type="text" id="editar-cliente-direccion" placeholder="Dirección">
-    <label>RUC / C.I.</label>
-    <input type="text" id="editar-cliente-ruc" placeholder="RUC o cédula">
-    <label>Telf.</label>
-    <input type="text" id="editar-cliente-telefono" placeholder="Teléfono">
+    <div class="campos-cliente">
+      <label>Sr.(es)</label>
+      <input type="text" id="editar-cliente-nombre" placeholder="Nombre del cliente">
+      <label>Dirección</label>
+      <input type="text" id="editar-cliente-direccion" placeholder="Dirección">
+      <label>RUC / C.I.</label>
+      <input type="text" id="editar-cliente-ruc" placeholder="RUC o cédula">
+      <label>Telf.</label>
+      <input type="text" id="editar-cliente-telefono" placeholder="Teléfono">
+      <label>Correo</label>
+      <input type="email" id="editar-cliente-email" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="correo@ejemplo.com">
+    </div>
 
     <h3>Productos</h3>
     <div id="editar-items-lista"></div>

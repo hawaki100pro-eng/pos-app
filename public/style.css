@@ -401,6 +401,18 @@ th, td {
 
 label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 
+/* Datos del cliente (nota nueva y modal de edición): cada rótulo va encima de
+   su campo. Sin esto los <label> y los <input> fluyen en línea y se enredan al
+   llegar al borde de la pantalla, que es lo que pasaba con RUC / C.I. */
+.campos-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campos-cliente label { margin-top: 6px; }
+.campos-cliente label:first-child { margin-top: 0; }
+
 .tipo-cliente-row {
   display: flex;
   gap: 10px;

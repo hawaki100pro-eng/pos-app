@@ -37,6 +37,7 @@ async function init() {
       cliente_direccion TEXT,
       cliente_ruc TEXT,
       cliente_telefono TEXT,
+      cliente_email TEXT,
       fecha TIMESTAMP NOT NULL DEFAULT NOW(),
       total REAL NOT NULL,
       numero_proforma INTEGER,
@@ -111,6 +112,9 @@ async function init() {
     ALTER TABLE productos ADD COLUMN IF NOT EXISTS fecha_eliminacion TIMESTAMP;
     ALTER TABLE productos ADD COLUMN IF NOT EXISTS eliminado_por INTEGER REFERENCES usuarios(id);
   `);
+
+  // Migración: correo del cliente. Las ventas ya registradas lo dejan vacío.
+  await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS cliente_email TEXT`);
 
   // Migración: método de pago (efectivo/transferencia). Las transferencias no suman a la caja física.
   await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS metodo_pago TEXT NOT NULL DEFAULT 'efectivo'`);

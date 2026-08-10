@@ -38,6 +38,7 @@
   document.getElementById('cliente-direccion').textContent = venta.cliente_direccion || '';
   document.getElementById('cliente-ruc').textContent = venta.cliente_ruc || '';
   document.getElementById('cliente-telefono').textContent = venta.cliente_telefono || '';
+  document.getElementById('cliente-email').textContent = venta.cliente_email || '';
 
   const tbody = document.getElementById('items-tbody');
   venta.detalle.forEach((item) => {

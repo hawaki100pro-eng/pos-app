@@ -170,6 +170,7 @@ function resetTipoCliente() {
   document.getElementById('cliente-direccion').value = '';
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
+  document.getElementById('cliente-email').value = '';
 }
 
 document.getElementById('btn-consumidor-final').addEventListener('click', () => {
@@ -178,6 +179,7 @@ document.getElementById('btn-consumidor-final').addEventListener('click', () => 
   document.getElementById('cliente-direccion').value = '';
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
+  document.getElementById('cliente-email').value = '';
   document.getElementById('btn-consumidor-final').classList.add('activo');
   document.getElementById('btn-consumidor-datos').classList.remove('activo');
 });
@@ -306,11 +308,12 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   const cliente_direccion = document.getElementById('cliente-direccion').value.trim();
   const cliente_ruc = document.getElementById('cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('cliente-telefono').value.trim();
+  const cliente_email = document.getElementById('cliente-email').value.trim();
   const metodo_pago = document.querySelector('input[name="metodo-pago"]:checked').value;
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, items, metodo_pago }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items, metodo_pago }),
   });
   const data = await res.json();
 
@@ -473,9 +476,9 @@ async function cargarDashboard() {
 
     const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
 
-    // Punto verde: venta hecha "con datos" (nombre real del cliente o RUC/dirección/teléfono), a diferencia del consumidor final
+    // Punto verde: venta hecha "con datos" (nombre real del cliente o RUC/dirección/teléfono/correo), a diferencia del consumidor final
     const conDatos = (v.cliente && v.cliente.trim() && v.cliente.trim().toLowerCase() !== 'consumidor final')
-      || v.cliente_ruc || v.cliente_direccion || v.cliente_telefono;
+      || v.cliente_ruc || v.cliente_direccion || v.cliente_telefono || v.cliente_email;
     const clienteHtml = `${conDatos ? '<span class="dot-cliente-datos"></span>' : ''}${v.cliente || '-'}`;
 
     // Cada celda lleva su clase para que en celular el CSS reordene la fila como tarjeta
@@ -544,6 +547,7 @@ function abrirEditarVenta(venta) {
   document.getElementById('editar-cliente-direccion').value = venta.cliente_direccion || '';
   document.getElementById('editar-cliente-ruc').value = venta.cliente_ruc || '';
   document.getElementById('editar-cliente-telefono').value = venta.cliente_telefono || '';
+  document.getElementById('editar-cliente-email').value = venta.cliente_email || '';
   document.querySelector(`input[name="editar-metodo-pago"][value="${venta.metodo_pago || 'efectivo'}"]`).checked = true;
   document.getElementById('editar-msg').textContent = '';
   renderEditarItems();
@@ -607,12 +611,13 @@ document.getElementById('guardar-edicion-btn').addEventListener('click', async (
   const cliente_direccion = document.getElementById('editar-cliente-direccion').value.trim();
   const cliente_ruc = document.getElementById('editar-cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('editar-cliente-telefono').value.trim();
+  const cliente_email = document.getElementById('editar-cliente-email').value.trim();
   const metodo_pago = document.querySelector('input[name="editar-metodo-pago"]:checked').value;
 
   const res = await fetch(`/api/ventas/${editandoVentaId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, items: editandoItems, metodo_pago }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items: editandoItems, metodo_pago }),
   });
   const data = await res.json();
   if (!res.ok) {
