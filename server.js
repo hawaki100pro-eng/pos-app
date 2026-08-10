@@ -4,6 +4,7 @@ const pgSession = require('connect-pg-simple')(session);
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const { pool, init } = require('./db');
+const { skuUnico } = require('./sku');
 
 const app = express();
 
@@ -644,9 +645,12 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
     return res.status(200).json({ ...r.rows[0], stock_sumado: Math.round(stock) });
   }
 
+  // El código de la etiqueta se arma aquí y ya no cambia: la etiqueta impresa
+  // tiene que seguir sirviendo aunque después se corrija el nombre del color.
+  const sku = await skuUnico(pool, { modelo: modelo.trim(), color: color.trim(), talla: talla.trim() });
   const r = await pool.query(
-    'INSERT INTO productos (modelo, talla, color, precio, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock)]
+    'INSERT INTO productos (modelo, talla, color, precio, stock, sku) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), sku]
   );
   res.status(201).json(r.rows[0]);
 });

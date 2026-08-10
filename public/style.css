@@ -698,6 +698,34 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   margin-left: 8px;
 }
 
+/* Botón de etiquetas del inventario. Va discreto (solo contorno) porque aparece
+   muchas veces en la pantalla y no debe competir con Editar ni con Eliminar. */
+.btn-etiqueta {
+  background: transparent;
+  color: var(--texto-suave);
+  border: 1.5px solid var(--borde-tarjeta);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  gap: 5px;
+}
+
+.btn-etiqueta:hover {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  border-color: var(--acento);
+}
+
+.btn-etiqueta svg { width: 13px; height: 13px; }
+
+/* En las cabeceras de modelo y color va a la derecha, separado del título */
+.grupo-modelo .btn-etiqueta,
+.grupo-color .btn-etiqueta {
+  float: right;
+  margin-left: 10px;
+}
+
 /* Inventario en celular: la tabla no cabe a lo ancho, así que cada talla se muestra como
    una tarjeta. Modelo y color se ocultan porque ya se leen en las cabeceras del grupo. */
 @media (max-width: 700px) {

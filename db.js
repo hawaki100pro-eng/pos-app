@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const { armarSku } = require('./sku');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -115,6 +116,25 @@ async function init() {
   await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS metodo_pago TEXT NOT NULL DEFAULT 'efectivo'`);
   await pool.query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_metodo_pago_check`);
   await pool.query(`ALTER TABLE ventas ADD CONSTRAINT ventas_metodo_pago_check CHECK (metodo_pago IN ('efectivo', 'transferencia'))`);
+
+  // Migración: código de la etiqueta (SKU). Se rellena una sola vez para los
+  // productos que ya existían; de ahí en adelante lo pone el alta de producto.
+  await pool.query('ALTER TABLE productos ADD COLUMN IF NOT EXISTS sku TEXT');
+  const sinSku = await pool.query('SELECT id, modelo, color, talla FROM productos WHERE sku IS NULL OR sku = $1', ['']);
+  if (sinSku.rowCount > 0) {
+    const usados = new Set(
+      (await pool.query('SELECT sku FROM productos WHERE sku IS NOT NULL AND sku <> $1', [''])).rows.map((r) => r.sku)
+    );
+    for (const p of sinSku.rows) {
+      // Dos colores pueden dar las mismas iniciales: se numera para no repetir
+      const base = armarSku(p);
+      let sku = base;
+      for (let n = 2; usados.has(sku); n++) sku = `${base}-${n}`;
+      usados.add(sku);
+      await pool.query('UPDATE productos SET sku = $1 WHERE id = $2', [sku, p.id]);
+    }
+    console.log(`SKU generado para ${sinSku.rowCount} producto(s) que no tenían`);
+  }
 
   const contador = await pool.query("SELECT clave FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
   if (contador.rowCount === 0) {

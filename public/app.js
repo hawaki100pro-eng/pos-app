@@ -965,6 +965,7 @@ function renderInventario() {
       else gruposAbiertos.add(modelo);
       renderInventario();
     });
+    trGrupo.firstElementChild.appendChild(botonEtiquetas(todos, 'Etiquetas del modelo'));
     tbody.appendChild(trGrupo);
     if (!abierto) return;
 
@@ -982,10 +983,34 @@ function renderInventario() {
         else coloresAbiertos.add(clave);
         renderInventario();
       });
+      trColor.firstElementChild.appendChild(botonEtiquetas(tallas, 'Etiquetas de este color'));
       tbody.appendChild(trColor);
       if (colorAbierto) tallas.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
     });
   });
+}
+
+// Abre la hoja de etiquetas en pestaña nueva, para no perder de vista el inventario.
+// Los productos eliminados no se etiquetan.
+function abrirEtiquetas(items) {
+  const ids = items.filter((p) => !p.eliminado).map((p) => p.id);
+  if (ids.length === 0) return;
+  window.open(`etiquetas.html?ids=${ids.join(',')}`, '_blank');
+}
+
+const ICONO_ETIQUETA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 1.4.6l6.4 6.4a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
+
+function botonEtiquetas(items, texto) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-etiqueta';
+  btn.innerHTML = ICONO_ETIQUETA + texto;
+  btn.title = 'Imprimir etiquetas con código de barras y QR';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); // si no, el clic también plegaría el grupo
+    abrirEtiquetas(items);
+  });
+  return btn;
 }
 
 function crearFilaProducto(p) {
@@ -1029,6 +1054,11 @@ function crearFilaProducto(p) {
       btnPurga.addEventListener('click', () => eliminarProductoDefinitivo(p));
       acciones.appendChild(btnPurga);
     } else {
+      // Tantas etiquetas como pares haya: el botón lo dice para que no haya sorpresas
+      const btnEtiqueta = botonEtiquetas([p], `${Math.max(1, p.stock)} etiqueta${p.stock === 1 ? '' : 's'}`);
+      btnEtiqueta.classList.add('accion-btn');
+      acciones.appendChild(btnEtiqueta);
+
       const btnEditar = document.createElement('button');
       btnEditar.textContent = '✎ Editar';
       btnEditar.className = 'accion-btn editar-btn';

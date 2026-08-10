@@ -1,0 +1,207 @@
+/* ============================================================================
+   Hoja de etiquetas — 40 x 20 mm
+
+   Todo va en milímetros a propósito: la etiqueta tiene que salir del tamaño
+   exacto del adhesivo, sin importar el zoom de la pantalla ni la impresora.
+   ============================================================================ */
+
+:root {
+  --etiqueta-ancho: 40mm;
+  --etiqueta-alto: 20mm;
+  --margen: 1mm;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #eceef3;
+  color: #1c1c22;
+  margin: 0;
+  padding: 16px 12px 40px;
+}
+
+/* --- Barra de control (no se imprime) --- */
+
+.barra {
+  max-width: 900px;
+  margin: 0 auto 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(20, 20, 40, .08);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.barra h1 { font-size: 1rem; margin: 0; flex: 1 1 auto; min-width: 180px; }
+.barra .cuenta { color: #5c6270; font-size: .85rem; }
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .85rem;
+  color: #3b4150;
+  cursor: pointer;
+}
+
+.barra select {
+  font: inherit;
+  font-size: .85rem;
+  padding: 6px 10px;
+  border: 1px solid #ccd0da;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.barra button {
+  font: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: #fff;
+  cursor: pointer;
+}
+
+.barra button:hover { background: #4338ca; }
+.barra button svg { width: 16px; height: 16px; }
+
+.aviso {
+  max-width: 900px;
+  margin: 0 auto 16px;
+  background: #fff8e6;
+  border: 1px solid #f5dfa8;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: .85rem;
+  line-height: 1.5;
+  color: #4a4230;
+}
+
+.aviso strong { color: #2c2718; }
+
+/* --- La hoja --- */
+
+.hoja {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3mm;
+  justify-content: flex-start;
+}
+
+/* --- La etiqueta --- */
+
+.etiqueta {
+  width: var(--etiqueta-ancho);
+  height: var(--etiqueta-alto);
+  padding: var(--margen);
+  background: #fff;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* En pantalla se ve el borde para entender el recorte; al imprimir se quita */
+  outline: 1px dashed #b9bdc9;
+}
+
+.et-arriba {
+  display: flex;
+  gap: 1.5mm;
+  height: 10mm;
+}
+
+.et-qr { width: 10mm; height: 10mm; flex: none; }
+.et-qr svg { width: 100%; height: 100%; display: block; }
+
+.et-datos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .3mm;
+}
+
+/* Los tamaños van en puntos porque es lo que entiende la impresora */
+.et-modelo {
+  font-size: 5.4pt;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.et-variante {
+  font-size: 4.8pt;
+  line-height: 1.15;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.et-precio {
+  font-size: 7pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.et-barras {
+  height: 6mm;
+  margin-top: .4mm;
+}
+
+.et-barras svg { width: 100%; height: 100%; display: block; }
+
+.et-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1mm;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 4.2pt;
+  line-height: 1.1;
+  color: #222;
+}
+
+.et-pie .et-sku {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.et-pie .et-num { flex: none; color: #666; }
+
+/* --- Impresión --- */
+
+@media print {
+  body { background: #fff; padding: 0; }
+  .barra, .aviso { display: none !important; }
+  .hoja { max-width: none; margin: 0; gap: 0; }
+  .etiqueta { outline: none; }
+  /* Que no se parta una etiqueta entre dos páginas */
+  .etiqueta { break-inside: avoid; page-break-inside: avoid; }
+  /* Los negros salen negros aunque el navegador quiera ahorrar tinta */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Modo rollo: una etiqueta por página, del tamaño exacto del adhesivo */
+body[data-modo="rollo"] .etiqueta { break-after: page; page-break-after: always; }
+body[data-modo="rollo"] .etiqueta:last-child { break-after: auto; page-break-after: auto; }
+
+/* Modo hoja A4: las etiquetas se acomodan en filas */
+@media print {
+  body[data-modo="hoja"] .hoja { gap: 0; }
+  body[data-modo="hoja"] .etiqueta { outline: 1px dotted #ccc; }
+}
