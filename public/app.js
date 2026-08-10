@@ -160,31 +160,79 @@ async function cargarEstadoCaja() {
   }
 }
 
-// --- Correo del cliente ---
-// El correo es opcional, pero si se escribe algo tiene que parecer un correo.
-// La misma regla vive en server.js (emailValido): si se cambia una, cambiar la otra.
-const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const AVISO_EMAIL = 'El correo no tiene un formato válido (ejemplo: nombre@dominio.com)';
+// --- Revisión de los datos del cliente ---
+// El RUC/cédula y el correo son opcionales, pero si se escribe algo tiene que
+// estar bien. Cada revisor devuelve '' cuando el dato está bien, o el aviso que
+// se le muestra a la vendedora. Las mismas reglas viven en server.js: si se
+// cambia una aquí, hay que cambiarla allá.
 
-function emailValido(valor) {
-  return valor === '' || RE_EMAIL.test(valor);
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function avisoEmail(valor) {
+  if (valor === '') return '';
+  return RE_EMAIL.test(valor) ? '' : 'El correo no tiene un formato válido (ejemplo: nombre@dominio.com)';
 }
 
-// Pinta el campo en rojo mientras el correo esté mal escrito. Se revisa al salir
-// del campo, no en cada tecla: si no, avisaría desde la primera letra, cuando el
-// correo todavía no puede estar completo. Ya marcado, sí se revisa al escribir,
-// para que la marca se quite en cuanto se corrija.
-function vigilarEmail(id) {
+// Cédula: 10 dígitos. RUC: 13. Cualquier otro largo, o algo que no sean números,
+// es un error. El aviso dice cuántos dígitos van, para que se vea qué falta.
+function avisoCedulaRuc(valor) {
+  if (valor === '') return '';
+  if (!/^[0-9]+$/.test(valor)) return 'El RUC o cédula solo lleva números, sin letras ni guiones';
+  if (valor.length === 10 || valor.length === 13) return '';
+  if (valor.length < 10) return `La cédula debe tener 10 dígitos (van ${valor.length})`;
+  if (valor.length < 13) return `La cédula tiene 10 dígitos y el RUC 13 (van ${valor.length})`;
+  return `El RUC debe tener 13 dígitos (van ${valor.length})`;
+}
+
+// Los campos que se revisan, con el revisor que le toca a cada uno. El id lleva
+// delante 'editar-' cuando es el modal de edición del dueño.
+const CAMPOS_REVISADOS = [
+  ['cliente-ruc', avisoCedulaRuc],
+  ['cliente-email', avisoEmail],
+];
+
+// Escribe el aviso debajo del campo y lo pinta de rojo. Devuelve el aviso.
+function revisarCampo(id, revisor) {
   const input = document.getElementById(id);
-  const revisar = () => input.classList.toggle('campo-invalido', !emailValido(input.value.trim()));
-  input.addEventListener('blur', revisar);
+  const texto = revisor(input.value.trim());
+  document.getElementById(`${id}-aviso`).textContent = texto;
+  input.classList.toggle('campo-invalido', texto !== '');
+  return texto;
+}
+
+// Revisa todos los campos de un formulario y devuelve el primer aviso, o ''.
+function revisarDatosCliente(prefijo) {
+  let primero = '';
+  for (const [id, revisor] of CAMPOS_REVISADOS) {
+    const texto = revisarCampo(prefijo + id, revisor);
+    if (texto && !primero) primero = texto;
+  }
+  return primero;
+}
+
+function limpiarAvisosCliente(prefijo) {
+  for (const [id] of CAMPOS_REVISADOS) {
+    document.getElementById(`${prefijo}${id}-aviso`).textContent = '';
+    document.getElementById(prefijo + id).classList.remove('campo-invalido');
+  }
+}
+
+// Se revisa al salir del campo, no en cada tecla: si no, avisaría desde el
+// primer dígito, cuando el dato todavía no puede estar completo. Ya marcado en
+// rojo, sí se revisa al escribir, para que el aviso se quite al corregir.
+function vigilarCampo(id, revisor) {
+  const input = document.getElementById(id);
+  input.addEventListener('blur', () => revisarCampo(id, revisor));
   input.addEventListener('input', () => {
-    if (input.classList.contains('campo-invalido')) revisar();
+    if (input.classList.contains('campo-invalido')) revisarCampo(id, revisor);
   });
 }
 
-vigilarEmail('cliente-email');
-vigilarEmail('editar-cliente-email');
+for (const prefijo of ['', 'editar-']) {
+  for (const [id, revisor] of CAMPOS_REVISADOS) {
+    vigilarCampo(prefijo + id, revisor);
+  }
+}
 
 // --- Tipo de cliente ---
 
@@ -197,7 +245,7 @@ function resetTipoCliente() {
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
   document.getElementById('cliente-email').value = '';
-  document.getElementById('cliente-email').classList.remove('campo-invalido');
+  limpiarAvisosCliente('');
 }
 
 document.getElementById('btn-consumidor-final').addEventListener('click', () => {
@@ -207,7 +255,7 @@ document.getElementById('btn-consumidor-final').addEventListener('click', () => 
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
   document.getElementById('cliente-email').value = '';
-  document.getElementById('cliente-email').classList.remove('campo-invalido');
+  limpiarAvisosCliente('');
   document.getElementById('btn-consumidor-final').classList.add('activo');
   document.getElementById('btn-consumidor-datos').classList.remove('activo');
 });
@@ -337,10 +385,10 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   const cliente_ruc = document.getElementById('cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('cliente-telefono').value.trim();
   const cliente_email = document.getElementById('cliente-email').value.trim();
-  if (!emailValido(cliente_email)) {
-    msg.textContent = AVISO_EMAIL;
+  const problema = revisarDatosCliente('');
+  if (problema) {
+    msg.textContent = problema;
     msg.className = 'error';
-    document.getElementById('cliente-email').classList.add('campo-invalido');
     return;
   }
   const metodo_pago = document.querySelector('input[name="metodo-pago"]:checked').value;
@@ -582,7 +630,7 @@ function abrirEditarVenta(venta) {
   document.getElementById('editar-cliente-ruc').value = venta.cliente_ruc || '';
   document.getElementById('editar-cliente-telefono').value = venta.cliente_telefono || '';
   document.getElementById('editar-cliente-email').value = venta.cliente_email || '';
-  document.getElementById('editar-cliente-email').classList.remove('campo-invalido');
+  limpiarAvisosCliente('editar-');
   document.querySelector(`input[name="editar-metodo-pago"][value="${venta.metodo_pago || 'efectivo'}"]`).checked = true;
   document.getElementById('editar-msg').textContent = '';
   renderEditarItems();
@@ -647,10 +695,10 @@ document.getElementById('guardar-edicion-btn').addEventListener('click', async (
   const cliente_ruc = document.getElementById('editar-cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('editar-cliente-telefono').value.trim();
   const cliente_email = document.getElementById('editar-cliente-email').value.trim();
-  if (!emailValido(cliente_email)) {
-    msg.textContent = AVISO_EMAIL;
+  const problema = revisarDatosCliente('editar-');
+  if (problema) {
+    msg.textContent = problema;
     msg.className = 'error';
-    document.getElementById('editar-cliente-email').classList.add('campo-invalido');
     return;
   }
   const metodo_pago = document.querySelector('input[name="editar-metodo-pago"]:checked').value;

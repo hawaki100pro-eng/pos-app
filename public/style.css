@@ -413,12 +413,23 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .campos-cliente label { margin-top: 6px; }
 .campos-cliente label:first-child { margin-top: 0; }
 
-/* Campo con un dato mal escrito (hoy solo el correo). Reusa los colores del
-   distintivo de "anulada", que ya están resueltos para el día y para la noche. */
+/* Campo con un dato mal escrito. Reusa los colores del distintivo de "anulada",
+   que ya están resueltos para el día y para la noche. */
 .campo-invalido {
   border-color: var(--badge-anulada-texto);
   background: var(--badge-anulada-fondo);
 }
+
+/* Aviso bajo el campo. app.js lo deja vacío cuando el dato está bien, y así
+   desaparece sin dejar hueco. */
+.aviso-campo {
+  color: var(--badge-anulada-texto);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 2px 0 0;
+}
+
+.aviso-campo:empty { display: none; }
 
 .tipo-cliente-row {
   display: flex;

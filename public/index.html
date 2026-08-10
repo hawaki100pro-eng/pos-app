@@ -77,11 +77,15 @@
         <label>Dirección</label>
         <input type="text" id="cliente-direccion" placeholder="Dirección">
         <label>RUC / C.I.</label>
-        <input type="text" id="cliente-ruc" placeholder="RUC o cédula">
+        <!-- Los avisos de "cédula de 10 dígitos / RUC de 13" y de correo mal
+             escrito los escribe app.js dentro de estos párrafos (ver revisarCampo). -->
+        <input type="text" id="cliente-ruc" inputmode="numeric" placeholder="RUC o cédula">
+        <p id="cliente-ruc-aviso" class="aviso-campo"></p>
         <label>Telf.</label>
         <input type="text" id="cliente-telefono" placeholder="Teléfono">
         <label>Correo</label>
         <input type="email" id="cliente-email" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="correo@ejemplo.com">
+        <p id="cliente-email-aviso" class="aviso-campo"></p>
       </div>
 
       <h3>Productos</h3>
@@ -289,11 +293,13 @@
       <label>Dirección</label>
       <input type="text" id="editar-cliente-direccion" placeholder="Dirección">
       <label>RUC / C.I.</label>
-      <input type="text" id="editar-cliente-ruc" placeholder="RUC o cédula">
+      <input type="text" id="editar-cliente-ruc" inputmode="numeric" placeholder="RUC o cédula">
+      <p id="editar-cliente-ruc-aviso" class="aviso-campo"></p>
       <label>Telf.</label>
       <input type="text" id="editar-cliente-telefono" placeholder="Teléfono">
       <label>Correo</label>
       <input type="email" id="editar-cliente-email" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="correo@ejemplo.com">
+      <p id="editar-cliente-email-aviso" class="aviso-campo"></p>
     </div>
 
     <h3>Productos</h3>

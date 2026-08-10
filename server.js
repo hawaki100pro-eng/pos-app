@@ -228,18 +228,29 @@ function formatNumeroProforma(numero) {
   return String(numero).padStart(7, '0');
 }
 
-// El correo del cliente es opcional, pero si viene algo tiene que parecer un
-// correo. Se revisa también aquí y no solo en el navegador: el formulario se
-// puede saltar. La misma regla vive en public/app.js (emailValido).
+// El RUC/cédula y el correo del cliente son opcionales, pero si viene algo tiene
+// que estar bien. Se revisan también aquí y no solo en el navegador: el
+// formulario se puede saltar. Las mismas reglas viven en public/app.js
+// (avisoCedulaRuc y avisoEmail): si se cambia una allá, cambiarla aquí.
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const AVISO_EMAIL = 'El correo no tiene un formato válido (ejemplo: nombre@dominio.com)';
 
-function limpiarEmail(valor) {
+function limpiarTexto(valor) {
   return (valor == null ? '' : String(valor)).trim();
 }
 
-function emailValido(email) {
-  return email === '' || RE_EMAIL.test(email);
+function avisoEmail(valor) {
+  if (valor === '') return '';
+  return RE_EMAIL.test(valor) ? '' : 'El correo no tiene un formato válido (ejemplo: nombre@dominio.com)';
+}
+
+// Cédula: 10 dígitos. RUC: 13. Cualquier otro largo, o algo que no sean números, falla.
+function avisoCedulaRuc(valor) {
+  if (valor === '') return '';
+  if (!/^[0-9]+$/.test(valor)) return 'El RUC o cédula solo lleva números, sin letras ni guiones';
+  if (valor.length === 10 || valor.length === 13) return '';
+  if (valor.length < 10) return `La cédula debe tener 10 dígitos (van ${valor.length})`;
+  if (valor.length < 13) return `La cédula tiene 10 dígitos y el RUC 13 (van ${valor.length})`;
+  return `El RUC debe tener 13 dígitos (van ${valor.length})`;
 }
 
 app.post('/api/ventas', requireLogin, async (req, res) => {
@@ -253,9 +264,11 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
       return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
     }
   }
-  const email = limpiarEmail(cliente_email);
-  if (!emailValido(email)) {
-    return res.status(400).json({ error: AVISO_EMAIL });
+  const ruc = limpiarTexto(cliente_ruc);
+  const email = limpiarTexto(cliente_email);
+  const problema = avisoCedulaRuc(ruc) || avisoEmail(email);
+  if (problema) {
+    return res.status(400).json({ error: problema });
   }
 
   const turno = await getTurnoAbierto();
@@ -276,7 +289,7 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     const ventaResult = await client.query(
       `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago]
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -483,9 +496,11 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
       return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
     }
   }
-  const email = limpiarEmail(cliente_email);
-  if (!emailValido(email)) {
-    return res.status(400).json({ error: AVISO_EMAIL });
+  const ruc = limpiarTexto(cliente_ruc);
+  const email = limpiarTexto(cliente_email);
+  const problema = avisoCedulaRuc(ruc) || avisoEmail(email);
+  if (problema) {
+    return res.status(400).json({ error: problema });
   }
 
   const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
@@ -509,7 +524,7 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
 
     await client.query(
       `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7 WHERE id = $8`,
-      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, venta.id]
+      [cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
