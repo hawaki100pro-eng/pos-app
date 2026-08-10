@@ -228,6 +228,20 @@ function formatNumeroProforma(numero) {
   return String(numero).padStart(7, '0');
 }
 
+// El correo del cliente es opcional, pero si viene algo tiene que parecer un
+// correo. Se revisa también aquí y no solo en el navegador: el formulario se
+// puede saltar. La misma regla vive en public/app.js (emailValido).
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const AVISO_EMAIL = 'El correo no tiene un formato válido (ejemplo: nombre@dominio.com)';
+
+function limpiarEmail(valor) {
+  return (valor == null ? '' : String(valor)).trim();
+}
+
+function emailValido(email) {
+  return email === '' || RE_EMAIL.test(email);
+}
+
 app.post('/api/ventas', requireLogin, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items } = req.body;
   const metodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
@@ -238,6 +252,10 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     if (!item.producto || !item.cantidad || item.cantidad <= 0 || item.precio_unitario == null || item.precio_unitario < 0) {
       return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
     }
+  }
+  const email = limpiarEmail(cliente_email);
+  if (!emailValido(email)) {
+    return res.status(400).json({ error: AVISO_EMAIL });
   }
 
   const turno = await getTurnoAbierto();
@@ -258,7 +276,7 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     const ventaResult = await client.query(
       `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, cliente_email || null, total, numeroProforma, metodoPago]
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -465,6 +483,10 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
       return res.status(400).json({ error: 'Cada ítem necesita producto, cantidad > 0 y precio_unitario >= 0' });
     }
   }
+  const email = limpiarEmail(cliente_email);
+  if (!emailValido(email)) {
+    return res.status(400).json({ error: AVISO_EMAIL });
+  }
 
   const ventaR = await pool.query('SELECT * FROM ventas WHERE id = $1', [req.params.id]);
   const venta = ventaR.rows[0];
@@ -487,7 +509,7 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
 
     await client.query(
       `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7 WHERE id = $8`,
-      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, cliente_email || null, nuevoTotal, nuevoMetodoPago, venta.id]
+      [cliente || null, cliente_direccion || null, cliente_ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);

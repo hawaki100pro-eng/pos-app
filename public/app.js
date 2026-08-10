@@ -160,6 +160,32 @@ async function cargarEstadoCaja() {
   }
 }
 
+// --- Correo del cliente ---
+// El correo es opcional, pero si se escribe algo tiene que parecer un correo.
+// La misma regla vive en server.js (emailValido): si se cambia una, cambiar la otra.
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const AVISO_EMAIL = 'El correo no tiene un formato válido (ejemplo: nombre@dominio.com)';
+
+function emailValido(valor) {
+  return valor === '' || RE_EMAIL.test(valor);
+}
+
+// Pinta el campo en rojo mientras el correo esté mal escrito. Se revisa al salir
+// del campo, no en cada tecla: si no, avisaría desde la primera letra, cuando el
+// correo todavía no puede estar completo. Ya marcado, sí se revisa al escribir,
+// para que la marca se quite en cuanto se corrija.
+function vigilarEmail(id) {
+  const input = document.getElementById(id);
+  const revisar = () => input.classList.toggle('campo-invalido', !emailValido(input.value.trim()));
+  input.addEventListener('blur', revisar);
+  input.addEventListener('input', () => {
+    if (input.classList.contains('campo-invalido')) revisar();
+  });
+}
+
+vigilarEmail('cliente-email');
+vigilarEmail('editar-cliente-email');
+
 // --- Tipo de cliente ---
 
 function resetTipoCliente() {
@@ -171,6 +197,7 @@ function resetTipoCliente() {
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
   document.getElementById('cliente-email').value = '';
+  document.getElementById('cliente-email').classList.remove('campo-invalido');
 }
 
 document.getElementById('btn-consumidor-final').addEventListener('click', () => {
@@ -180,6 +207,7 @@ document.getElementById('btn-consumidor-final').addEventListener('click', () => 
   document.getElementById('cliente-ruc').value = '';
   document.getElementById('cliente-telefono').value = '';
   document.getElementById('cliente-email').value = '';
+  document.getElementById('cliente-email').classList.remove('campo-invalido');
   document.getElementById('btn-consumidor-final').classList.add('activo');
   document.getElementById('btn-consumidor-datos').classList.remove('activo');
 });
@@ -309,6 +337,12 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   const cliente_ruc = document.getElementById('cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('cliente-telefono').value.trim();
   const cliente_email = document.getElementById('cliente-email').value.trim();
+  if (!emailValido(cliente_email)) {
+    msg.textContent = AVISO_EMAIL;
+    msg.className = 'error';
+    document.getElementById('cliente-email').classList.add('campo-invalido');
+    return;
+  }
   const metodo_pago = document.querySelector('input[name="metodo-pago"]:checked').value;
   const res = await fetch('/api/ventas', {
     method: 'POST',
@@ -548,6 +582,7 @@ function abrirEditarVenta(venta) {
   document.getElementById('editar-cliente-ruc').value = venta.cliente_ruc || '';
   document.getElementById('editar-cliente-telefono').value = venta.cliente_telefono || '';
   document.getElementById('editar-cliente-email').value = venta.cliente_email || '';
+  document.getElementById('editar-cliente-email').classList.remove('campo-invalido');
   document.querySelector(`input[name="editar-metodo-pago"][value="${venta.metodo_pago || 'efectivo'}"]`).checked = true;
   document.getElementById('editar-msg').textContent = '';
   renderEditarItems();
@@ -612,6 +647,12 @@ document.getElementById('guardar-edicion-btn').addEventListener('click', async (
   const cliente_ruc = document.getElementById('editar-cliente-ruc').value.trim();
   const cliente_telefono = document.getElementById('editar-cliente-telefono').value.trim();
   const cliente_email = document.getElementById('editar-cliente-email').value.trim();
+  if (!emailValido(cliente_email)) {
+    msg.textContent = AVISO_EMAIL;
+    msg.className = 'error';
+    document.getElementById('editar-cliente-email').classList.add('campo-invalido');
+    return;
+  }
   const metodo_pago = document.querySelector('input[name="editar-metodo-pago"]:checked').value;
 
   const res = await fetch(`/api/ventas/${editandoVentaId}`, {
