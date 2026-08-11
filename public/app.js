@@ -394,6 +394,8 @@ function mensajeVenta(texto, esError) {
 }
 
 let escaneando = false;
+let resaltado = null;            // id del producto recién escaneado
+let temporizadorResaltado = null;
 
 async function escanear(codigo) {
   if (escaneando) return;          // no encimar dos lecturas
@@ -425,6 +427,12 @@ async function escanear(codigo) {
     } else {
       items.push({ producto: nombre, cantidad: 1, precio_unitario: Number(data.precio), producto_id: data.id });
     }
+
+    // La línea recién escaneada se resalta un momento: si salió la talla
+    // equivocada, se ve al toque y no al final de la venta.
+    resaltado = data.id;
+    clearTimeout(temporizadorResaltado);
+    temporizadorResaltado = setTimeout(() => { resaltado = null; renderItems(); }, 2500);
 
     renderItems();
     pitido(true);
@@ -481,10 +489,38 @@ document.addEventListener('keydown', (e) => {
    -------------------------------------------------------------------------- */
 let flujoCamara = null;
 let temporizadorCamara = null;
+let ultimaLectura = '';   // para exigir dos fotogramas seguidos con el mismo código
+
+// El recuadro de puntería, pasado a coordenadas del fotograma. El video se
+// muestra con object-fit: cover, o sea recortado y escalado, así que hay que
+// deshacer esa transformación para saber qué parte de la imagen es la que la
+// vendedora ve dentro del recuadro.
+function regionDeMira(video, mira) {
+  const rv = video.getBoundingClientRect();
+  const rm = mira.getBoundingClientRect();
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) return null;
+
+  const escala = Math.max(rv.width / vw, rv.height / vh);
+  const desplazadoX = (rv.width - vw * escala) / 2;
+  const desplazadoY = (rv.height - vh * escala) / 2;
+
+  const x = Math.round((rm.left - rv.left - desplazadoX) / escala);
+  const y = Math.round((rm.top - rv.top - desplazadoY) / escala);
+  const w = Math.round(rm.width / escala);
+  const h = Math.round(rm.height / escala);
+
+  // Recortado a los límites del fotograma, por si el recuadro se sale
+  const x0 = Math.max(0, Math.min(x, vw - 1));
+  const y0 = Math.max(0, Math.min(y, vh - 1));
+  return { x: x0, y: y0, w: Math.min(w, vw - x0), h: Math.min(h, vh - y0) };
+}
 
 function cerrarCamara() {
   clearInterval(temporizadorCamara);
   temporizadorCamara = null;
+  ultimaLectura = '';
   if (flujoCamara) {
     flujoCamara.getTracks().forEach((t) => t.stop());  // apaga la luz de la cámara
     flujoCamara = null;
@@ -504,7 +540,9 @@ async function abrirCamara() {
   const modal = document.getElementById('camara-modal');
   const video = document.getElementById('camara-video');
   const aviso = document.getElementById('camara-msg');
-  aviso.textContent = 'Apunta a la etiqueta';
+  const mira = document.querySelector('.camara-mira');
+  aviso.textContent = 'Encuadra UNA sola etiqueta dentro del recuadro';
+  ultimaLectura = '';
   modal.classList.remove('hidden');
 
   try {
@@ -523,18 +561,49 @@ async function abrirCamara() {
   await video.play();
 
   const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128'] });
+  const lienzo = document.createElement('canvas');
+  const pincel = lienzo.getContext('2d', { willReadFrequently: true });
+
   temporizadorCamara = setInterval(async () => {
     try {
-      const encontrados = await detector.detect(video);
-      if (!encontrados.length) return;
-      const codigo = encontrados[0].rawValue.trim();
+      // 1) Se mira SOLO lo que está dentro del recuadro. Las etiquetas vienen en
+      //    tira, pegadas una a otra: si se analizara el fotograma entero, la de
+      //    al lado podría colarse y venderse una talla equivocada.
+      const region = regionDeMira(video, mira);
+      if (!region || region.w < 10 || region.h < 10) return;
+      lienzo.width = region.w;
+      lienzo.height = region.h;
+      pincel.drawImage(video, region.x, region.y, region.w, region.h, 0, 0, region.w, region.h);
+
+      const encontrados = await detector.detect(lienzo);
+      if (!encontrados.length) { ultimaLectura = ''; return; }
+
+      // 2) Si aun así entró más de un código, gana el que esté más al centro del
+      //    recuadro, que es el que la vendedora está apuntando.
+      const cx = region.w / 2;
+      const cy = region.h / 2;
+      const distancia = (c) => {
+        const b = c.boundingBox;
+        return Math.hypot(b.x + b.width / 2 - cx, b.y + b.height / 2 - cy);
+      };
+      const elegido = encontrados.reduce((a, b) => (distancia(b) < distancia(a) ? b : a));
+      const codigo = (elegido.rawValue || '').trim();
       if (!codigo) return;
+
+      // 3) Se exige leer lo mismo dos veces seguidas. Una lectura suelta puede
+      //    ser un reflejo o un movimiento; dos iguales, no.
+      if (codigo !== ultimaLectura) {
+        ultimaLectura = codigo;
+        aviso.textContent = 'Leyendo… no muevas';
+        return;
+      }
+
       cerrarCamara();
       escanear(codigo);
     } catch (e) {
-      // Un fotograma que no se pudo analizar no es un error: se intenta con el siguiente
+      // Un fotograma que no se pudo analizar no es un error: sigue el siguiente
     }
-  }, 250);
+  }, 200);
 }
 
 document.getElementById('escanear-btn').addEventListener('click', abrirCamara);
@@ -548,7 +617,7 @@ function renderItems() {
     const subtotal = item.cantidad * item.precio_unitario;
     total += subtotal;
     const row = document.createElement('div');
-    row.className = 'item-row';
+    row.className = 'item-row' + (item.producto_id && item.producto_id === resaltado ? ' item-escaneado' : '');
     row.innerHTML = `
       <span>${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
       <button data-idx="${idx}" class="quitar-item-btn">Quitar</button>

@@ -420,6 +420,14 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   background: var(--badge-anulada-fondo);
 }
 
+/* La línea recién escaneada se resalta un momento, para notar al toque si
+   entró una talla distinta a la que se apuntó. */
+.item-row.item-escaneado {
+  background: var(--acento-suave);
+  box-shadow: inset 3px 0 0 var(--acento);
+  border-radius: 6px;
+}
+
 /* ============================================================
    Lector con la cámara: ocupa toda la pantalla para que la
    vendedora apunte con las dos manos libres de la interfaz.
