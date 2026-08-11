@@ -27,7 +27,14 @@
       Una etiqueta por par
     </label>
 
-    <button id="imprimir">
+    <button id="descargar-pdf">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+      </svg>
+      Descargar PDF de 40 × 20 mm
+    </button>
+
+    <button id="imprimir" class="btn-suave">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
         <path d="M6 14h12v8H6z"/>
@@ -37,14 +44,20 @@
   </div>
 
   <div class="aviso">
-    <strong>Antes de imprimir de verdad:</strong> saca una prueba en papel normal, mídela con una regla
-    (cada etiqueta debe dar 40 × 20 mm) y pásale el lector. Si sale de otro tamaño, en el diálogo de
-    impresión pon la escala en <strong>100 %</strong> y desactiva «ajustar a la página».
+    <strong>Desde el celular:</strong> usa «Descargar PDF de 40 × 20 mm» y abre ese archivo en la app de
+    la impresora. Cada hoja del PDF ya viene del tamaño exacto del adhesivo, así que la app no tiene que
+    encoger nada. <strong>No uses «Imprimir» en el celular:</strong> Chrome en Android no respeta el
+    tamaño de hoja y saca papel A4 con la etiqueta diminuta en una esquina. El botón «Imprimir» sirve
+    desde una computadora.
+    <br><br>
+    <strong>Antes de imprimir toda la tanda:</strong> saca una etiqueta de prueba, mídela con una regla
+    (debe dar 40 × 20 mm) y pásale el lector.
   </div>
 
   <div class="hoja" id="hoja"></div>
 
   <script src="codigos.js"></script>
+  <script src="pdf-etiquetas.js"></script>
   <script src="etiquetas.js"></script>
 </body>
 </html>

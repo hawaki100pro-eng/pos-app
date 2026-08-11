@@ -74,6 +74,14 @@ body {
 .barra button:hover { background: #4338ca; }
 .barra button svg { width: 16px; height: 16px; }
 
+/* Acción secundaria: imprimir desde el navegador, que solo sirve en computadora */
+.barra button.btn-suave {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.barra button.btn-suave:hover { background: #e0e7ff; }
+
 .aviso {
   max-width: 900px;
   margin: 0 auto 16px;

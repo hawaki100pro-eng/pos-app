@@ -291,7 +291,10 @@ const C128 = ("212222,222122,222221,121223,121322,131222,122213,122312,132212,22
   "214121,412121,111143,111341,131141,114113,114311,411113,411311,113141," +
   "114131,311141,411131,211412,211214,211232,2331112").split(',');
 
-function code128SVG(text) {
+// Devuelve las barras negras medidas en módulos: { total, barras: [{ x, w }] }.
+// Lo usan el SVG de la pantalla y el PDF de 40 x 20 mm, así la codificación
+// (que es la parte delicada) queda escrita una sola vez.
+function code128Modulos(text) {
   const clean = text.replace(/[^\x20-\x7E]/g, '');
   const values = [104];                       // Start B
   let sum = 104;
@@ -303,16 +306,22 @@ function code128SVG(text) {
   values.push(sum % 103);                     // checksum
   values.push(106);                           // Stop
 
-  let x = 10, bars = '';                      // 10 módulos de zona muda
+  let x = 10;                                 // 10 módulos de zona muda
+  const barras = [];
   for (const v of values) {
     const widths = C128[v];
     for (let i = 0; i < widths.length; i++) {
       const w = +widths[i];
-      if (i % 2 === 0) bars += `M${x} 0h${w}v100h-${w}z`;
+      if (i % 2 === 0) barras.push({ x, w });
       x += w;
     }
   }
-  const total = x + 10;
+  return { clean, total: x + 10, barras };
+}
+
+function code128SVG(text) {
+  const { clean, total, barras } = code128Modulos(text);
+  const bars = barras.map(({ x, w }) => `M${x} 0h${w}v100h-${w}z`).join('');
   return `<svg viewBox="0 0 ${total} 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" role="img" aria-label="Código de barras ${escapeAttr(clean)}"><rect width="${total}" height="100" fill="#ffffff"/><path d="${bars}" fill="#000000"/></svg>`;
 }
 

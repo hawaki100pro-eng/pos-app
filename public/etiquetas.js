@@ -59,6 +59,33 @@ async function cargar() {
   render();
 }
 
+// La lista de etiquetas a imprimir, ya repetida por par. La usan tanto la
+// vista de pantalla como el PDF, para que salga exactamente lo mismo.
+function listaEtiquetas() {
+  const unaPorPar = chkPorPar.checked;
+  const lista = [];
+  const problemas = [];
+
+  for (const p of productos) {
+    // El stock puede ser 0 (producto agotado): igual se imprime una, por si se repone
+    const copias = unaPorPar ? Math.max(1, p.stock) : 1;
+    const sku = p.sku || '(sin código)';
+
+    try {
+      qrMatrix(sku, 'M'); // si el SKU no cabe en el QR, avisa aquí
+    } catch (e) {
+      problemas.push(`${p.modelo} T${p.talla} ${p.color}: ${e.message}`);
+      continue;
+    }
+
+    for (let i = 0; i < copias; i++) {
+      lista.push({ producto: p, sku, codigoBarras: codigoBarras(p) });
+    }
+  }
+
+  return { lista, problemas };
+}
+
 function render() {
   const unaPorPar = chkPorPar.checked;
   let html = '';
@@ -121,6 +148,29 @@ function aplicarModo() {
     ? '@page { size: 40mm 20mm; margin: 0; }'
     : '@page { size: A4; margin: 8mm; }';
 }
+
+// Nombre del archivo: sirve para encontrarlo en Descargas desde el celular.
+function nombreArchivo(cuantas) {
+  const modelos = [...new Set(productos.map((p) => p.modelo))].join('-');
+  const limpio = deaccent(modelos).replace(/[^A-Za-z0-9-]+/g, '_').slice(0, 40) || 'etiquetas';
+  return `etiquetas-${limpio}-${cuantas}.pdf`;
+}
+
+document.getElementById('descargar-pdf').addEventListener('click', () => {
+  const { lista, problemas } = listaEtiquetas();
+  if (problemas.length) {
+    alert('No se pudieron generar estas etiquetas:\n\n' + problemas.join('\n'));
+  }
+  if (lista.length === 0) return;
+
+  const url = URL.createObjectURL(pdfEtiquetas(lista));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo(lista.length);
+  a.click();
+  // Se libera después de que el navegador alcanzó a empezar la descarga
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+});
 
 selModo.addEventListener('change', aplicarModo);
 chkPorPar.addEventListener('change', render);
