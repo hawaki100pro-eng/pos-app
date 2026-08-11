@@ -640,6 +640,40 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireDueño, async (req, re
 // --- Catálogo / Inventario ---
 
 // Catálogo disponible para vendedores (activo y con stock)
+// Búsqueda por el código de la etiqueta, para vender escaneando.
+// La etiqueta lleva dos códigos del mismo producto: el de barras tiene el id en
+// 6 dígitos y el QR tiene el SKU. Se aceptan los dos, así da igual cuál alcance
+// a leer el lector.
+//
+// Se consulta la base en cada escaneo en vez de una copia en el celular: el
+// stock y el precio tienen que ser los de este momento, porque otra vendedora
+// pudo haber vendido el último par hace un segundo.
+app.get('/api/productos/codigo/:codigo', requireLogin, async (req, res) => {
+  const codigo = String(req.params.codigo || '').trim().toUpperCase();
+  if (!codigo) return res.status(400).json({ error: 'Código vacío' });
+
+  // El código de barras son solo dígitos con ceros a la izquierda (000207)
+  const esId = /^[0-9]{1,9}$/.test(codigo);
+  const r = esId
+    ? await pool.query('SELECT * FROM productos WHERE id = $1 AND eliminado = 0', [parseInt(codigo, 10)])
+    : await pool.query('SELECT * FROM productos WHERE UPPER(sku) = $1 AND eliminado = 0', [codigo]);
+
+  const p = r.rows[0];
+  if (!p) {
+    return res.status(404).json({ error: `Ningún producto tiene el código ${codigo}. ¿Es una etiqueta de otra tienda?` });
+  }
+
+  const nombre = `${p.modelo} T${p.talla} ${p.color}`;
+  if (!p.activo) {
+    return res.status(409).json({ error: `${nombre} está desactivado en el inventario. Avisa al administrador.` });
+  }
+  if (p.stock <= 0) {
+    return res.status(409).json({ error: `${nombre} figura agotado en el sistema. Avisa al administrador para que corrija el stock.` });
+  }
+
+  res.json(p);
+});
+
 app.get('/api/productos/disponibles', requireLogin, async (req, res) => {
   const r = await pool.query(
     `SELECT * FROM productos WHERE activo = 1 AND stock > 0 AND eliminado = 0 ORDER BY modelo, color, talla`

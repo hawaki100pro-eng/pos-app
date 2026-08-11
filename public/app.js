@@ -350,6 +350,196 @@ function renderCatalogoModal(productos) {
   });
 }
 
+/* ==========================================================================
+   Escaneo de etiquetas
+
+   Dos formas de leer, un solo camino: la pistola Bluetooth y la cámara llaman
+   las dos a escanear(), así nunca pueden comportarse distinto.
+   ========================================================================== */
+
+// Pitido corto hecho por el navegador, sin archivos de sonido que descargar.
+// Sirve para no tener que mirar la pantalla en cada par: el tono agudo es
+// "entró", el grave es "algo pasó, mira".
+let contextoAudio = null;
+
+function pitido(bien) {
+  try {
+    contextoAudio = contextoAudio || new (window.AudioContext || window.webkitAudioContext)();
+    if (contextoAudio.state === 'suspended') contextoAudio.resume();
+    const ahora = contextoAudio.currentTime;
+    const tonos = bien ? [[880, 0, 0.09]] : [[240, 0, 0.16], [190, 0.2, 0.24]];
+    for (const [hz, desde, hasta] of tonos) {
+      const osc = contextoAudio.createOscillator();
+      const vol = contextoAudio.createGain();
+      osc.type = 'square';
+      osc.frequency.value = hz;
+      // La rampa evita el chasquido que se oye si el tono corta de golpe
+      vol.gain.setValueAtTime(0.0001, ahora + desde);
+      vol.gain.exponentialRampToValueAtTime(0.18, ahora + desde + 0.01);
+      vol.gain.exponentialRampToValueAtTime(0.0001, ahora + hasta);
+      osc.connect(vol);
+      vol.connect(contextoAudio.destination);
+      osc.start(ahora + desde);
+      osc.stop(ahora + hasta + 0.02);
+    }
+  } catch (e) {
+    // Si el navegador no deja sonar, el aviso en pantalla igual se ve
+  }
+}
+
+function mensajeVenta(texto, esError) {
+  const msg = document.getElementById('venta-msg');
+  msg.textContent = texto;
+  msg.className = esError ? 'error' : '';
+}
+
+let escaneando = false;
+
+async function escanear(codigo) {
+  if (escaneando) return;          // no encimar dos lecturas
+  escaneando = true;
+  try {
+    let res, data;
+    try {
+      res = await fetch(`/api/productos/codigo/${encodeURIComponent(codigo)}`);
+      data = await res.json();
+    } catch (e) {
+      pitido(false);
+      return mensajeVenta('Sin conexión con el servidor. Revisa el internet.', true);
+    }
+
+    if (!res.ok) {
+      pitido(false);
+      return mensajeVenta(data.error || 'No se pudo leer el código', true);
+    }
+
+    // Si ya está en la lista, sube la cantidad en vez de repetir la línea
+    const nombre = `${data.modelo} T${data.talla} ${data.color}`;
+    const yaEsta = items.find((i) => i.producto_id === data.id);
+    if (yaEsta) {
+      if (yaEsta.cantidad + 1 > data.stock) {
+        pitido(false);
+        return mensajeVenta(`Solo quedan ${data.stock} de ${nombre} en el sistema.`, true);
+      }
+      yaEsta.cantidad++;
+    } else {
+      items.push({ producto: nombre, cantidad: 1, precio_unitario: Number(data.precio), producto_id: data.id });
+    }
+
+    renderItems();
+    pitido(true);
+    const cuantos = yaEsta ? ` (x${yaEsta.cantidad})` : '';
+    mensajeVenta(`${nombre} · $${Number(data.precio).toFixed(2)}${cuantos}`, false);
+  } finally {
+    escaneando = false;
+  }
+}
+
+/* --- Pistola Bluetooth -----------------------------------------------------
+   Se comporta como un teclado: manda el código tecla por tecla y termina en
+   Enter, pero mucho más rápido de lo que teclea una persona. Por eso se mide el
+   tiempo entre teclas. Así la vendedora escanea sin tener que tocar nada antes.
+
+   Mientras el cursor esté dentro de un campo se deja pasar todo: ahí está
+   escribiendo ella, no la pistola.
+   -------------------------------------------------------------------------- */
+const MS_ENTRE_TECLAS = 50;
+let bufferLector = '';
+let ultimaTecla = 0;
+
+function enCampoDeTexto() {
+  const el = document.activeElement;
+  return !!el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('venta-form-wrap').classList.contains('hidden')) return;
+  if (enCampoDeTexto()) return;
+
+  const ahora = Date.now();
+  const seguidas = ahora - ultimaTecla <= MS_ENTRE_TECLAS;
+  ultimaTecla = ahora;
+
+  if (e.key === 'Enter') {
+    const codigo = seguidas ? bufferLector.trim() : '';
+    bufferLector = '';
+    if (codigo.length >= 4) {
+      e.preventDefault();
+      escanear(codigo);
+    }
+    return;
+  }
+
+  if (e.key.length !== 1) return;  // Shift, flechas y demás no son parte del código
+  bufferLector = seguidas ? bufferLector + e.key : e.key;
+});
+
+/* --- Cámara del celular ----------------------------------------------------
+   Usa el lector que Chrome ya trae (BarcodeDetector): no hay que descargar
+   ninguna librería y funciona sin internet. Si el celular no lo tiene, el botón
+   lo dice en vez de quedarse mudo.
+   -------------------------------------------------------------------------- */
+let flujoCamara = null;
+let temporizadorCamara = null;
+
+function cerrarCamara() {
+  clearInterval(temporizadorCamara);
+  temporizadorCamara = null;
+  if (flujoCamara) {
+    flujoCamara.getTracks().forEach((t) => t.stop());  // apaga la luz de la cámara
+    flujoCamara = null;
+  }
+  document.getElementById('camara-video').srcObject = null;
+  document.getElementById('camara-modal').classList.add('hidden');
+}
+
+async function abrirCamara() {
+  if (!('BarcodeDetector' in window)) {
+    return mensajeVenta('Este navegador no puede leer códigos con la cámara. Usa la pistola, o el botón MAGICA para buscar a mano.', true);
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return mensajeVenta('No se puede abrir la cámara desde aquí. La página tiene que estar en https.', true);
+  }
+
+  const modal = document.getElementById('camara-modal');
+  const video = document.getElementById('camara-video');
+  const aviso = document.getElementById('camara-msg');
+  aviso.textContent = 'Apunta a la etiqueta';
+  modal.classList.remove('hidden');
+
+  try {
+    flujoCamara = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },   // la cámara de atrás
+    });
+  } catch (e) {
+    cerrarCamara();
+    const negada = e.name === 'NotAllowedError';
+    return mensajeVenta(negada
+      ? 'No diste permiso para usar la cámara. Actívalo en el candado de la barra de direcciones.'
+      : 'No se pudo abrir la cámara: ' + e.message, true);
+  }
+
+  video.srcObject = flujoCamara;
+  await video.play();
+
+  const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128'] });
+  temporizadorCamara = setInterval(async () => {
+    try {
+      const encontrados = await detector.detect(video);
+      if (!encontrados.length) return;
+      const codigo = encontrados[0].rawValue.trim();
+      if (!codigo) return;
+      cerrarCamara();
+      escanear(codigo);
+    } catch (e) {
+      // Un fotograma que no se pudo analizar no es un error: se intenta con el siguiente
+    }
+  }, 250);
+}
+
+document.getElementById('escanear-btn').addEventListener('click', abrirCamara);
+document.getElementById('cerrar-camara-btn').addEventListener('click', cerrarCamara);
+
 function renderItems() {
   const cont = document.getElementById('items-lista');
   cont.innerHTML = '';

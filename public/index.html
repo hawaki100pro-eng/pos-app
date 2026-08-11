@@ -102,6 +102,13 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
           MAGICA
         </button>
+        <!-- Con pistola no hace falta tocar nada: el lector escribe el código y da
+             Enter, y app.js lo reconoce por la velocidad de las teclas. Este botón
+             es para leer la etiqueta con la cámara del celular. -->
+        <button id="escanear-btn" type="button" class="btn-secundario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M3 12h18"/></svg>
+          Escanear
+        </button>
       </div>
 
       <p>Total: $<span id="carrito-total">0.00</span></p>
@@ -279,6 +286,15 @@
     </div>
     <input type="text" id="catalogo-buscar" placeholder="Buscar por modelo, talla o color...">
     <div id="catalogo-lista" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- Lector con la cámara. El recuadro de puntería es solo una guía visual: se
+       lee toda la imagen, así que no hace falta encuadrar con precisión. -->
+  <div id="camara-modal" class="camara-modal hidden">
+    <video id="camara-video" playsinline muted></video>
+    <div class="camara-mira"></div>
+    <p id="camara-msg">Apunta a la etiqueta</p>
+    <button id="cerrar-camara-btn" type="button">Cerrar</button>
   </div>
 
   <!-- Modal de edición de venta (solo dueño) -->
