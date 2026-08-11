@@ -294,8 +294,9 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
 
     for (const item of items) {
       await client.query(
-        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario, producto_id) VALUES ($1, $2, $3, $4, $5)',
-        [ventaId, item.producto, item.cantidad, item.precio_unitario, item.producto_id || null]
+        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario, precio_lista, producto_id) VALUES ($1, $2, $3, $4, $5, $6)',
+        // Sin precio de lista se asume que se cobró el de siempre, o sea sin descuento
+        [ventaId, item.producto, item.cantidad, item.precio_unitario, item.precio_lista ?? item.precio_unitario, item.producto_id || null]
       );
       if (item.producto_id) {
         const stockR = await client.query('SELECT stock FROM productos WHERE id = $1 FOR UPDATE', [item.producto_id]);
@@ -345,7 +346,7 @@ app.get('/api/ventas/:id', requireLogin, async (req, res) => {
     return res.status(404).json({ error: 'Venta no encontrada' });
   }
   venta.numero_proforma = formatNumeroProforma(venta.numero_proforma || venta.id);
-  const detalle = await pool.query('SELECT producto, cantidad, precio_unitario FROM detalle_venta WHERE venta_id = $1', [venta.id]);
+  const detalle = await pool.query('SELECT producto, cantidad, precio_unitario, precio_lista FROM detalle_venta WHERE venta_id = $1', [venta.id]);
   venta.detalle = detalle.rows;
   res.json(venta);
 });
@@ -385,7 +386,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   const ventas = ventasR.rows;
   for (const v of ventas) {
     v.numero_proforma = formatNumeroProforma(v.numero_proforma || v.id);
-    const detalle = await pool.query('SELECT producto, cantidad, precio_unitario FROM detalle_venta WHERE venta_id = $1', [v.id]);
+    const detalle = await pool.query('SELECT producto, cantidad, precio_unitario, precio_lista FROM detalle_venta WHERE venta_id = $1', [v.id]);
     v.detalle = detalle.rows;
   }
 
@@ -529,8 +530,8 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
     for (const item of items) {
       await client.query(
-        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)',
-        [venta.id, item.producto, item.cantidad, item.precio_unitario]
+        'INSERT INTO detalle_venta (venta_id, producto, cantidad, precio_unitario, precio_lista) VALUES ($1, $2, $3, $4, $5)',
+        [venta.id, item.producto, item.cantidad, item.precio_unitario, item.precio_lista ?? item.precio_unitario]
       );
     }
 

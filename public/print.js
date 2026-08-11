@@ -59,7 +59,21 @@
     tbody.appendChild(tr);
   }
 
-  document.getElementById('subtotal-valor').textContent = `$${venta.total.toFixed(2)}`;
+  // Subtotal = lo que habría costado a precio de siempre. La diferencia con lo
+  // que se cobró es el descuento, y va a la vista para que el cliente lo vea.
+  // En las ventas viejas no hay precio de lista: ahí subtotal y total coinciden.
+  const subtotal = venta.detalle.reduce(
+    (a, i) => a + i.cantidad * Number(i.precio_lista ?? i.precio_unitario), 0);
+  const descuento = subtotal - venta.total;
+
+  document.getElementById('subtotal-valor').textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById('total-valor').textContent = `$${venta.total.toFixed(2)}`;
+
+  if (descuento > 0.004) {
+    document.getElementById('descuento-valor').textContent = `-$${descuento.toFixed(2)}`;
+    document.getElementById('descuento-pct').textContent = `(${((descuento / subtotal) * 100).toFixed(1)}%)`;
+    document.getElementById('fila-descuento').classList.remove('hidden');
+  }
   const metodoEl = document.getElementById('metodo-pago-valor');
   if (metodoEl) {
     metodoEl.textContent = venta.metodo_pago === 'transferencia' ? 'TRANSFERENCIA' : 'EFECTIVO';

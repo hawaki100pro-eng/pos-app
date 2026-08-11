@@ -355,9 +355,54 @@ th, td {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 6px 0;
   border-bottom: 1px solid var(--borde-suave);
 }
+
+/* El nombre y, debajo, la rebaja de esa línea. Ocupa el renglón entero para que
+   el precio y el botón de quitar queden juntos en el de abajo, en vez de que el
+   botón se vaya solo a un tercer renglón en pantallas angostas. */
+.item-datos {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-descuento {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--acento-texto);
+  margin-top: 1px;
+}
+
+/* Precio editable: aquí se baja el precio para hacer un descuento */
+.item-precio-campo {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: auto;   /* el precio a la izquierda, Quitar a la derecha */
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+.item-precio-campo input {
+  width: 78px;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.descuento-resumen {
+  color: var(--acento-texto);
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.descuento-resumen:empty { display: none; }
 
 .item-row button {
   background: #dc2626;

@@ -62,9 +62,14 @@
           <p class="label">ANOTACIONES</p>
           <p class="label" style="margin-top: 8px;">FORMA DE PAGO: <span id="metodo-pago-valor"></span></p>
         </td>
-        <td class="subtotal">
-          <span>SUBTOTAL</span>
-          <span id="subtotal-valor">$0.00</span>
+        <td class="totales">
+          <!-- La fila del descuento la esconde print.js cuando no hubo rebaja -->
+          <div class="fila-total"><span>SUBTOTAL</span><span id="subtotal-valor">$0.00</span></div>
+          <div class="fila-total fila-descuento hidden" id="fila-descuento">
+            <span>DESCUENTO</span>
+            <span class="nowrap"><span id="descuento-valor">$0.00</span> <small id="descuento-pct"></small></span>
+          </div>
+          <div class="fila-total fila-granTotal"><span>TOTAL</span><span id="total-valor">$0.00</span></div>
         </td>
       </tr>
     </table>

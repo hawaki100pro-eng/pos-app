@@ -113,6 +113,12 @@ async function init() {
     ALTER TABLE productos ADD COLUMN IF NOT EXISTS eliminado_por INTEGER REFERENCES usuarios(id);
   `);
 
+  // Migración: precio de lista del ítem, para poder mostrar el descuento en la
+  // nota de venta. Guarda cuánto costaba el producto en el catálogo al momento
+  // de venderlo; lo que se cobró de verdad sigue en precio_unitario. En las
+  // ventas ya registradas queda vacío y se asume que no hubo descuento.
+  await pool.query(`ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS precio_lista REAL`);
+
   // Migración: correo del cliente. Las ventas ya registradas lo dejan vacío.
   await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS cliente_email TEXT`);
 

@@ -95,15 +95,33 @@ table { width: 100%; border-collapse: collapse; }
 .pie td { vertical-align: bottom; padding: 10px 12px; }
 .anotaciones { width: 60%; border-right: 2px solid #1e293b; height: 60px; }
 .anotaciones .label { font-weight: bold; font-size: 0.8rem; margin: 0; }
-.subtotal {
+/* Bloque de totales: subtotal, descuento (si lo hubo) y total a pagar */
+.totales {
   width: 40%;
-  display: flex;
-  justify-content: space-between;
+  padding: 0 !important;
   font-weight: bold;
   background: #1e293b;
   color: #fff;
 }
-.subtotal span { padding: 8px 10px; }
+
+.fila-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+}
+
+.fila-total small { font-weight: normal; font-size: 0.72rem; opacity: .85; }
+.fila-total .nowrap { white-space: nowrap; }
+
+/* El descuento se separa con una línea tenue para que no se confunda con el total */
+.fila-descuento {
+  border-top: 1px solid rgba(255, 255, 255, .25);
+  border-bottom: 1px solid rgba(255, 255, 255, .25);
+}
+
+.fila-granTotal { font-size: 1.08rem; }
 
 @media print {
   body { padding: 0; }

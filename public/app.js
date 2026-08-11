@@ -280,9 +280,15 @@ document.getElementById('agregar-item-btn').addEventListener('click', () => {
   }
 
   const producto_id = inputProducto.dataset.productoId ? parseInt(inputProducto.dataset.productoId) : null;
-  items.push({ producto, cantidad, precio_unitario, producto_id });
+  // Si el producto se escribió a mano no hay precio de catálogo: se toma el
+  // cobrado, o sea que esa línea no lleva descuento
+  const precio_lista = inputProducto.dataset.precioLista
+    ? parseFloat(inputProducto.dataset.precioLista)
+    : precio_unitario;
+  items.push({ producto, cantidad, precio_unitario, precio_lista, producto_id });
   inputProducto.value = '';
   inputProducto.dataset.productoId = '';
+  inputProducto.dataset.precioLista = '';
   document.getElementById('item-cantidad').value = '1';
   document.getElementById('item-precio').value = '';
   document.getElementById('venta-msg').textContent = '';
@@ -341,6 +347,9 @@ function renderCatalogoModal(productos) {
       const inputProducto = document.getElementById('item-producto');
       inputProducto.value = `${p.modelo} T${p.talla} ${p.color}`;
       inputProducto.dataset.productoId = p.id;
+      // Se guarda el precio del catálogo aparte: si la vendedora lo baja antes de
+      // agregar, la diferencia se cuenta como descuento
+      inputProducto.dataset.precioLista = p.precio;
       document.getElementById('item-precio').value = p.precio;
       document.getElementById('item-cantidad').value = 1;
       document.getElementById('catalogo-modal').classList.add('hidden');
@@ -425,7 +434,13 @@ async function escanear(codigo) {
       }
       yaEsta.cantidad++;
     } else {
-      items.push({ producto: nombre, cantidad: 1, precio_unitario: Number(data.precio), producto_id: data.id });
+      items.push({
+        producto: nombre,
+        cantidad: 1,
+        precio_unitario: Number(data.precio),
+        precio_lista: Number(data.precio),   // el del catálogo, para calcular el descuento
+        producto_id: data.id,
+      });
     }
 
     // La línea recién escaneada se resalta un momento: si salió la talla
@@ -609,6 +624,19 @@ async function abrirCamara() {
 document.getElementById('escanear-btn').addEventListener('click', abrirCamara);
 document.getElementById('cerrar-camara-btn').addEventListener('click', cerrarCamara);
 
+// Lo que se rebajó en una línea: cuánto en dólares y cuánto en porcentaje.
+// Si no hay precio de catálogo, o se cobró igual o más, no hay descuento.
+function descuentoDe(item) {
+  const lista = Number(item.precio_lista ?? item.precio_unitario);
+  const cobrado = Number(item.precio_unitario);
+  if (!(lista > cobrado)) return null;
+  return {
+    lista,
+    dolares: (lista - cobrado) * item.cantidad,
+    porcentaje: ((lista - cobrado) / lista) * 100,
+  };
+}
+
 function renderItems() {
   const cont = document.getElementById('items-lista');
   cont.innerHTML = '';
@@ -616,18 +644,54 @@ function renderItems() {
   items.forEach((item, idx) => {
     const subtotal = item.cantidad * item.precio_unitario;
     total += subtotal;
+    const dcto = descuentoDe(item);
+
     const row = document.createElement('div');
     row.className = 'item-row' + (item.producto_id && item.producto_id === resaltado ? ' item-escaneado' : '');
     row.innerHTML = `
-      <span>${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
-      <button data-idx="${idx}" class="quitar-item-btn">Quitar</button>
+      <div class="item-datos">
+        <span class="item-nombre">${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
+        ${dcto ? `<span class="item-descuento">antes $${dcto.lista.toFixed(2)} · rebaja $${dcto.dolares.toFixed(2)} (${dcto.porcentaje.toFixed(1)}%)</span>` : ''}
+      </div>
+      <label class="item-precio-campo">
+        <span>$</span>
+        <input type="number" min="0" step="0.01" value="${item.precio_unitario.toFixed(2)}"
+               aria-label="Precio de ${item.producto}">
+      </label>
+      <button class="quitar-item-btn">Quitar</button>
     `;
+
+    // Se actualiza al salir del campo, no en cada tecla: si no, al escribir "3"
+    // para llegar a 30 la línea se recalcularía con un precio de 3
+    const campoPrecio = row.querySelector('.item-precio-campo input');
+    campoPrecio.addEventListener('change', () => {
+      const nuevo = parseFloat(campoPrecio.value);
+      if (isNaN(nuevo) || nuevo < 0) {
+        campoPrecio.value = item.precio_unitario.toFixed(2);
+        return;
+      }
+      item.precio_unitario = nuevo;
+      renderItems();
+    });
+
     row.querySelector('.quitar-item-btn').addEventListener('click', () => {
       items.splice(idx, 1);
       renderItems();
     });
     cont.appendChild(row);
   });
+
+  // Resumen del descuento de toda la venta, para que la vendedora vea lo que
+  // está regalando antes de confirmar
+  const rebaja = items.reduce((a, i) => a + (descuentoDe(i)?.dolares || 0), 0);
+  const resumen = document.getElementById('descuento-resumen');
+  if (rebaja > 0.004) {
+    const sinRebaja = total + rebaja;
+    resumen.textContent = `Descuento: $${rebaja.toFixed(2)} (${((rebaja / sinRebaja) * 100).toFixed(1)}%) · antes $${sinRebaja.toFixed(2)}`;
+  } else {
+    resumen.textContent = '';
+  }
+
   document.getElementById('carrito-total').textContent = total.toFixed(2);
 }
 
@@ -926,10 +990,14 @@ function renderEditarItems() {
   editandoItems.forEach((item, idx) => {
     const subtotal = item.cantidad * item.precio_unitario;
     total += subtotal;
+    const dcto = descuentoDe(item);
     const row = document.createElement('div');
     row.className = 'item-row';
     row.innerHTML = `
-      <span>${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
+      <div class="item-datos">
+        <span class="item-nombre">${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
+        ${dcto ? `<span class="item-descuento">antes $${dcto.lista.toFixed(2)} · rebaja $${dcto.dolares.toFixed(2)} (${dcto.porcentaje.toFixed(1)}%)</span>` : ''}
+      </div>
       <button data-idx="${idx}" class="quitar-item-btn">Quitar</button>
     `;
     row.querySelector('.quitar-item-btn').addEventListener('click', () => {
