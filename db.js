@@ -113,6 +113,27 @@ async function init() {
     ALTER TABLE productos ADD COLUMN IF NOT EXISTS eliminado_por INTEGER REFERENCES usuarios(id);
   `);
 
+  // Migración: cuántas etiquetas se imprimieron ya de cada talla. Lo que falta
+  // etiquetar es la resta contra el stock, así al ingresar mercadería nueva solo
+  // salen los pares nuevos y no hay que reimprimir todo el modelo.
+  //
+  // La primera vez se asume que TODO lo que hay en bodega ya está etiquetado: es
+  // lo que corresponde a un inventario en marcha, y evita que el primer día
+  // aparezca el catálogo entero como pendiente. Para un modelo viejo que se haya
+  // quedado sin etiquetar está el botón "marcar como no etiquetado".
+  //
+  // El candado en configuracion es imprescindible: sin él, este UPDATE se
+  // volvería a ejecutar en cada arranque y borraría la cuenta real.
+  await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS etiquetas_impresas INTEGER NOT NULL DEFAULT 0`);
+  const yaInicializado = await pool.query(
+    "SELECT clave FROM configuracion WHERE clave = 'etiquetas_impresas_inicializado'"
+  );
+  if (yaInicializado.rowCount === 0) {
+    await pool.query('UPDATE productos SET etiquetas_impresas = stock');
+    await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('etiquetas_impresas_inicializado', '1')");
+    console.log('Etiquetas: se asumió que el stock actual ya está etiquetado');
+  }
+
   // Migración: precio de lista del ítem, para poder mostrar el descuento en la
   // nota de venta. Guarda cuánto costaba el producto en el catálogo al momento
   // de venderlo; lo que se cobró de verdad sigue en precio_unitario. En las

@@ -23,8 +23,12 @@
     </label>
 
     <label class="opcion">
-      <input type="checkbox" id="una-por-par" checked>
-      Una etiqueta por par
+      Cuántas
+      <select id="cuantas">
+        <option value="pendientes">Solo las que faltan</option>
+        <option value="par">Todas: una por par</option>
+        <option value="talla">Una por talla</option>
+      </select>
     </label>
 
     <button id="descargar-pdf">
@@ -40,6 +44,12 @@
         <path d="M6 14h12v8H6z"/>
       </svg>
       Imprimir
+    </button>
+
+    <!-- Aparece recién después de descargar el PDF: descargar no es imprimir -->
+    <button id="confirmar-impresas" class="btn-confirmar hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+      Ya las imprimí
     </button>
   </div>
 

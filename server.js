@@ -303,7 +303,13 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
         if (!stockR.rows[0] || stockR.rows[0].stock < item.cantidad) {
           throw new Error(`Stock insuficiente para "${item.producto}"`);
         }
-        await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.cantidad, item.producto_id]);
+        // La etiqueta se va pegada al zapato, así que al vender baja también la
+        // cuenta de impresas. Si no, al reponer ese par el sistema lo daría por
+        // etiquetado y saldría a la venta sin etiqueta.
+        await client.query(
+          'UPDATE productos SET stock = stock - $1, etiquetas_impresas = LEAST(etiquetas_impresas, stock - $1) WHERE id = $2',
+          [item.cantidad, item.producto_id]
+        );
       }
     }
 
@@ -641,6 +647,52 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireDueño, async (req, re
 // --- Catálogo / Inventario ---
 
 // Catálogo disponible para vendedores (activo y con stock)
+// --- Etiquetas ya impresas ---
+// Lo pendiente de etiquetar es stock - etiquetas_impresas. Al ingresar mercadería
+// el stock sube y las impresas no, así que lo pendiente pasa a ser exactamente lo
+// que acaba de entrar, sin tener que registrar nada más.
+
+// Se confirma después de imprimir, no al descargar el PDF: descargar no es
+// imprimir, y el rollo se puede trabar.
+app.post('/api/etiquetas/impresas', requireLogin, requireAdmin, async (req, res) => {
+  const items = req.body.items;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'No se indicó qué etiquetas se imprimieron' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const item of items) {
+      const cantidad = Math.round(Number(item.cantidad));
+      if (!Number.isInteger(item.id) || !Number.isFinite(cantidad) || cantidad <= 0) continue;
+      // Nunca por encima del stock: no se puede haber etiquetado más pares de los que hay
+      await client.query(
+        'UPDATE productos SET etiquetas_impresas = LEAST(stock, etiquetas_impresas + $1) WHERE id = $2',
+        [cantidad, item.id]
+      );
+    }
+    await client.query('COMMIT');
+    res.status(204).send();
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Para el modelo viejo que nunca se etiquetó, o el rollo que se trabó a la mitad:
+// vuelve a dejar toda esa talla como pendiente.
+app.post('/api/productos/:id/etiquetas-pendientes', requireLogin, requireAdmin, async (req, res) => {
+  const r = await pool.query(
+    'UPDATE productos SET etiquetas_impresas = 0 WHERE id = $1 RETURNING *',
+    [req.params.id]
+  );
+  if (r.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
+  res.json(r.rows[0]);
+});
+
 // Búsqueda por el código de la etiqueta, para vender escaneando.
 // La etiqueta lleva dos códigos del mismo producto: el de barras tiene el id en
 // 6 dígitos y el QR tiene el SKU. Se aceptan los dos, así da igual cuál alcance
@@ -751,7 +803,8 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   }
 
   const r = await pool.query(
-    'UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5 WHERE id=$6 RETURNING *',
+    // Si el stock se corrige hacia abajo, las etiquetas impresas no pueden quedar por encima
+    'UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5, etiquetas_impresas=LEAST(etiquetas_impresas, $5) WHERE id=$6 RETURNING *',
     [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), req.params.id]
   );
   res.json(r.rows[0]);

@@ -1413,6 +1413,18 @@ function renderInventario() {
   });
 }
 
+async function marcarSinEtiquetar(p) {
+  const nombre = `${p.modelo} T${p.talla} ${p.color}`;
+  if (!confirm(`¿Marcar "${nombre}" como no etiquetado?\n\nSus ${p.stock} par(es) volverán a aparecer como pendientes de imprimir.`)) return;
+  const res = await fetch(`/api/productos/${p.id}/etiquetas-pendientes`, { method: 'POST' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'No se pudo marcar como no etiquetado');
+    return;
+  }
+  cargarProductos();
+}
+
 // Abre la hoja de etiquetas en pestaña nueva, para no perder de vista el inventario.
 // Los productos eliminados no se etiquetan.
 function abrirEtiquetas(items) {
@@ -1477,10 +1489,27 @@ function crearFilaProducto(p) {
       btnPurga.addEventListener('click', () => eliminarProductoDefinitivo(p));
       acciones.appendChild(btnPurga);
     } else {
-      // Tantas etiquetas como pares haya: el botón lo dice para que no haya sorpresas
-      const btnEtiqueta = botonEtiquetas([p], `${Math.max(1, p.stock)} etiqueta${p.stock === 1 ? '' : 's'}`);
+      // El botón dice cuántas FALTAN, no cuántos pares hay: al reponer mercadería
+      // solo salen los pares nuevos, sin reimprimir todo el modelo.
+      const pendientes = Math.max(0, p.stock - (p.etiquetas_impresas || 0));
+      const btnEtiqueta = botonEtiquetas(
+        [p],
+        pendientes > 0 ? `${pendientes} pendiente${pendientes === 1 ? '' : 's'}` : 'Etiquetas'
+      );
       btnEtiqueta.classList.add('accion-btn');
+      if (pendientes > 0) btnEtiqueta.classList.add('con-pendientes');
       acciones.appendChild(btnEtiqueta);
+
+      // Salida para el modelo viejo que nunca se etiquetó, o el rollo que se
+      // trabó: vuelve a dejar toda la talla como pendiente.
+      if (pendientes === 0 && p.stock > 0) {
+        const btnSinEtiquetar = document.createElement('button');
+        btnSinEtiquetar.textContent = '↺ Sin etiquetar';
+        btnSinEtiquetar.className = 'accion-btn';
+        btnSinEtiquetar.title = 'Marca esta talla como no etiquetada, para volver a imprimir sus etiquetas';
+        btnSinEtiquetar.addEventListener('click', () => marcarSinEtiquetar(p));
+        acciones.appendChild(btnSinEtiquetar);
+      }
 
       const btnEditar = document.createElement('button');
       btnEditar.textContent = '✎ Editar';

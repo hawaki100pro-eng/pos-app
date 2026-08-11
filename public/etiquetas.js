@@ -18,7 +18,8 @@ const hoja = document.getElementById('hoja');
 const cuenta = document.getElementById('cuenta');
 const titulo = document.getElementById('titulo');
 const selModo = document.getElementById('modo');
-const chkPorPar = document.getElementById('una-por-par');
+const selCuantas = document.getElementById('cuantas');
+const btnConfirmar = document.getElementById('confirmar-impresas');
 
 let productos = [];
 
@@ -59,16 +60,26 @@ async function cargar() {
   render();
 }
 
-// La lista de etiquetas a imprimir, ya repetida por par. La usan tanto la
-// vista de pantalla como el PDF, para que salga exactamente lo mismo.
+// Cuántas etiquetas lleva una talla según lo que se haya elegido arriba.
+//   pendientes → las que faltan: los pares que aún no tienen etiqueta pegada
+//   par        → una por cada par en bodega, aunque ya estén etiquetados
+//   talla      → una sola, para ver cómo queda o pegarla en la caja
+function copiasDe(p) {
+  const modo = selCuantas.value;
+  if (modo === 'talla') return 1;
+  if (modo === 'par') return Math.max(1, p.stock);
+  return Math.max(0, p.stock - (p.etiquetas_impresas || 0));
+}
+
+// La lista de etiquetas a imprimir, ya repetida. La usan tanto la vista de
+// pantalla como el PDF, para que salga exactamente lo mismo.
 function listaEtiquetas() {
-  const unaPorPar = chkPorPar.checked;
   const lista = [];
   const problemas = [];
 
   for (const p of productos) {
-    // El stock puede ser 0 (producto agotado): igual se imprime una, por si se repone
-    const copias = unaPorPar ? Math.max(1, p.stock) : 1;
+    const copias = copiasDe(p);
+    if (copias === 0) continue;
     const sku = p.sku || '(sin código)';
 
     try {
@@ -87,14 +98,13 @@ function listaEtiquetas() {
 }
 
 function render() {
-  const unaPorPar = chkPorPar.checked;
   let html = '';
   let total = 0;
   const problemas = [];
 
   for (const p of productos) {
-    // El stock puede ser 0 (producto agotado): igual se imprime una, por si se repone
-    const copias = unaPorPar ? Math.max(1, p.stock) : 1;
+    const copias = copiasDe(p);
+    if (copias === 0) continue;
     const sku = p.sku || '(sin código)';
 
     let qr = '', barras = '';
@@ -128,10 +138,28 @@ function render() {
   }
 
   hoja.innerHTML = html;
-  const pares = productos.reduce((a, p) => a + Math.max(1, p.stock), 0);
-  cuenta.textContent = unaPorPar
-    ? `${total} etiquetas · ${productos.length} talla(s), ${pares} par(es)`
-    : `${total} etiquetas · una por talla`;
+
+  const modo = selCuantas.value;
+  const pares = productos.reduce((a, p) => a + Math.max(0, p.stock), 0);
+  if (modo === 'pendientes') {
+    cuenta.textContent = total === 0
+      ? 'Nada pendiente: todo este modelo ya está etiquetado'
+      : `${total} pendiente(s) de ${pares} par(es)`;
+  } else if (modo === 'par') {
+    cuenta.textContent = `${total} etiquetas · ${productos.length} talla(s), ${pares} par(es)`;
+  } else {
+    cuenta.textContent = `${total} etiquetas · una por talla`;
+  }
+
+  // Sin nada que imprimir no tiene sentido ofrecer el PDF
+  document.getElementById('descargar-pdf').disabled = total === 0;
+  btnConfirmar.classList.add('hidden');
+
+  if (total === 0 && modo === 'pendientes') {
+    hoja.innerHTML = `<p style="max-width:900px;margin:0 auto;color:#5c6270">
+      Todos los pares de este modelo ya tienen su etiqueta. Si necesitas reponer alguna
+      (se despegó, salió mal impresa), elige <strong>«Todas: una por par»</strong> arriba.</p>`;
+  }
 
   if (problemas.length) {
     hoja.insertAdjacentHTML('afterbegin',
@@ -170,10 +198,48 @@ document.getElementById('descargar-pdf').addEventListener('click', () => {
   a.click();
   // Se libera después de que el navegador alcanzó a empezar la descarga
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  // Recién ahora se ofrece confirmar: descargar no es imprimir, y el rollo se
+  // puede trabar. La cuenta solo avanza cuando el papel salió de verdad.
+  btnConfirmar.classList.remove('hidden');
+});
+
+// Cuántas etiquetas lleva cada talla en la tanda que se acaba de descargar
+function tandaPorProducto() {
+  const conteo = new Map();
+  for (const p of productos) {
+    const copias = copiasDe(p);
+    if (copias > 0) conteo.set(p.id, copias);
+  }
+  return [...conteo].map(([id, cantidad]) => ({ id, cantidad }));
+}
+
+btnConfirmar.addEventListener('click', async () => {
+  const items = tandaPorProducto();
+  if (items.length === 0) return;
+
+  btnConfirmar.disabled = true;
+  try {
+    const res = await fetch('/api/etiquetas/impresas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'No se pudo guardar. Revisa la conexión e inténtalo de nuevo.');
+      return;
+    }
+    // Se recargan los productos para que la cuenta de pendientes quede al día
+    await cargar();
+    cuenta.textContent = 'Listo: quedaron registradas como impresas';
+  } finally {
+    btnConfirmar.disabled = false;
+  }
 });
 
 selModo.addEventListener('change', aplicarModo);
-chkPorPar.addEventListener('change', render);
+selCuantas.addEventListener('change', render);
 document.getElementById('imprimir').addEventListener('click', () => window.print());
 
 aplicarModo();

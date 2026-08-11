@@ -82,6 +82,16 @@ body {
 
 .barra button.btn-suave:hover { background: #e0e7ff; }
 
+/* Confirmar que el papel salió de verdad */
+.barra button.btn-confirmar { background: #15803d; }
+.barra button.btn-confirmar:hover { background: #166534; }
+
+.barra button:disabled {
+  background: #d7dae2;
+  color: #8b909d;
+  cursor: default;
+}
+
 .aviso {
   max-width: 900px;
   margin: 0 auto 16px;

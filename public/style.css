@@ -865,6 +865,14 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   gap: 5px;
 }
 
+/* Con etiquetas por imprimir el botón se pinta, para que se note de un vistazo
+   cuáles quedaron pendientes al ingresar mercadería */
+.btn-etiqueta.con-pendientes {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  border-color: var(--acento);
+}
+
 .btn-etiqueta:hover {
   background: var(--acento-suave);
   color: var(--acento-texto);
