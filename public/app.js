@@ -561,19 +561,46 @@ async function abrirCamara() {
   modal.classList.remove('hidden');
 
   try {
+    // Se pide resolución alta a propósito. Como solo se analiza el recuadro de
+    // puntería, con la resolución por defecto (640x480) ese recorte queda en
+    // unos 170 px de ancho: el código de barras tiene 121 barras, o sea 1,4
+    // píxeles por barra, y a un lector le hacen falta 2 o 3. Con 1920 el mismo
+    // recorte pasa de 500 px y las barras se distinguen.
+    //
+    // El enfoque continuo va en "advanced", que el navegador aplica solo si
+    // puede: como restricción normal, un celular que no lo soporte fallaría al
+    // abrir la cámara en vez de abrirla sin enfoque.
     flujoCamara = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },   // la cámara de atrás
+      video: {
+        facingMode: 'environment',            // la cámara de atrás
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        advanced: [{ focusMode: 'continuous' }],
+      },
     });
   } catch (e) {
-    cerrarCamara();
-    const negada = e.name === 'NotAllowedError';
-    return mensajeVenta(negada
-      ? 'No diste permiso para usar la cámara. Actívalo en el candado de la barra de direcciones.'
-      : 'No se pudo abrir la cámara: ' + e.message, true);
+    // Si el celular no puede dar esa resolución, se abre con lo que tenga:
+    // vale más una cámara de menos calidad que ninguna cámara.
+    try {
+      flujoCamara = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (e2) {
+      cerrarCamara();
+      const negada = e2.name === 'NotAllowedError' || e.name === 'NotAllowedError';
+      return mensajeVenta(negada
+        ? 'No diste permiso para usar la cámara. Actívalo en el candado de la barra de direcciones.'
+        : 'No se pudo abrir la cámara: ' + e2.message, true);
+    }
   }
 
   video.srcObject = flujoCamara;
   await video.play();
+
+  // Si aun así el recorte queda muy chico, el código de barras no se va a poder
+  // leer y conviene decirlo en vez de dejar a la vendedora apuntando en vano.
+  const regionInicial = regionDeMira(video, mira);
+  if (regionInicial && regionInicial.w < 320) {
+    aviso.textContent = 'Cámara de baja resolución: si no lee, acércate más o usa el QR';
+  }
 
   const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128'] });
   const lienzo = document.createElement('canvas');
