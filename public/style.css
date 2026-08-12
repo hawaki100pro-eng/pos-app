@@ -865,6 +865,64 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   gap: 5px;
 }
 
+/* ============================================================
+   Buscador del inventario
+   ============================================================ */
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--borde-campo);
+  border-radius: 999px;
+  padding: 0 14px;
+  margin: 10px 0 4px;
+  background: var(--campo);
+}
+
+.buscador:focus-within { border-color: var(--acento); }
+
+.buscador svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--texto-tenue);
+}
+
+/* El campo va sin borde propio: el borde es el de la píldora que lo envuelve */
+.buscador input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 11px 0;
+  font-size: 1rem;
+}
+
+.buscador input:focus { outline: none; }
+
+/* Se le quita la equis que dibuja el navegador: ya hay un botón propio */
+.buscador input::-webkit-search-cancel-button { display: none; }
+
+.buscador button {
+  background: none;
+  color: var(--texto-suave);
+  border: none;
+  padding: 4px 6px;
+  font-size: 1rem;
+  border-radius: 999px;
+}
+
+.buscador button:hover { background: var(--superficie-2); color: var(--texto); }
+
+.busqueda-info {
+  margin: 0 0 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.busqueda-info:empty { display: none; }
+
 /* Con etiquetas por imprimir el botón se pinta, para que se note de un vistazo
    cuáles quedaron pendientes al ingresar mercadería */
 .btn-etiqueta.con-pendientes {

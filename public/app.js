@@ -1360,15 +1360,55 @@ async function cargarProductos() {
   renderInventario();
 }
 
+/* --- Buscador del inventario ---------------------------------------------
+   Con varios modelos y decenas de variantes, bajar con el dedo hasta la talla
+   que se quiere editar se vuelve lento. Esto filtra mientras se escribe.
+   -------------------------------------------------------------------------- */
+const buscadorInv = document.getElementById('buscar-inventario');
+const infoBusqueda = document.getElementById('busqueda-info');
+const btnLimpiarBusqueda = document.getElementById('limpiar-busqueda');
+
+// Sin tildes y en minúsculas, para que "animal print" encuentre "Animal Print"
+// y "ortopedica" encuentre "Ortopédica".
+function sinTildes(texto) {
+  return String(texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+// Cada palabra tiene que aparecer en algún dato del producto, en cualquier orden:
+// así "chunky 38" llega directo a la talla 38 de ese modelo.
+function coincide(p, palabras) {
+  const donde = sinTildes(
+    `${p.modelo} ${p.color} ${p.talla} t${p.talla} ${p.sku || ''} ${String(p.id).padStart(6, '0')}`
+  );
+  return palabras.every((w) => donde.includes(w));
+}
+
 function renderInventario() {
   const tbody = document.querySelector('#productos-tabla tbody');
   tbody.innerHTML = '';
+
+  const busqueda = sinTildes(buscadorInv.value).trim();
+  const palabras = busqueda ? busqueda.split(/\s+/) : [];
+  const filtrando = palabras.length > 0;
+  const productosVisibles = filtrando
+    ? productosInventario.filter((p) => coincide(p, palabras))
+    : productosInventario;
+
+  btnLimpiarBusqueda.classList.toggle('hidden', !filtrando);
+  if (!filtrando) {
+    infoBusqueda.textContent = '';
+  } else if (productosVisibles.length === 0) {
+    infoBusqueda.textContent = `Sin resultados para «${buscadorInv.value.trim()}»`;
+  } else {
+    const modelos = new Set(productosVisibles.map((p) => p.modelo)).size;
+    infoBusqueda.textContent = `${productosVisibles.length} variante(s) en ${modelos} modelo(s)`;
+  }
 
   // Dos niveles, igual en escritorio y celular: clic en el modelo despliega sus colores;
   // clic en un color despliega las tallas de ese color con su stock.
   // (En celular el CSS convierte cada talla en una tarjeta para que nada quede cortado.)
   const grupos = new Map();
-  productosInventario.forEach((p) => {
+  productosVisibles.forEach((p) => {
     if (!grupos.has(p.modelo)) grupos.set(p.modelo, new Map());
     const porColor = grupos.get(p.modelo);
     if (!porColor.has(p.color)) porColor.set(p.color, []);
@@ -1378,7 +1418,9 @@ function renderInventario() {
   const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
 
   grupos.forEach((porColor, modelo) => {
-    const abierto = gruposAbiertos.has(modelo);
+    // Buscando, los grupos se abren solos: si no, habría que ir tocando modelo
+    // por modelo para ver qué coincidió. Al limpiar vuelve el estado manual.
+    const abierto = filtrando || gruposAbiertos.has(modelo);
     const todos = [].concat(...porColor.values());
     const trGrupo = document.createElement('tr');
     trGrupo.className = 'grupo-modelo';
@@ -1394,7 +1436,7 @@ function renderInventario() {
 
     porColor.forEach((items, color) => {
       const clave = `${modelo}||${color}`;
-      const colorAbierto = coloresAbiertos.has(clave);
+      const colorAbierto = filtrando || coloresAbiertos.has(clave);
       const tallas = items
         .slice()
         .sort((a, b) => String(a.talla).localeCompare(String(b.talla), 'es', { numeric: true }));
@@ -1412,6 +1454,13 @@ function renderInventario() {
     });
   });
 }
+
+buscadorInv.addEventListener('input', renderInventario);
+btnLimpiarBusqueda.addEventListener('click', () => {
+  buscadorInv.value = '';
+  renderInventario();
+  buscadorInv.focus();
+});
 
 async function marcarSinEtiquetar(p) {
   const nombre = `${p.modelo} T${p.talla} ${p.color}`;
