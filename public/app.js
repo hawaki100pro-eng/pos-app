@@ -463,21 +463,25 @@ async function escanear(codigo) {
    Enter, pero mucho más rápido de lo que teclea una persona. Por eso se mide el
    tiempo entre teclas. Así la vendedora escanea sin tener que tocar nada antes.
 
-   Mientras el cursor esté dentro de un campo se deja pasar todo: ahí está
-   escribiendo ella, no la pistola.
+   Funciona aunque el cursor esté dentro de un campo: si no, bastaba con haber
+   tocado "Producto" o "Nombre del cliente" para que el código se escribiera ahí
+   y la venta no registrara nada. Lo que distingue a la pistola de la vendedora
+   es SOLO la velocidad, así que se recuerda el campo y su contenido al empezar
+   la ráfaga y se restaura al confirmarse que fue un escaneo.
    -------------------------------------------------------------------------- */
 const MS_ENTRE_TECLAS = 50;
 let bufferLector = '';
 let ultimaTecla = 0;
+let campoAlEmpezar = null;   // campo enfocado cuando arrancó la ráfaga
+let valorAlEmpezar = '';     // y lo que tenía escrito, para dejarlo igual
 
-function enCampoDeTexto() {
+function campoEditable() {
   const el = document.activeElement;
-  return !!el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+  return el && ['INPUT', 'TEXTAREA'].includes(el.tagName) ? el : null;
 }
 
 document.addEventListener('keydown', (e) => {
   if (document.getElementById('venta-form-wrap').classList.contains('hidden')) return;
-  if (enCampoDeTexto()) return;
 
   const ahora = Date.now();
   const seguidas = ahora - ultimaTecla <= MS_ENTRE_TECLAS;
@@ -488,12 +492,23 @@ document.addEventListener('keydown', (e) => {
     bufferLector = '';
     if (codigo.length >= 4) {
       e.preventDefault();
+      // El código alcanzó a escribirse en un campo: se borra y queda como estaba
+      if (campoAlEmpezar) {
+        campoAlEmpezar.value = valorAlEmpezar;
+        campoAlEmpezar = null;
+      }
       escanear(codigo);
     }
     return;
   }
 
   if (e.key.length !== 1) return;  // Shift, flechas y demás no son parte del código
+  if (!seguidas) {
+    // Arranca una ráfaga nueva. En keydown la tecla todavía no se insertó,
+    // así que este es el contenido previo del campo.
+    campoAlEmpezar = campoEditable();
+    valorAlEmpezar = campoAlEmpezar ? campoAlEmpezar.value : '';
+  }
   bufferLector = seguidas ? bufferLector + e.key : e.key;
 });
 
