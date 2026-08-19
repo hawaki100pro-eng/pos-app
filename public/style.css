@@ -89,38 +89,6 @@
   --badge-transfer-texto: #7dd3fc;
 }
 
-/* ============================================================
-   El color de la app depende de quién entró: fucsia si el nombre
-   es de mujer, azul si es de hombre. app.js pone la clase en el
-   <body> (ver aplicarColorUsuario) y con eso cambia todo de golpe:
-   botones, tarjetas de tipo de cliente y filas del inventario. La banda
-   del logo no entra aquí: siempre es fucsia con la letra blanca.
-   ============================================================ */
-/* Todos estos tonos son el mismo fucsia de la marca (#f45e94, matiz 338°) en
-   distintas intensidades, para que peguen con la banda del logo. El botón va
-   más oscuro que la banda porque encima lleva letra blanca y sobre el fucsia
-   claro no se leería. */
-body.usuario-femenino {
-  --acento: #d81b60;
-  --acento-oscuro: #ba1250;
-  --acento-texto: #ba1250;
-  --acento-suave: #fde8f0;
-  --acento-suave-2: #fbcfe0;
-  --grupo-color-fondo: #fef5f8;
-  --grupo-color-hover: #fde8f0;
-}
-
-:root[data-tema="noche"] body.usuario-femenino {
-  /* No se aclara más: sobre un fucsia brillante la letra blanca deja de leerse */
-  --acento: #d81b60;
-  --acento-oscuro: #ba1250;
-  --acento-texto: #f9a8c9;
-  --acento-suave: #3d1f2d;
-  --acento-suave-2: #4e2637;
-  --grupo-color-fondo: #35202a;
-  --grupo-color-hover: #402734;
-}
-
 * { box-sizing: border-box; }
 
 body {
