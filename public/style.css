@@ -234,6 +234,11 @@ th, td {
   border-bottom: 1px solid var(--borde-suave);
 }
 
+/* Vendedor y admin comparten ancho: la Nota de venta es el mismo formulario para
+   los dos, así que a distinto ancho se veía distinta según quién entrara. El
+   login y el modal de edición se quedan en los 600px de .container, que a un
+   formulario corto le sienta mejor. */
+#vendedor-screen,
 #admin-screen { max-width: 900px; }
 
 .venta-anulada { opacity: 0.6; }
@@ -425,6 +430,10 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 
 .campos-cliente label { margin-top: 6px; }
 .campos-cliente label:first-child { margin-top: 0; }
+
+/* Un campo de nombre o teléfono estirado a todo el ancho se ve raro; con tope
+   quedan a una medida cómoda de leer en cualquiera de las dos pantallas. */
+.campos-cliente input { max-width: 420px; }
 
 /* Campo con un dato mal escrito. Reusa los colores del distintivo de "anulada",
    que ya están resueltos para el día y para la noche. */
