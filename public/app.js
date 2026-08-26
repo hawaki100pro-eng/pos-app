@@ -748,6 +748,14 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
     return;
   }
   const metodo_pago = document.querySelector('input[name="metodo-pago"]:checked').value;
+
+  // La pestaña de impresión se abre AQUÍ, todavía dentro del clic, y recién
+  // después se le pone la dirección. Si se abriera al terminar el fetch, el
+  // navegador ya no la vería como respuesta a un clic y la bloquearía por
+  // emergente. Queda en blanco el instante que tarda el servidor en responder.
+  let ventanaImpresion = null;
+  try { ventanaImpresion = window.open('', '_blank'); } catch (e) { /* bloqueada: queda el enlace */ }
+
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -756,6 +764,7 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   const data = await res.json();
 
   if (!res.ok) {
+    if (ventanaImpresion) ventanaImpresion.close();  // la venta no se hizo: no hay nada que imprimir
     msg.textContent = data.error;
     msg.className = 'error';
     return;
@@ -764,9 +773,13 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   msg.textContent = `Venta ${data.numero_proforma} registrada por $${data.total.toFixed(2)} (${data.metodo_pago})`;
   msg.className = '';
 
+  // El enlace se deja visible igual, por si el navegador bloqueó la pestaña
+  const direccionImpresion = `print.html?id=${data.ventaId}`;
   const imprimirLink = document.getElementById('imprimir-link');
-  imprimirLink.href = `print.html?id=${data.ventaId}`;
+  imprimirLink.href = direccionImpresion;
   imprimirLink.classList.remove('hidden');
+
+  if (ventanaImpresion) ventanaImpresion.location = `${direccionImpresion}&imprimir=1`;
 
   items = [];
   resetTipoCliente();

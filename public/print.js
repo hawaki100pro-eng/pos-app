@@ -94,4 +94,12 @@
   proforma.classList.remove('hidden');
 
   document.getElementById('imprimir-btn').addEventListener('click', () => window.print());
+
+  // Al confirmar una venta se abre esta página con ?imprimir=1 y el cuadro de
+  // impresión sale solo. Se espera a que las fuentes estén listas: si no, la
+  // hoja puede salir con la tipografía provisional y los renglones corridos.
+  if (params.get('imprimir') === '1') {
+    try { await document.fonts.ready; } catch (e) { /* si falla, se imprime igual */ }
+    window.print();
+  }
 })();
