@@ -865,6 +865,35 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   gap: 5px;
 }
 
+/* Casilla de "categoría suelta", con el acceso a la tarjeta de precios al lado */
+.opcion-categoria {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 2px;
+  font-size: 0.85rem;
+  color: var(--texto-suave-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.opcion-categoria input { flex: none; }
+.opcion-categoria span { flex: 1 1 auto; min-width: 180px; }
+
+.opcion-categoria button {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+}
+
+/* Los campos que no aplican a una categoría se apagan en vez de desaparecer:
+   así no salta la maqueta al marcar la casilla */
+.item-row-nueva input:disabled {
+  background: var(--superficie-2);
+  color: var(--texto-tenue);
+  cursor: not-allowed;
+}
+
 /* ============================================================
    Buscador del inventario
    ============================================================ */

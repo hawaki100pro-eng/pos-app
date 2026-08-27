@@ -303,7 +303,13 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
         [ventaId, item.producto, item.cantidad, item.precio_unitario, item.precio_lista ?? item.precio_unitario, item.producto_id || null]
       );
       if (item.producto_id) {
-        const stockR = await client.query('SELECT stock FROM productos WHERE id = $1 FOR UPDATE', [item.producto_id]);
+        const stockR = await client.query(
+          'SELECT stock, controla_stock FROM productos WHERE id = $1 FOR UPDATE',
+          [item.producto_id]
+        );
+        // Las categorías sueltas (zapatillas, ofertas) no llevan stock: se venden
+        // siempre y no descuentan nada. Solo aportan su nombre y su precio.
+        if (stockR.rows[0] && !stockR.rows[0].controla_stock) continue;
         if (!stockR.rows[0] || stockR.rows[0].stock < item.cantidad) {
           throw new Error(`Stock insuficiente para "${item.producto}"`);
         }
@@ -651,6 +657,15 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireDueño, async (req, re
 // --- Catálogo / Inventario ---
 
 // Catálogo disponible para vendedores (activo y con stock)
+// Cómo se nombra un producto en la línea de una venta. Una sandalia lleva talla
+// y color ("Cabuya Alta T38 Yute"); una categoría suelta no tiene ninguno de los
+// dos y se queda solo con su nombre ("Zapatilla de dama").
+function nombreProducto(p) {
+  const talla = String(p.talla || '').trim();
+  const color = String(p.color || '').trim();
+  return [p.modelo, talla && `T${talla}`, color].filter(Boolean).join(' ');
+}
+
 // --- Etiquetas ya impresas ---
 // Lo pendiente de etiquetar es stock - etiquetas_impresas. Al ingresar mercadería
 // el stock sube y las impresas no, así que lo pendiente pasa a ser exactamente lo
@@ -720,20 +735,26 @@ app.get('/api/productos/codigo/:codigo', requireLogin, async (req, res) => {
     return res.status(404).json({ error: `Ningún producto tiene el código ${codigo}. ¿Es una etiqueta de otra tienda?` });
   }
 
-  const nombre = `${p.modelo} T${p.talla} ${p.color}`;
+  const nombre = nombreProducto(p);
   if (!p.activo) {
     return res.status(409).json({ error: `${nombre} está desactivado en el inventario. Avisa al administrador.` });
   }
-  if (p.stock <= 0) {
+  // Una categoría suelta no tiene stock que revisar: se vende siempre
+  if (p.controla_stock && p.stock <= 0) {
     return res.status(409).json({ error: `${nombre} figura agotado en el sistema. Avisa al administrador para que corrija el stock.` });
   }
 
-  res.json(p);
+  // El nombre lo arma el servidor y no el navegador, así los dos escriben igual
+  // la línea de la venta, con talla y color o sin ellos.
+  res.json({ ...p, nombre });
 });
 
 app.get('/api/productos/disponibles', requireLogin, async (req, res) => {
   const r = await pool.query(
-    `SELECT * FROM productos WHERE activo = 1 AND stock > 0 AND eliminado = 0 ORDER BY modelo, color, talla`
+    // Las categorías sueltas no tienen stock que mirar: se ofrecen siempre
+    `SELECT * FROM productos
+     WHERE activo = 1 AND eliminado = 0 AND (stock > 0 OR controla_stock = 0)
+     ORDER BY modelo, color, talla`
   );
   res.json(r.rows);
 });
@@ -751,8 +772,18 @@ app.get('/api/productos', requireLogin, requireAdmin, async (req, res) => {
 });
 
 app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
-  const { modelo, talla, color, precio, stock } = req.body;
-  if (!modelo?.trim() || !talla?.trim() || !color?.trim() || precio == null || precio < 0 || stock == null || stock < 0) {
+  const { modelo, precio } = req.body;
+  // Una categoría suelta no tiene talla, ni color, ni stock: es un solo producto
+  // con su precio. Por eso esos campos solo se exigen cuando sí lleva control.
+  const controlaStock = req.body.controla_stock === false || req.body.controla_stock === 0 ? 0 : 1;
+  const talla = controlaStock ? req.body.talla : '';
+  const color = controlaStock ? req.body.color : '';
+  const stock = controlaStock ? req.body.stock : 0;
+
+  if (!modelo?.trim() || precio == null || precio < 0) {
+    return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
+  }
+  if (controlaStock && (!talla?.trim() || !color?.trim() || stock == null || stock < 0)) {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' });
   }
 
@@ -773,8 +804,8 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   }
 
   const r = await pool.query(
-    'INSERT INTO productos (modelo, talla, color, precio, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock)]
+    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock]
   );
 
   // El código de la etiqueta se pone en un segundo paso, y aparte: si fallara,
@@ -792,24 +823,40 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
 });
 
 app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
-  const { modelo, talla, color, precio, stock } = req.body;
-  if (!modelo?.trim() || !talla?.trim() || !color?.trim() || precio == null || precio < 0 || stock == null || stock < 0) {
+  const { modelo, precio } = req.body;
+
+  const actual = await pool.query('SELECT stock, controla_stock FROM productos WHERE id = $1', [req.params.id]);
+  if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
+
+  // Si no viene en el cuerpo se conserva lo que ya tenía: así una edición que no
+  // toca el tema no convierte por accidente una talla en categoría suelta.
+  const controlaStock = req.body.controla_stock == null
+    ? actual.rows[0].controla_stock
+    : (req.body.controla_stock === false || req.body.controla_stock === 0 ? 0 : 1);
+  const talla = controlaStock ? req.body.talla : '';
+  const color = controlaStock ? req.body.color : '';
+  const stock = controlaStock ? req.body.stock : 0;
+
+  if (!modelo?.trim() || precio == null || precio < 0) {
+    return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
+  }
+  if (controlaStock && (!talla?.trim() || !color?.trim() || stock == null || stock < 0)) {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' });
   }
 
-  const actual = await pool.query('SELECT stock FROM productos WHERE id = $1', [req.params.id]);
-  if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
-
   // Seguridad: reducir stock es exclusivo del dueño. El admin puede corregir datos y precio,
   // y subir stock, pero nunca bajarlo (esa es la vía típica para desviar mercadería).
+  // Pasar una talla a categoría suelta pone el stock en 0, así que también se controla.
   if (Math.round(stock) < actual.rows[0].stock && req.session.user.rol !== 'dueno') {
     return res.status(403).json({ error: 'Reducir el stock solo puede hacerlo el dueño' });
   }
 
   const r = await pool.query(
     // Si el stock se corrige hacia abajo, las etiquetas impresas no pueden quedar por encima
-    'UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5, etiquetas_impresas=LEAST(etiquetas_impresas, $5) WHERE id=$6 RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), req.params.id]
+    `UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5,
+       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6
+     WHERE id=$7 RETURNING *`,
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, req.params.id]
   );
   res.json(r.rows[0]);
 });

@@ -113,6 +113,17 @@ async function init() {
     ALTER TABLE productos ADD COLUMN IF NOT EXISTS eliminado_por INTEGER REFERENCES usuarios(id);
   `);
 
+  // Migración: productos sin control de stock (categorías sueltas).
+  //
+  // Sirve para la mercadería que no se etiqueta par por par: "Zapatilla de dama
+  // $12", "Oferta $5". Es UN producto, no una talla, y su código identifica la
+  // categoría y su precio, nada más.
+  //
+  // Con controla_stock = 0 el producto no descuenta stock, nunca bloquea una
+  // venta por estar agotado, no pide etiquetas y aparece igual en el catálogo.
+  // Todo lo demás (precio, nombre, búsqueda, descuentos) funciona como siempre.
+  await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS controla_stock INTEGER NOT NULL DEFAULT 1`);
+
   // Migración: cuántas etiquetas se imprimieron ya de cada talla. Lo que falta
   // etiquetar es la resta contra el stock, así al ingresar mercadería nueva solo
   // salen los pares nuevos y no hay que reimprimir todo el modelo.

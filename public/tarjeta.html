@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarjeta de precios</title>
+<link rel="stylesheet" href="tarjeta.css">
+</head>
+<body>
+
+  <div class="barra no-print">
+    <h1 id="titulo">Tarjeta de precios</h1>
+    <span class="cuenta" id="cuenta"></span>
+    <button id="imprimir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <path d="M6 14h12v8H6z"/>
+      </svg>
+      Imprimir
+    </button>
+  </div>
+
+  <div class="aviso no-print">
+    Imprime esta hoja en A4, recórtala si quieres y <strong>plastifícala</strong>: vive junto a la caja.
+    Para vender una de estas, la vendedora le pasa la pistola al código, igual que a una sandalia.
+    <br><br>
+    Los códigos van grandes a propósito: aquí las barras miden más del doble que en la etiqueta de
+    40 mm, así el lector las agarra de más lejos y falla menos.
+  </div>
+
+  <div class="hoja" id="hoja"></div>
+
+  <script src="codigos.js"></script>
+  <script src="tarjeta.js"></script>
+</body>
+</html>

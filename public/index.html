@@ -269,6 +269,17 @@
         Agregar
       </button>
     </div>
+
+    <!-- Para la mercadería que no se etiqueta par por par (zapatillas, ofertas):
+         un solo producto con su precio, sin talla, color ni stock. -->
+    <label class="opcion-categoria">
+      <input type="checkbox" id="prod-sin-stock">
+      <span>Es una categoría suelta (sin talla ni stock): zapatillas, ofertas…</span>
+      <button type="button" id="tarjeta-btn" class="btn-secundario">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h5M6 13h8M17 9v6"/></svg>
+        Tarjeta de precios
+      </button>
+    </label>
     <p id="producto-msg"></p>
 
     <!-- Va aparte del formulario de arriba a propósito: mezclarlo con los campos

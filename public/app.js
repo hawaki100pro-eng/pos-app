@@ -332,11 +332,13 @@ function renderCatalogoModal(productos) {
     card.className = 'catalogo-item';
     card.innerHTML = `
       <div class="catalogo-item-modelo">${p.modelo}</div>
-      <div class="catalogo-item-detalle"><strong>Talla ${p.talla}</strong> · ${p.color} · $${p.precio.toFixed(2)} · Stock: ${p.stock}</div>
+      <div class="catalogo-item-detalle">${p.controla_stock
+        ? `<strong>Talla ${p.talla}</strong> · ${p.color} · $${p.precio.toFixed(2)} · Stock: ${p.stock}`
+        : `$${p.precio.toFixed(2)} · sin control de stock`}</div>
     `;
     card.addEventListener('click', () => {
       const inputProducto = document.getElementById('item-producto');
-      inputProducto.value = `${p.modelo} T${p.talla} ${p.color}`;
+      inputProducto.value = nombreProducto(p);
       inputProducto.dataset.productoId = p.id;
       // Se guarda el precio del catálogo aparte: si la vendedora lo baja antes de
       // agregar, la diferencia se cuenta como descuento
@@ -393,6 +395,16 @@ function mensajeVenta(texto, esError) {
   msg.className = esError ? 'error' : '';
 }
 
+// Cómo se nombra un producto en la línea de una venta. Una sandalia lleva talla
+// y color ("Cabuya Alta T38 Yute"); una categoría suelta no tiene ninguno de los
+// dos y se queda solo con su nombre ("Zapatilla de dama").
+// El servidor tiene la misma función: si se cambia una, cambiar la otra.
+function nombreProducto(p) {
+  const talla = String(p.talla || '').trim();
+  const color = String(p.color || '').trim();
+  return [p.modelo, talla && `T${talla}`, color].filter(Boolean).join(' ');
+}
+
 let escaneando = false;
 let resaltado = null;            // id del producto recién escaneado
 let temporizadorResaltado = null;
@@ -416,10 +428,11 @@ async function escanear(codigo) {
     }
 
     // Si ya está en la lista, sube la cantidad en vez de repetir la línea
-    const nombre = `${data.modelo} T${data.talla} ${data.color}`;
+    const nombre = data.nombre || nombreProducto(data);
     const yaEsta = items.find((i) => i.producto_id === data.id);
     if (yaEsta) {
-      if (yaEsta.cantidad + 1 > data.stock) {
+      // Una categoría suelta no tiene tope: se puede vender la que sea
+      if (data.controla_stock && yaEsta.cantidad + 1 > data.stock) {
         pitido(false);
         return mensajeVenta(`Solo quedan ${data.stock} de ${nombre} en el sistema.`, true);
       }
@@ -1541,6 +1554,30 @@ function renderInventario() {
   });
 }
 
+// Al marcar "categoría suelta" se apagan los campos que no aplican: es más claro
+// que dejarlos escribibles y luego ignorarlos.
+const chkSinStock = document.getElementById('prod-sin-stock');
+
+function aplicarModoCategoria() {
+  const suelta = chkSinStock.checked;
+  for (const id of ['prod-talla', 'prod-color', 'prod-stock']) {
+    const campo = document.getElementById(id);
+    campo.disabled = suelta;
+    if (suelta) campo.value = '';
+  }
+  document.getElementById('prod-modelo').placeholder = suelta
+    ? 'Nombre (ej: Zapatilla de dama)'
+    : 'Modelo (ej: Sandalia Roma)';
+}
+
+chkSinStock.addEventListener('change', aplicarModoCategoria);
+aplicarModoCategoria();
+
+// La hoja con los códigos de las categorías, para imprimir y dejar en la caja
+document.getElementById('tarjeta-btn').addEventListener('click', () => {
+  window.open('tarjeta.html', '_blank');
+});
+
 buscadorInv.addEventListener('input', renderInventario);
 btnLimpiarBusqueda.addEventListener('click', () => {
   buscadorInv.value = '';
@@ -1748,8 +1785,10 @@ function crearFilaProducto(p) {
     const tr = document.createElement('tr');
     tr.className = 'fila-producto';
     if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
-    const stockRojo = p.stock === 2;
-    const stockAzul = p.stock === 1;
+    // Una categoría suelta no lleva stock: no hay nada que avisar ni que agotar
+    const suelta = !p.controla_stock;
+    const stockRojo = !suelta && p.stock === 2;
+    const stockAzul = !suelta && p.stock === 1;
     // El color va por clase, no escrito aquí, para que el modo noche pueda aclararlo
     const stockClase = stockRojo ? ' stock-bajo' : stockAzul ? ' stock-critico' : '';
     // Solo el dueño recibe productos eliminados del servidor: se muestran con el motivo que escribió el admin
@@ -1760,10 +1799,10 @@ function crearFilaProducto(p) {
     // talla, precio y stock en una sola línea, por eso cada celda lleva su clase.
     tr.innerHTML = `
       <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
-      <td class="celda-talla">${p.talla}</td>
-      <td class="celda-color">${p.color}</td>
+      <td class="celda-talla">${suelta ? '—' : p.talla}</td>
+      <td class="celda-color">${suelta ? '—' : p.color}</td>
       <td class="celda-precio">$${p.precio.toFixed(2)}</td>
-      <td class="celda-stock${stockClase}">${p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
+      <td class="celda-stock${stockClase}">${suelta ? '—' : p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
       <td class="celda-acciones"></td>
     `;
 
@@ -1785,20 +1824,24 @@ function crearFilaProducto(p) {
       btnPurga.addEventListener('click', () => eliminarProductoDefinitivo(p));
       acciones.appendChild(btnPurga);
     } else {
+      // Las categorías sueltas no llevan etiqueta por par: su código va en la
+      // tarjeta de precios, que se imprime una sola vez desde arriba.
       // El botón dice cuántas FALTAN, no cuántos pares hay: al reponer mercadería
       // solo salen los pares nuevos, sin reimprimir todo el modelo.
-      const pendientes = Math.max(0, p.stock - (p.etiquetas_impresas || 0));
-      const btnEtiqueta = botonEtiquetas(
-        [p],
-        pendientes > 0 ? `${pendientes} pendiente${pendientes === 1 ? '' : 's'}` : 'Etiquetas'
-      );
-      btnEtiqueta.classList.add('accion-btn');
-      if (pendientes > 0) btnEtiqueta.classList.add('con-pendientes');
-      acciones.appendChild(btnEtiqueta);
+      const pendientes = suelta ? 0 : Math.max(0, p.stock - (p.etiquetas_impresas || 0));
+      if (!suelta) {
+        const btnEtiqueta = botonEtiquetas(
+          [p],
+          pendientes > 0 ? `${pendientes} pendiente${pendientes === 1 ? '' : 's'}` : 'Etiquetas'
+        );
+        btnEtiqueta.classList.add('accion-btn');
+        if (pendientes > 0) btnEtiqueta.classList.add('con-pendientes');
+        acciones.appendChild(btnEtiqueta);
+      }
 
       // Salida para el modelo viejo que nunca se etiquetó, o el rollo que se
       // trabó: vuelve a dejar toda la talla como pendiente.
-      if (pendientes === 0 && p.stock > 0) {
+      if (!suelta && pendientes === 0 && p.stock > 0) {
         const btnSinEtiquetar = document.createElement('button');
         btnSinEtiquetar.textContent = '↺ Sin etiquetar';
         btnSinEtiquetar.className = 'accion-btn';
@@ -1859,26 +1902,41 @@ async function eliminarProducto(p) {
 }
 
 async function editarProducto(p) {
-  const modelo = window.prompt('Modelo:', p.modelo);
+  // Una categoría suelta no tiene talla, color ni stock: no se preguntan
+  const suelta = !p.controla_stock;
+
+  const modelo = window.prompt(suelta ? 'Nombre:' : 'Modelo:', p.modelo);
   if (modelo === null) return;
-  const talla = window.prompt('Talla:', p.talla);
-  if (talla === null) return;
-  const color = window.prompt('Color:', p.color);
-  if (color === null) return;
+
+  let talla = p.talla, color = p.color, stock = p.stock;
+  if (!suelta) {
+    talla = window.prompt('Talla:', p.talla);
+    if (talla === null) return;
+    color = window.prompt('Color:', p.color);
+    if (color === null) return;
+  }
+
   const precioStr = window.prompt('Precio:', p.precio);
   if (precioStr === null) return;
-  const stockStr = window.prompt('Stock actual:', p.stock);
-  if (stockStr === null) return;
+
+  if (!suelta) {
+    const stockStr = window.prompt('Stock actual:', p.stock);
+    if (stockStr === null) return;
+    stock = parseInt(stockStr, 10);
+  }
 
   const precio = parseFloat(precioStr);
-  const stock = parseInt(stockStr, 10);
-  if (!modelo.trim() || !talla.trim() || !color.trim() || isNaN(precio) || precio < 0 || isNaN(stock) || stock < 0) {
+  if (!modelo.trim() || isNaN(precio) || precio < 0) {
+    alert('Datos inválidos');
+    return;
+  }
+  if (!suelta && (!talla.trim() || !color.trim() || isNaN(stock) || stock < 0)) {
     alert('Datos inválidos');
     return;
   }
 
   // Reducir stock es exclusivo del dueño (el servidor también lo valida)
-  if (stock < p.stock && rolActual !== 'dueno') {
+  if (!suelta && stock < p.stock && rolActual !== 'dueno') {
     alert(`No puedes reducir el stock (actual: ${p.stock}). Solo el dueño puede bajarlo.`);
     return;
   }
@@ -1886,7 +1944,14 @@ async function editarProducto(p) {
   const res = await fetch(`/api/productos/${p.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modelo: modelo.trim(), talla: talla.trim(), color: color.trim(), precio, stock }),
+    body: JSON.stringify({
+      modelo: modelo.trim(),
+      talla: String(talla).trim(),
+      color: String(color).trim(),
+      precio,
+      stock,
+      controla_stock: p.controla_stock ? true : false,
+    }),
   });
   if (!res.ok) { const d = await res.json(); alert(d.error); return; }
   cargarProductos();
@@ -1909,8 +1974,14 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const color = document.getElementById('prod-color').value.trim();
   const precio = parseFloat(document.getElementById('prod-precio').value);
   const stock = parseInt(document.getElementById('prod-stock').value, 10);
+  const controla_stock = !document.getElementById('prod-sin-stock').checked;
 
-  if (!modelo || !talla || !color || isNaN(precio) || precio < 0 || isNaN(stock) || stock < 0) {
+  if (!modelo || isNaN(precio) || precio < 0) {
+    msg.textContent = 'Escribe al menos el nombre y el precio';
+    msg.className = 'error';
+    return;
+  }
+  if (controla_stock && (!talla || !color || isNaN(stock) || stock < 0)) {
     msg.textContent = 'Completa todos los campos con valores válidos';
     msg.className = 'error';
     return;
@@ -1919,7 +1990,7 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const res = await fetch('/api/productos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modelo, talla, color, precio, stock }),
+    body: JSON.stringify({ modelo, talla, color, precio, stock, controla_stock }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -1928,15 +1999,26 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
     return;
   }
 
-  msg.textContent = data.stock_sumado
-    ? `Ya existía "${data.modelo} T${data.talla} ${data.color}": se sumaron ${data.stock_sumado} al stock (ahora tiene ${data.stock})`
-    : `Producto "${data.modelo} T${data.talla} ${data.color}" agregado con stock ${data.stock}`;
+  const nombre = nombreProducto(data);
+  if (!controla_stock) {
+    msg.textContent = `Categoría "${nombre}" lista a $${Number(data.precio).toFixed(2)}. Imprime la tarjeta para poder escanearla.`;
+  } else {
+    msg.textContent = data.stock_sumado
+      ? `Ya existía "${nombre}": se sumaron ${data.stock_sumado} al stock (ahora tiene ${data.stock})`
+      : `Producto "${nombre}" agregado con stock ${data.stock}`;
+  }
   msg.className = '';
   // Se conservan modelo, color, precio y stock para cargar la siguiente talla rápido:
   // solo se selecciona la talla, listo para escribir la nueva (35 → 36 → 37...)
   const tallaInput = document.getElementById('prod-talla');
-  tallaInput.focus();
-  tallaInput.select();
+  if (controla_stock) {
+    tallaInput.focus();
+    tallaInput.select();
+  } else {
+    document.getElementById('prod-modelo').value = '';
+    document.getElementById('prod-precio').value = '';
+    document.getElementById('prod-modelo').focus();
+  }
   cargarProductos();
 });
 
