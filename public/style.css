@@ -935,7 +935,8 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .grupo-modelo .btn-etiqueta,
 .grupo-color .btn-etiqueta,
 .grupo-modelo .btn-eliminar-modelo,
-.grupo-modelo .btn-editar-modelo {
+.grupo-modelo .btn-editar-modelo,
+.grupo-familia .btn-editar-modelo {
   float: right;
   margin-left: 10px;
 }

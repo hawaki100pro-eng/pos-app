@@ -1493,6 +1493,7 @@ function renderInventario() {
     else familiasAbiertas.add(familia);
     renderInventario();
   });
+  trFamilia.firstElementChild.appendChild(botonRenombrarFamilia(todosFamilia, familia));
   tbody.appendChild(trFamilia);
   if (!familiaAbierta) return;
 
@@ -1585,6 +1586,65 @@ function botonEtiquetas(items, texto) {
 const ICONO_PAPELERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
 
 const ICONO_LAPIZ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+
+// Botón para cambiar el nombre de una familia entera (Chunky, Cabuya Alta...).
+// Cada modelo conserva su código: solo cambia la parte de adelante.
+function botonRenombrarFamilia(items, familia) {
+  const modelos = new Set(items.map((p) => p.modelo)).size;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-editar-modelo';
+  btn.innerHTML = ICONO_LAPIZ + 'Editar nombre';
+  btn.title = `Cambiar el nombre de la familia ${familia} en sus ${modelos} modelo(s)`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); // si no, el clic también plegaría la familia
+    renombrarFamiliaCompleta(items, familia);
+  });
+  return btn;
+}
+
+async function renombrarFamiliaCompleta(items, familia) {
+  const modelos = new Set(items.map((p) => p.modelo)).size;
+  const nueva = window.prompt(
+    `Nuevo nombre para la familia (se aplica a sus ${modelos} modelo(s) y ${items.length} variante(s)).\n\n` +
+    `Cada modelo conserva su código: "${familia} #A-01" pasaría a "NUEVO #A-01".\n` +
+    `Las etiquetas ya pegadas siguen sirviendo: su código no cambia.`,
+    familia
+  );
+  if (nueva === null) return;
+  const limpio = nueva.trim();
+  if (!limpio) return alert('El nombre no puede quedar vacío');
+  if (limpio === familia) return;
+
+  // Unir dos familias suele ser justo lo que se busca (Chunky PB dentro de
+  // Chunky), pero conviene decirlo antes de hacerlo.
+  const yaExiste = productosInventario.some(
+    (p) => partirModelo(p.modelo).familia.toLowerCase() === limpio.toLowerCase()
+  );
+  if (yaExiste && !confirm(`Ya existe la familia "${limpio}".\nSi continúas, "${familia}" pasará a formar parte de ella.\n\n¿Continuar?`)) {
+    return;
+  }
+
+  // Cada producto lleva el nombre nuevo con SU código; los que no tienen código
+  // se quedan solo con el nombre de la familia.
+  const cambios = items.map((p) => {
+    const { codigo } = partirModelo(p.modelo);
+    return { id: p.id, modelo: codigo ? `${limpio} ${codigo}` : limpio };
+  });
+
+  const res = await fetch('/api/productos/renombrar-varios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cambios }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error); return; }
+  // Se deja abierta la familia nueva para ver el resultado sin volver a buscarla
+  familiasAbiertas.delete(familia);
+  familiasAbiertas.add(limpio);
+  alert(`Listo: ${data.actualizados} variante(s) ahora están en "${limpio}".`);
+  cargarProductos();
+}
 
 // Botón para corregir el código del modelo en todas sus tallas de una vez.
 function botonRenombrarModelo(items, modelo) {

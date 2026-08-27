@@ -856,6 +856,38 @@ app.post('/api/productos/:id/eliminar', requireLogin, requireAdmin, async (req, 
   res.status(204).send();
 });
 
+// Renombrar varios productos a nombres distintos en una sola sentencia. Lo usa
+// el cambio de nombre de una familia entera: cada modelo conserva su código
+// (#APR-03) y solo cambia la parte de la familia, así que cada fila recibe un
+// nombre diferente. El cliente manda los pares ya armados.
+app.post('/api/productos/renombrar-varios', requireLogin, requireAdmin, async (req, res) => {
+  const cambios = Array.isArray(req.body.cambios) ? req.body.cambios : [];
+  const limpios = [];
+  for (const c of cambios) {
+    const id = parseInt(c && c.id, 10);
+    const modelo = String((c && c.modelo) || '').trim();
+    if (Number.isInteger(id) && modelo) limpios.push({ id, modelo });
+  }
+  if (limpios.length === 0) {
+    return res.status(400).json({ error: 'No se indicó qué renombrar' });
+  }
+
+  const valores = [];
+  const parametros = [];
+  for (const c of limpios) {
+    parametros.push(c.id, c.modelo);
+    valores.push(`($${parametros.length - 1}::int, $${parametros.length}::text)`);
+  }
+
+  const r = await pool.query(
+    `UPDATE productos SET modelo = nuevos.modelo
+     FROM (VALUES ${valores.join(', ')}) AS nuevos(id, modelo)
+     WHERE productos.id = nuevos.id`,
+    parametros
+  );
+  res.json({ actualizados: r.rowCount });
+});
+
 // Renombrar un modelo entero de una vez (todas sus tallas y colores), para
 // corregir un código mal escrito sin editar variante por variante.
 //
