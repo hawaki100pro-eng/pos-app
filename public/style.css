@@ -933,10 +933,35 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 
 /* En las cabeceras de modelo y color va a la derecha, separado del título */
 .grupo-modelo .btn-etiqueta,
-.grupo-color .btn-etiqueta {
+.grupo-color .btn-etiqueta,
+.grupo-modelo .btn-eliminar-modelo {
   float: right;
   margin-left: 10px;
 }
+
+/* Borrar el modelo entero. Va en contorno rojo y no relleno: es la acción más
+   destructiva de la pantalla, pero aparece en cada fila de modelo y no debe
+   gritar más que Editar. El relleno llega solo al pasar por encima. */
+.btn-eliminar-modelo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--badge-anulada-texto);
+  background: transparent;
+  color: var(--badge-anulada-texto);
+  cursor: pointer;
+}
+
+.btn-eliminar-modelo:hover {
+  background: var(--badge-anulada-texto);
+  color: #fff;
+}
+
+.btn-eliminar-modelo svg { width: 13px; height: 13px; flex: none; }
 
 /* Inventario en celular: la tabla no cabe a lo ancho, así que cada talla se muestra como
    una tarjeta. Modelo y color se ocultan porque ya se leen en las cabeceras del grupo. */

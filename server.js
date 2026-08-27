@@ -856,6 +856,49 @@ app.post('/api/productos/:id/eliminar', requireLogin, requireAdmin, async (req, 
   res.status(204).send();
 });
 
+// Eliminar un modelo entero de una vez (todas sus tallas y colores), en vez de
+// ir talla por talla. Sigue la misma regla que el borrado individual: el dueño
+// elimina de verdad y el admin solo marca con un motivo que el dueño verá.
+// Los ids van en el cuerpo y no en la dirección: los modelos llevan "#" en el
+// nombre, que en una URL se interpreta como otra cosa.
+app.post('/api/productos/eliminar-varios', requireLogin, requireAdmin, async (req, res) => {
+  const ids = Array.isArray(req.body.ids)
+    ? req.body.ids.map((n) => parseInt(n, 10)).filter(Number.isInteger)
+    : [];
+  if (ids.length === 0) {
+    return res.status(400).json({ error: 'No se indicó qué eliminar' });
+  }
+
+  if (req.session.user.rol !== 'dueno') {
+    const motivo = String(req.body.motivo || '').trim();
+    if (!motivo) {
+      return res.status(400).json({ error: 'Debes escribir el motivo de la eliminación (el dueño lo verá)' });
+    }
+    const r = await pool.query(
+      `UPDATE productos SET eliminado = 1, motivo_eliminacion = $1, fecha_eliminacion = NOW(), eliminado_por = $2
+       WHERE id = ANY($3::int[]) AND eliminado = 0`,
+      [motivo, req.session.user.id, ids]
+    );
+    return res.json({ eliminados: r.rowCount });
+  }
+
+  // Dueño: borrado definitivo. Las ventas históricas no se rompen porque
+  // conservan el nombre del producto en texto; solo se suelta la referencia.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('UPDATE detalle_venta SET producto_id = NULL WHERE producto_id = ANY($1::int[])', [ids]);
+    const r = await client.query('DELETE FROM productos WHERE id = ANY($1::int[])', [ids]);
+    await client.query('COMMIT');
+    res.json({ eliminados: r.rowCount });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 init()

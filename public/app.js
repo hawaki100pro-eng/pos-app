@@ -1510,6 +1510,7 @@ function renderInventario() {
       renderInventario();
     });
     trGrupo.firstElementChild.appendChild(botonEtiquetas(todos, 'Etiquetas del modelo'));
+    trGrupo.firstElementChild.appendChild(botonEliminarModelo(todos, modelo));
     tbody.appendChild(trGrupo);
     if (!abierto) return;
 
@@ -1575,6 +1576,57 @@ function botonEtiquetas(items, texto) {
     abrirEtiquetas(items);
   });
   return btn;
+}
+
+const ICONO_PAPELERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+
+// Botón para borrar el modelo completo, sin ir talla por talla.
+function botonEliminarModelo(items, nombre) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-eliminar-modelo';
+  btn.innerHTML = ICONO_PAPELERA + 'Eliminar modelo';
+  btn.title = `Eliminar las ${items.length} variante(s) de ${nombre}`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); // si no, el clic también plegaría el grupo
+    eliminarModeloCompleto(items, nombre);
+  });
+  return btn;
+}
+
+async function eliminarModeloCompleto(items, nombre) {
+  const cuantas = items.length;
+  const pares = items.reduce((acc, p) => acc + p.stock, 0);
+  const cuerpo = { ids: items.map((p) => p.id) };
+
+  if (rolActual === 'dueno') {
+    // Se pide escribir el nombre: son varias tallas de una sola vez y no hay vuelta atrás
+    const confirmacion = window.prompt(
+      `Vas a eliminar PERMANENTEMENTE ${nombre}: ${cuantas} variante(s) y ${pares} par(es) de stock.\n` +
+      `Esto no se puede deshacer.\n\nEscribe ELIMINAR para confirmar:`
+    );
+    if (confirmacion === null) return;
+    if (confirmacion.trim().toUpperCase() !== 'ELIMINAR') {
+      return alert('No se eliminó nada.');
+    }
+  } else {
+    const motivo = window.prompt(
+      `¿Por qué eliminas ${nombre} completo (${cuantas} variante(s))? El dueño verá este motivo:`
+    );
+    if (motivo === null) return;
+    if (!motivo.trim()) return alert('Debes escribir el motivo');
+    cuerpo.motivo = motivo;
+  }
+
+  const res = await fetch('/api/productos/eliminar-varios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cuerpo),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error); return; }
+  alert(`${nombre}: ${data.eliminados} variante(s) eliminada(s).`);
+  cargarProductos();
 }
 
 function crearFilaProducto(p) {
