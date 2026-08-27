@@ -14,7 +14,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'cambia-este-secreto-en-produccion',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 }, // 8 horas
+  // rolling: true renueva los 30 días en cada visita, así alguien que entra
+  // seguido nunca ve caducar la sesión; solo se cierra sola si el dispositivo
+  // pasa 30 días sin usarse.
+  rolling: true,
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 días
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
