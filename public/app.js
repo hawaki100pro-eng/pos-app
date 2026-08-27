@@ -1509,7 +1509,11 @@ function renderInventario() {
       else gruposAbiertos.add(modelo);
       renderInventario();
     });
+    // Van con float:right, así que el orden de aquí sale invertido en pantalla:
+    // [Eliminar] [Editar código] [Etiquetas]. Eliminar queda lejos de Etiquetas,
+    // que es el que más se toca.
     trGrupo.firstElementChild.appendChild(botonEtiquetas(todos, 'Etiquetas del modelo'));
+    trGrupo.firstElementChild.appendChild(botonRenombrarModelo(todos, modelo));
     trGrupo.firstElementChild.appendChild(botonEliminarModelo(todos, modelo));
     tbody.appendChild(trGrupo);
     if (!abierto) return;
@@ -1579,6 +1583,57 @@ function botonEtiquetas(items, texto) {
 }
 
 const ICONO_PAPELERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+
+const ICONO_LAPIZ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+
+// Botón para corregir el código del modelo en todas sus tallas de una vez.
+function botonRenombrarModelo(items, modelo) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-editar-modelo';
+  btn.innerHTML = ICONO_LAPIZ + 'Editar código';
+  btn.title = `Cambiar el nombre de ${modelo} en sus ${items.length} variante(s)`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); // si no, el clic también plegaría el grupo
+    renombrarModeloCompleto(items, modelo);
+  });
+  return btn;
+}
+
+async function renombrarModeloCompleto(items, modelo) {
+  const nuevo = window.prompt(
+    `Nuevo nombre para el modelo (se aplica a sus ${items.length} variante(s)).\n\n` +
+    `Las etiquetas ya pegadas siguen sirviendo: su código no cambia.`,
+    modelo
+  );
+  if (nuevo === null) return;
+  const limpio = nuevo.trim();
+  if (!limpio) return alert('El nombre no puede quedar vacío');
+  if (limpio === modelo) return;
+
+  // Si ya hay otro modelo con ese nombre, los dos pasarían a ser uno solo.
+  // A veces es justo lo que se busca (unir un código escrito de dos formas),
+  // así que se avisa en vez de impedirlo.
+  const yaExiste = productosInventario.some(
+    (p) => p.modelo !== modelo && p.modelo.toLowerCase() === limpio.toLowerCase()
+  );
+  if (yaExiste && !confirm(`Ya existe un modelo llamado "${limpio}".\nSi continúas, los dos quedarán unidos en uno solo.\n\n¿Continuar?`)) {
+    return;
+  }
+
+  const res = await fetch('/api/productos/renombrar-modelo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: items.map((p) => p.id), modelo: limpio }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error); return; }
+  // El grupo abierto estaba guardado con el nombre viejo: se pasa al nuevo
+  if (gruposAbiertos.delete(modelo)) gruposAbiertos.add(limpio);
+  familiasAbiertas.add(partirModelo(limpio).familia);
+  alert(`Listo: ${data.actualizados} variante(s) ahora son "${limpio}".`);
+  cargarProductos();
+}
 
 // Botón para borrar el modelo completo, sin ir talla por talla.
 function botonEliminarModelo(items, nombre) {

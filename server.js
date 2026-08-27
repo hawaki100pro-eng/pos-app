@@ -856,6 +856,29 @@ app.post('/api/productos/:id/eliminar', requireLogin, requireAdmin, async (req, 
   res.status(204).send();
 });
 
+// Renombrar un modelo entero de una vez (todas sus tallas y colores), para
+// corregir un código mal escrito sin editar variante por variante.
+//
+// El SKU NO se toca a propósito, igual que al editar un producto suelto: la
+// etiqueta ya está pegada en el zapato y su código tiene que seguir sirviendo
+// después de corregir el nombre. El código de barras tampoco cambia, porque
+// lleva el id, que es fijo.
+app.post('/api/productos/renombrar-modelo', requireLogin, requireAdmin, async (req, res) => {
+  const ids = Array.isArray(req.body.ids)
+    ? req.body.ids.map((n) => parseInt(n, 10)).filter(Number.isInteger)
+    : [];
+  const modelo = String(req.body.modelo || '').trim();
+  if (ids.length === 0) {
+    return res.status(400).json({ error: 'No se indicó qué renombrar' });
+  }
+  if (!modelo) {
+    return res.status(400).json({ error: 'El nombre del modelo no puede quedar vacío' });
+  }
+
+  const r = await pool.query('UPDATE productos SET modelo = $1 WHERE id = ANY($2::int[])', [modelo, ids]);
+  res.json({ actualizados: r.rowCount, modelo });
+});
+
 // Eliminar un modelo entero de una vez (todas sus tallas y colores), en vez de
 // ir talla por talla. Sigue la misma regla que el borrado individual: el dueño
 // elimina de verdad y el admin solo marca con un motivo que el dueño verá.

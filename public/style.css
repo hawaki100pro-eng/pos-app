@@ -934,10 +934,34 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 /* En las cabeceras de modelo y color va a la derecha, separado del título */
 .grupo-modelo .btn-etiqueta,
 .grupo-color .btn-etiqueta,
-.grupo-modelo .btn-eliminar-modelo {
+.grupo-modelo .btn-eliminar-modelo,
+.grupo-modelo .btn-editar-modelo {
   float: right;
   margin-left: 10px;
 }
+
+/* Corregir el código del modelo. Mismo formato de píldora en contorno que
+   Eliminar, pero en el color de acento: es una corrección, no un destrozo. */
+.btn-editar-modelo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--acento);
+  background: transparent;
+  color: var(--acento-texto);
+  cursor: pointer;
+}
+
+.btn-editar-modelo:hover {
+  background: var(--acento);
+  color: #fff;
+}
+
+.btn-editar-modelo svg { width: 13px; height: 13px; flex: none; }
 
 /* Borrar el modelo entero. Va en contorno rojo y no relleno: es la acción más
    destructiva de la pantalla, pero aparece en cada fila de modelo y no debe
