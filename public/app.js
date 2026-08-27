@@ -1396,8 +1396,20 @@ document.getElementById('crear-usuario-btn').addEventListener('click', async () 
 // --- Catálogo / Inventario ---
 
 let productosInventario = [];
+const familiasAbiertas = new Set(); // familias expandidas (Cabuya Alta, Chunky, ...)
 const gruposAbiertos = new Set(); // modelos expandidos en la vista agrupada de escritorio
 const coloresAbiertos = new Set(); // colores expandidos, con clave `modelo||color`
+
+// Los modelos se nombran "{Familia} #{código}" (Cabuya Alta #00-04), así que la
+// familia sale de partir por el #. Con eso el nombre deja de repetirse en cada
+// fila: se escribe una vez arriba y dentro solo va el código.
+// Si un modelo no lleva #, el nombre completo hace de familia y no se pierde.
+function partirModelo(modelo) {
+  const nombre = String(modelo ?? '');
+  const i = nombre.indexOf('#');
+  if (i <= 0) return { familia: nombre.trim(), codigo: '' };
+  return { familia: nombre.slice(0, i).trim(), codigo: nombre.slice(i).trim() };
+}
 
 async function cargarProductos() {
   const res = await fetch('/api/productos');
@@ -1450,27 +1462,48 @@ function renderInventario() {
     infoBusqueda.textContent = `${productosVisibles.length} variante(s) en ${modelos} modelo(s)`;
   }
 
-  // Dos niveles, igual en escritorio y celular: clic en el modelo despliega sus colores;
-  // clic en un color despliega las tallas de ese color con su stock.
+  // Tres niveles, igual en escritorio y celular: familia > modelo > color > tallas.
+  // La familia va arriba para que "Cabuya Alta" no se repita en cada fila: dentro
+  // de ella los modelos se muestran solo por su código (#00-04).
   // (En celular el CSS convierte cada talla en una tarjeta para que nada quede cortado.)
-  const grupos = new Map();
+  const familias = new Map();
   productosVisibles.forEach((p) => {
-    if (!grupos.has(p.modelo)) grupos.set(p.modelo, new Map());
-    const porColor = grupos.get(p.modelo);
+    const { familia } = partirModelo(p.modelo);
+    if (!familias.has(familia)) familias.set(familia, new Map());
+    const porModelo = familias.get(familia);
+    if (!porModelo.has(p.modelo)) porModelo.set(p.modelo, new Map());
+    const porColor = porModelo.get(p.modelo);
     if (!porColor.has(p.color)) porColor.set(p.color, []);
     porColor.get(p.color).push(p);
   });
 
   const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
 
-  grupos.forEach((porColor, modelo) => {
-    // Buscando, los grupos se abren solos: si no, habría que ir tocando modelo
-    // por modelo para ver qué coincidió. Al limpiar vuelve el estado manual.
+  familias.forEach((porModelo, familia) => {
+  // Buscando, todo se abre solo: si no, habría que ir tocando familia por familia
+  // para ver qué coincidió. Al limpiar vuelve el estado manual.
+  const familiaAbierta = filtrando || familiasAbiertas.has(familia);
+  const todosFamilia = [];
+  porModelo.forEach((porColor) => porColor.forEach((items) => todosFamilia.push(...items)));
+  const trFamilia = document.createElement('tr');
+  trFamilia.className = 'grupo-familia';
+  trFamilia.innerHTML = `<td colspan="6">${familiaAbierta ? '▾' : '▸'} ${familia} <span class="grupo-info">${porModelo.size} modelo(s) · ${todosFamilia.length} variante(s) · stock total: ${sumaStock(todosFamilia)}</span></td>`;
+  trFamilia.addEventListener('click', () => {
+    if (familiaAbierta) familiasAbiertas.delete(familia);
+    else familiasAbiertas.add(familia);
+    renderInventario();
+  });
+  tbody.appendChild(trFamilia);
+  if (!familiaAbierta) return;
+
+  porModelo.forEach((porColor, modelo) => {
     const abierto = filtrando || gruposAbiertos.has(modelo);
     const todos = [].concat(...porColor.values());
+    // Dentro de la familia basta el código; si el modelo no lleva #, va entero
+    const etiquetaModelo = partirModelo(modelo).codigo || modelo;
     const trGrupo = document.createElement('tr');
     trGrupo.className = 'grupo-modelo';
-    trGrupo.innerHTML = `<td colspan="6">${abierto ? '▾' : '▸'} ${modelo} <span class="grupo-info">${porColor.size} color(es) · ${todos.length} variante(s) · stock total: ${sumaStock(todos)}</span></td>`;
+    trGrupo.innerHTML = `<td colspan="6">${abierto ? '▾' : '▸'} ${etiquetaModelo} <span class="grupo-info">${porColor.size} color(es) · ${todos.length} variante(s) · stock total: ${sumaStock(todos)}</span></td>`;
     trGrupo.addEventListener('click', () => {
       if (abierto) gruposAbiertos.delete(modelo);
       else gruposAbiertos.add(modelo);
@@ -1498,6 +1531,7 @@ function renderInventario() {
       tbody.appendChild(trColor);
       if (colorAbierto) tallas.forEach((p) => tbody.appendChild(crearFilaProducto(p)));
     });
+  });
   });
 }
 

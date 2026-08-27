@@ -799,11 +799,26 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .btn-toggle-seccion:hover { background: var(--gris-boton-hover); }
 
 /* Inventario en escritorio: fila de grupo por modelo (clic para desplegar tallas) */
+/* Primer nivel: la familia (Cabuya Alta, Chunky...). Va más marcada que el
+   modelo porque los tres niveles se distinguen por sangría y peso de color. */
+.grupo-familia td {
+  background: var(--acento-suave-2);
+  font-weight: 700;
+  font-size: 1.02rem;
+  cursor: pointer;
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-tarjeta);
+  user-select: none;
+}
+
+.grupo-familia:hover td { filter: brightness(0.97); }
+
+/* Segundo nivel: el modelo dentro de la familia, ya solo con su código */
 .grupo-modelo td {
   background: var(--acento-suave);
   font-weight: 600;
   cursor: pointer;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 26px;
   border-bottom: 1px solid var(--borde-tarjeta);
   user-select: none;
 }
@@ -815,7 +830,7 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   background: var(--grupo-color-fondo);
   font-weight: 600;
   cursor: pointer;
-  padding: 8px 12px 8px 32px;
+  padding: 8px 12px 8px 46px;
   border-bottom: 1px solid var(--borde-tipo-btn);
   user-select: none;
 }
@@ -929,8 +944,9 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   #productos-tabla { min-width: 0; }
   #productos-tabla thead { display: none; }
 
-  #productos-tabla .grupo-modelo td { padding: 12px 10px; }
-  #productos-tabla .grupo-color td { padding: 10px 10px 10px 24px; }
+  #productos-tabla .grupo-familia td { padding: 12px 10px; }
+  #productos-tabla .grupo-modelo td { padding: 12px 10px 12px 20px; }
+  #productos-tabla .grupo-color td { padding: 10px 10px 10px 34px; }
   #productos-tabla .grupo-info {
     display: block;
     margin-left: 0;
