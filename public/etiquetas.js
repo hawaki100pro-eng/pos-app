@@ -19,6 +19,7 @@ const cuenta = document.getElementById('cuenta');
 const titulo = document.getElementById('titulo');
 const selModo = document.getElementById('modo');
 const selCuantas = document.getElementById('cuantas');
+const inpCopias = document.getElementById('copias');
 const btnConfirmar = document.getElementById('confirmar-impresas');
 
 let productos = [];
@@ -53,18 +54,30 @@ async function cargar() {
   if (productos.length === 0) return aviso('No se encontraron esos productos en el catálogo.');
 
   const modelos = [...new Set(productos.map((p) => p.modelo))];
-  const colores = [...new Set(productos.map((p) => p.color))];
+  const colores = [...new Set(productos.map((p) => p.color))].filter(Boolean);
   titulo.textContent = 'Etiquetas — ' + modelos.join(', ') + (colores.length === 1 ? ' · ' + colores[0] : '');
   document.title = titulo.textContent;
 
+  // Las categorías sueltas no se cuentan por pares: se elige cuántas copias.
+  // Si TODO lo seleccionado es suelto, el selector de "cuántas" no aplica.
+  const haySueltas = productos.some(esSuelta);
+  document.getElementById('opcion-copias').classList.toggle('hidden', !haySueltas);
+  document.getElementById('opcion-cuantas').classList.toggle('hidden', productos.every(esSuelta));
+
   render();
 }
+
+const esSuelta = (p) => !p.controla_stock;
 
 // Cuántas etiquetas lleva una talla según lo que se haya elegido arriba.
 //   pendientes → las que faltan: los pares que aún no tienen etiqueta pegada
 //   par        → una por cada par en bodega, aunque ya estén etiquetados
 //   talla      → una sola, para ver cómo queda o pegarla en la caja
+//
+// Una categoría suelta no tiene pares que contar: su etiqueta no se pega a un
+// zapato, se lleva en el bolsillo. Ahí manda el número de copias de al lado.
 function copiasDe(p) {
+  if (esSuelta(p)) return Math.max(1, parseInt(inpCopias.value, 10) || 1);
   const modo = selCuantas.value;
   if (modo === 'talla') return 1;
   if (modo === 'par') return Math.max(1, p.stock);
@@ -124,7 +137,7 @@ function render() {
             <div class="et-qr">${qr}</div>
             <div class="et-datos">
               <div class="et-modelo">${escapar(p.modelo)}</div>
-              <div class="et-variante">T${escapar(p.talla)} · ${escapar(p.color)}</div>
+              ${esSuelta(p) ? '' : `<div class="et-variante">T${escapar(p.talla)} · ${escapar(p.color)}</div>`}
               <div class="et-precio">$${Number(p.precio).toFixed(2)}</div>
             </div>
           </div>
@@ -140,8 +153,12 @@ function render() {
   hoja.innerHTML = html;
 
   const modo = selCuantas.value;
+  const todasSueltas = productos.length > 0 && productos.every(esSuelta);
   const pares = productos.reduce((a, p) => a + Math.max(0, p.stock), 0);
-  if (modo === 'pendientes') {
+  if (todasSueltas) {
+    // Sin pares que contar: lo que importa es cuántas copias salen
+    cuenta.textContent = `${total} etiqueta(s) · ${productos.length} categoría(s)`;
+  } else if (modo === 'pendientes') {
     cuenta.textContent = total === 0
       ? 'Nada pendiente: todo este modelo ya está etiquetado'
       : `${total} pendiente(s) de ${pares} par(es)`;
@@ -155,7 +172,7 @@ function render() {
   document.getElementById('descargar-pdf').disabled = total === 0;
   btnConfirmar.classList.add('hidden');
 
-  if (total === 0 && modo === 'pendientes') {
+  if (total === 0 && modo === 'pendientes' && !todasSueltas) {
     hoja.innerHTML = `<p style="max-width:900px;margin:0 auto;color:#5c6270">
       Todos los pares de este modelo ya tienen su etiqueta. Si necesitas reponer alguna
       (se despegó, salió mal impresa), elige <strong>«Todas: una por par»</strong> arriba.</p>`;
@@ -201,13 +218,17 @@ document.getElementById('descargar-pdf').addEventListener('click', () => {
 
   // Recién ahora se ofrece confirmar: descargar no es imprimir, y el rollo se
   // puede trabar. La cuenta solo avanza cuando el papel salió de verdad.
-  btnConfirmar.classList.remove('hidden');
+  // Si solo había categorías sueltas no hay nada que registrar.
+  if (tandaPorProducto().length > 0) btnConfirmar.classList.remove('hidden');
 });
 
 // Cuántas etiquetas lleva cada talla en la tanda que se acaba de descargar
 function tandaPorProducto() {
   const conteo = new Map();
   for (const p of productos) {
+    // Una categoría suelta no lleva cuenta de etiquetas pegadas: sus copias son
+    // de bolsillo y se reimprimen cuando haga falta, sin nada que registrar.
+    if (esSuelta(p)) continue;
     const copias = copiasDe(p);
     if (copias > 0) conteo.set(p.id, copias);
   }
@@ -240,6 +261,7 @@ btnConfirmar.addEventListener('click', async () => {
 
 selModo.addEventListener('change', aplicarModo);
 selCuantas.addEventListener('change', render);
+inpCopias.addEventListener('input', render);
 document.getElementById('imprimir').addEventListener('click', () => window.print());
 
 aplicarModo();

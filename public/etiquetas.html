@@ -22,13 +22,21 @@
       </select>
     </label>
 
-    <label class="opcion">
+    <label class="opcion" id="opcion-cuantas">
       Cuántas
       <select id="cuantas">
         <option value="pendientes">Solo las que faltan</option>
         <option value="par">Todas: una por par</option>
         <option value="talla">Una por talla</option>
       </select>
+    </label>
+
+    <!-- Solo aparece si hay categorías sueltas: no se pegan a un par, se llevan
+         en el bolsillo, así que lo que se elige es cuántas copias (una por
+         vendedora), no cuántos pares hay. Lo muestra etiquetas.js. -->
+    <label class="opcion hidden" id="opcion-copias">
+      Copias
+      <input type="number" id="copias" value="2" min="1" max="20" step="1">
     </label>
 
     <button id="descargar-pdf">

@@ -1824,20 +1824,21 @@ function crearFilaProducto(p) {
       btnPurga.addEventListener('click', () => eliminarProductoDefinitivo(p));
       acciones.appendChild(btnPurga);
     } else {
-      // Las categorías sueltas no llevan etiqueta por par: su código va en la
-      // tarjeta de precios, que se imprime una sola vez desde arriba.
       // El botón dice cuántas FALTAN, no cuántos pares hay: al reponer mercadería
       // solo salen los pares nuevos, sin reimprimir todo el modelo.
+      //
+      // Una categoría suelta no se etiqueta par por par, pero igual puede
+      // imprimirse: son las tarjetas de bolsillo que lleva cada vendedora para
+      // escanear el precio sin ir hasta la hoja de la caja. Ahí no hay
+      // pendientes que contar, se elige cuántas copias en la vista de etiquetas.
       const pendientes = suelta ? 0 : Math.max(0, p.stock - (p.etiquetas_impresas || 0));
-      if (!suelta) {
-        const btnEtiqueta = botonEtiquetas(
-          [p],
-          pendientes > 0 ? `${pendientes} pendiente${pendientes === 1 ? '' : 's'}` : 'Etiquetas'
-        );
-        btnEtiqueta.classList.add('accion-btn');
-        if (pendientes > 0) btnEtiqueta.classList.add('con-pendientes');
-        acciones.appendChild(btnEtiqueta);
-      }
+      const btnEtiqueta = botonEtiquetas(
+        [p],
+        !suelta && pendientes > 0 ? `${pendientes} pendiente${pendientes === 1 ? '' : 's'}` : 'Etiquetas'
+      );
+      btnEtiqueta.classList.add('accion-btn');
+      if (!suelta && pendientes > 0) btnEtiqueta.classList.add('con-pendientes');
+      acciones.appendChild(btnEtiqueta);
 
       // Salida para el modelo viejo que nunca se etiquetó, o el rollo que se
       // trabó: vuelve a dejar toda la talla como pendiente.

@@ -13,6 +13,10 @@
 
 * { box-sizing: border-box; }
 
+/* Esta página no carga style.css, así que necesita su propia regla: la usan los
+   controles que solo aplican a un tipo de producto (copias / cuántas). */
+.hidden { display: none !important; }
+
 body {
   font-family: system-ui, sans-serif;
   background: #eceef3;
