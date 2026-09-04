@@ -340,14 +340,17 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
 
 // Ventas recientes de todos los vendedores (cualquier vendedor puede reimprimir la proforma de un compañero)
 app.get('/api/ventas/recientes', requireLogin, async (req, res) => {
+  // Un vendedor solo ve lo que vendió él. El admin y el dueño siguen viendo todo,
+  // que para eso tienen el panel.
+  const soloMias = req.session.user.rol === 'vendedor';
   const r = await pool.query(`
     SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, v.metodo_pago, u.usuario AS vendedor
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
-    WHERE v.eliminada = 0
+    WHERE v.eliminada = 0 ${soloMias ? 'AND v.usuario_id = $1' : ''}
     ORDER BY v.id DESC
     LIMIT 30
-  `);
+  `, soloMias ? [req.session.user.id] : []);
   res.json(r.rows);
 });
 
@@ -360,6 +363,11 @@ app.get('/api/ventas/:id', requireLogin, async (req, res) => {
   const venta = r.rows[0];
   if (!venta) {
     return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+  // Sin esto, esconder las ventas ajenas del listado sería solo apariencia: con
+  // cambiar el número en la dirección se abriría la nota de un compañero.
+  if (req.session.user.rol === 'vendedor' && venta.usuario_id !== req.session.user.id) {
+    return res.status(403).json({ error: 'Esa venta es de otro vendedor. Pídesela al administrador.' });
   }
   venta.numero_proforma = formatNumeroProforma(venta.numero_proforma || venta.id);
   const detalle = await pool.query('SELECT producto, cantidad, precio_unitario, precio_lista FROM detalle_venta WHERE venta_id = $1', [venta.id]);

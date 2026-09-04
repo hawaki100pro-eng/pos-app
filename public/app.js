@@ -850,14 +850,37 @@ async function cargarMisVentas() {
   const ventas = await res.json();
   const tbody = document.querySelector('#mis-ventas-tabla tbody');
   tbody.innerHTML = '';
+  // Sin columna de vendedor: todas son de quien entró, repetir su nombre en cada
+  // fila solo quitaría ancho en el celular
   ventas.forEach((v) => {
     const tr = document.createElement('tr');
     const totalTexto = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
     const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
-    tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${v.vendedor}</td><td>${formatFecha(v.fecha)}</td><td>${totalTexto}</td><td>${metodoTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
+    tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${formatFecha(v.fecha)}</td><td>${totalTexto}</td><td>${metodoTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
     tbody.appendChild(tr);
   });
 }
+
+/* Ocultar/mostrar las propias ventas, con el mismo botón que la caja.
+   Arranca oculto: la lista está a la vista del cliente que espera al otro lado
+   del mostrador, y no tiene por qué ver lo que se vendió en el día.
+   La preferencia se recuerda en este dispositivo. */
+let misVentasOcultas = localStorage.getItem('misVentasOcultas') !== '0';
+
+function aplicarVisibilidadMisVentas() {
+  document.getElementById('mis-ventas-wrap').classList.toggle('hidden', misVentasOcultas);
+  // Solo cambia el texto: el dibujo lo elige el CSS con la clase (ver .btn-dinero)
+  document.getElementById('toggle-mis-ventas-texto').textContent = misVentasOcultas ? 'Mostrar' : 'Ocultar';
+  document.getElementById('toggle-mis-ventas-btn').classList.toggle('dinero-oculto', misVentasOcultas);
+}
+
+document.getElementById('toggle-mis-ventas-btn').addEventListener('click', () => {
+  misVentasOcultas = !misVentasOcultas;
+  localStorage.setItem('misVentasOcultas', misVentasOcultas ? '1' : '0');
+  aplicarVisibilidadMisVentas();
+});
+
+aplicarVisibilidadMisVentas();
 
 // --- Admin: dashboard, caja, usuarios ---
 
