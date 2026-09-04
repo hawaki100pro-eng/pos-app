@@ -351,6 +351,20 @@ th, td {
   margin-top: 1px;
 }
 
+/* El botón de ocultar va DEBAJO de su título, no al lado: en el celular, junto
+   al título quedaba pegado al botón de Salir. Centrado y algo más angosto que
+   el ancho completo, igual que la tarjeta de la caja cuando está oculta. */
+.fila-toggle {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 12px;
+}
+
+.fila-toggle .tipo-btn {
+  width: 88%;
+  flex: none;
+}
+
 /* Cantidad editable: para vender tres pares iguales sin escanear tres veces */
 .item-cantidad-campo {
   display: flex;
