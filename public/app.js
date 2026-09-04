@@ -276,10 +276,15 @@ document.getElementById('agregar-item-btn').addEventListener('click', () => {
   const precio_lista = inputProducto.dataset.precioLista
     ? parseFloat(inputProducto.dataset.precioLista)
     : precio_unitario;
-  items.push({ producto, cantidad, precio_unitario, precio_lista, producto_id });
+  // Un producto escrito a mano no tiene stock que vigilar
+  const stock_max = inputProducto.dataset.stockMax
+    ? parseInt(inputProducto.dataset.stockMax, 10)
+    : null;
+  items.push({ producto, cantidad, precio_unitario, precio_lista, producto_id, stock_max });
   inputProducto.value = '';
   inputProducto.dataset.productoId = '';
   inputProducto.dataset.precioLista = '';
+  inputProducto.dataset.stockMax = '';
   document.getElementById('item-cantidad').value = '1';
   document.getElementById('item-precio').value = '';
   document.getElementById('venta-msg').textContent = '';
@@ -343,6 +348,9 @@ function renderCatalogoModal(productos) {
       // Se guarda el precio del catálogo aparte: si la vendedora lo baja antes de
       // agregar, la diferencia se cuenta como descuento
       inputProducto.dataset.precioLista = p.precio;
+      // El tope de stock viaja con la línea para poder avisar al cambiar la
+      // cantidad, sin tener que volver a preguntarle al servidor
+      inputProducto.dataset.stockMax = p.controla_stock ? p.stock : '';
       document.getElementById('item-precio').value = p.precio;
       document.getElementById('item-cantidad').value = 1;
       document.getElementById('catalogo-modal').classList.add('hidden');
@@ -429,14 +437,17 @@ async function escanear(codigo) {
 
     // Si ya está en la lista, sube la cantidad en vez de repetir la línea
     const nombre = data.nombre || nombreProducto(data);
+    // Cuánto se puede vender de esto. Una categoría suelta no tiene tope, así
+    // que queda en null y el recuadro de cantidad la deja subir libremente.
+    const tope = data.controla_stock ? data.stock : null;
     const yaEsta = items.find((i) => i.producto_id === data.id);
     if (yaEsta) {
-      // Una categoría suelta no tiene tope: se puede vender la que sea
-      if (data.controla_stock && yaEsta.cantidad + 1 > data.stock) {
+      if (tope != null && yaEsta.cantidad + 1 > tope) {
         pitido(false);
-        return mensajeVenta(`Solo quedan ${data.stock} de ${nombre} en el sistema.`, true);
+        return mensajeVenta(`Solo quedan ${tope} de ${nombre} en el sistema.`, true);
       }
       yaEsta.cantidad++;
+      yaEsta.stock_max = tope;   // por si otra vendedora movió el stock entretanto
     } else {
       items.push({
         producto: nombre,
@@ -444,6 +455,7 @@ async function escanear(codigo) {
         precio_unitario: Number(data.precio),
         precio_lista: Number(data.precio),   // el del catálogo, para calcular el descuento
         producto_id: data.id,
+        stock_max: tope,
       });
     }
 
@@ -696,9 +708,14 @@ function renderItems() {
     row.className = 'item-row' + (item.producto_id && item.producto_id === resaltado ? ' item-escaneado' : '');
     row.innerHTML = `
       <div class="item-datos">
-        <span class="item-nombre">${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
+        <span class="item-nombre">${item.producto} — $${subtotal.toFixed(2)}</span>
         ${dcto ? `<span class="item-descuento">antes $${dcto.lista.toFixed(2)} · rebaja $${dcto.dolares.toFixed(2)} (${dcto.porcentaje.toFixed(1)}%)</span>` : ''}
       </div>
+      <label class="item-cantidad-campo">
+        <span>x</span>
+        <input type="number" min="1" step="1" inputmode="numeric" value="${item.cantidad}"
+               aria-label="Cantidad de ${item.producto}">
+      </label>
       <label class="item-precio-campo">
         <span>$</span>
         <input type="number" min="0" step="0.01" value="${item.precio_unitario.toFixed(2)}"
@@ -706,6 +723,27 @@ function renderItems() {
       </label>
       <button class="quitar-item-btn">Quitar</button>
     `;
+
+    // Para vender tres pares iguales se escribe 3 aquí, en vez de pasar la
+    // pistola tres veces. Se aplica al salir del campo, no en cada tecla.
+    const campoCantidad = row.querySelector('.item-cantidad-campo input');
+    campoCantidad.addEventListener('change', () => {
+      const nueva = parseInt(campoCantidad.value, 10);
+      if (!Number.isInteger(nueva) || nueva < 1) {
+        campoCantidad.value = item.cantidad;
+        return;
+      }
+      // El tope se avisa aquí y no al confirmar, igual que al escanear. Una
+      // categoría suelta no tiene tope: su stock_max queda en null.
+      if (item.stock_max != null && nueva > item.stock_max) {
+        pitido(false);
+        mensajeVenta(`Solo quedan ${item.stock_max} de ${item.producto} en el sistema.`, true);
+        campoCantidad.value = item.cantidad;
+        return;
+      }
+      item.cantidad = nueva;
+      renderItems();
+    });
 
     // Se actualiza al salir del campo, no en cada tecla: si no, al escribir "3"
     // para llegar a 30 la línea se recalcularía con un precio de 3

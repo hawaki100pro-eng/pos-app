@@ -351,6 +351,23 @@ th, td {
   margin-top: 1px;
 }
 
+/* Cantidad editable: para vender tres pares iguales sin escanear tres veces */
+.item-cantidad-campo {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+.item-cantidad-campo input {
+  width: 62px;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
 /* Precio editable: aquí se baja el precio para hacer un descuento */
 .item-precio-campo {
   display: flex;
