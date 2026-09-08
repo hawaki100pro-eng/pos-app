@@ -353,15 +353,75 @@ function normalizarTexto(t) {
   return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-// Búsqueda por palabras: cada palabra escrita debe aparecer en algún campo del producto.
-// Así "chunky negro", "CHUNKY 37" o "a-001 38" encuentran lo esperado.
+/* --- Búsqueda tolerante a errores de tipeo ---------------------------------
+
+   Cuántas letras hay que cambiar, agregar o quitar para pasar de una palabra a
+   otra ("zapatila" → "zapatilla" es 1). Se corta apenas pasa del tope tolerado:
+   sin ese corte habría que calcular la tabla entera para palabras que ya se
+   sabe que no van a servir, y esto corre en cada tecla.
+   -------------------------------------------------------------------------- */
+function distanciaEdicion(a, b, tope) {
+  if (Math.abs(a.length - b.length) > tope) return tope + 1;
+  let fila = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const anterior = fila;
+    fila = [i];
+    let mejor = i;
+    for (let j = 1; j <= b.length; j++) {
+      const costo = a[i - 1] === b[j - 1] ? 0 : 1;
+      fila[j] = Math.min(anterior[j] + 1, fila[j - 1] + 1, anterior[j - 1] + costo);
+      if (fila[j] < mejor) mejor = fila[j];
+    }
+    if (mejor > tope) return tope + 1;   // ya no hay vuelta atrás
+  }
+  return fila[b.length];
+}
+
+// Cuánto error se perdona según lo escrito. En palabras muy cortas no se
+// perdona nada: con dos letras, una de diferencia hace que todo se parezca.
+function topeErrores(escrito) {
+  if (escrito.length <= 3) return 0;
+  return escrito.length <= 6 ? 1 : 2;
+}
+
+function pareceIgual(escrito, palabra) {
+  if (palabra.includes(escrito)) return true;      // el caso normal, sin errores
+  const tope = topeErrores(escrito);
+  if (tope === 0) return false;
+  if (distanciaEdicion(escrito, palabra, tope) <= tope) return true;
+  // Contra el principio de la palabra, para lo escrito a medias: así "zapatil"
+  // alcanza a "zapatilla" aunque además venga con una letra cambiada.
+  const recorte = palabra.slice(0, escrito.length + tope);
+  return distanciaEdicion(escrito, recorte, tope) <= tope;
+}
+
+// Un número escrito puede ser un precio ("15" encuentra $15.00) o una talla.
+// Se compara desde el principio para que "15" no caiga dentro de $115.00.
+function pareceElPrecio(escrito, precio) {
+  if (!/^[0-9]+([.,][0-9]+)?$/.test(escrito)) return false;
+  const buscado = escrito.replace(',', '.');
+  const valor = Number(precio);
+  return [String(valor), valor.toFixed(2)].some((forma) => forma.startsWith(buscado));
+}
+
+// Búsqueda por palabras: cada palabra escrita tiene que encontrar algo en el
+// producto —su nombre, talla, color o precio—, en cualquier orden.
+// Así "chunky negro", "colombiana 15" o "zapatila dama" encuentran lo esperado.
+function coincideEnCatalogo(p, palabras) {
+  const texto = normalizarTexto(`${p.modelo} ${p.talla} ${p.color}`);
+  const campos = texto.split(/[^a-z0-9]+/).filter(Boolean);
+  return palabras.every((escrito) =>
+    // Sobre el texto entero, para lo que lleva guiones o almohadilla: "a-001",
+    // "00-04". Si solo se mirara palabra por palabra, eso dejaría de encontrarse.
+    texto.includes(escrito)
+    || pareceElPrecio(escrito, p.precio)
+    || campos.some((campo) => pareceIgual(escrito, campo))
+  );
+}
+
 document.getElementById('catalogo-buscar').addEventListener('input', (e) => {
   const palabras = normalizarTexto(e.target.value).split(/\s+/).filter(Boolean);
-  const filtrados = productosParaCatalogo().filter((p) => {
-    const texto = normalizarTexto(`${p.modelo} ${p.talla} ${p.color}`);
-    return palabras.every((palabra) => texto.includes(palabra));
-  });
-  renderCatalogoModal(filtrados);
+  renderCatalogoModal(productosParaCatalogo().filter((p) => coincideEnCatalogo(p, palabras)));
 });
 
 function renderCatalogoModal(productos) {
