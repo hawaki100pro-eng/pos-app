@@ -324,6 +324,10 @@
     <button id="logout-btn-a" class="logout-pie">Salir</button>
   </div>
 
+  <!-- Fondo oscuro del panel General. Solo se usa ahí: MAGICA ocupa la pantalla
+       entera y no necesita oscurecer nada detrás. -->
+  <div id="catalogo-fondo" class="catalogo-fondo hidden"></div>
+
   <!-- Modal catálogo para vendedor. Sirve para las dos puertas: MAGICA lo abre
        con todo el catálogo, y General solo con las categorías sueltas. -->
   <div id="catalogo-modal" class="container hidden">
@@ -332,6 +336,7 @@
       <button id="cerrar-catalogo-btn">Cerrar</button>
     </div>
     <input type="text" id="catalogo-buscar" placeholder="Buscar por modelo, talla o color...">
+    <p id="catalogo-ayuda" class="catalogo-ayuda hidden">Toca una para agregarla a la venta</p>
     <div id="catalogo-lista" style="margin-top:12px;"></div>
   </div>
 

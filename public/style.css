@@ -1217,46 +1217,103 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   max-width: 600px;
 }
 
-/* Panel General: cuadros grandes, varios por fila, para tocar sin apuntar */
+/* ============================================================
+   Panel General
+
+   MAGICA necesita la pantalla entera porque su lista es larga y se busca
+   escribiendo. General son cuatro o cinco cuadros: con la misma ventana
+   quedaba un vacío enorme debajo. Aquí la ventana se ajusta a su
+   contenido y se centra, como un panel y no como una pantalla.
+   ============================================================ */
+#catalogo-modal.modo-general {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 92%;
+  max-width: 460px;
+  height: auto;
+  max-height: 86vh;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 18px 50px rgba(20, 20, 40, .28);
+}
+
+/* Oscurece la pantalla de atrás para que el panel se lea como una ventana y no
+   como algo flotando encima. Es un elemento propio y no un pseudo-elemento del
+   panel: un pseudo con z-index negativo se ve, pero los toques lo atraviesan y
+   acaban activando lo que hay debajo. */
+.catalogo-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 9;                 /* justo debajo del panel, que va en 10 */
+  background: rgba(17, 12, 20, .45);
+}
+
+/* Cerrar es la salida, no la acción principal: en este panel va suave para
+   que el peso visual se lo lleven los cuadros */
+#catalogo-modal.modo-general #cerrar-catalogo-btn {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  padding: 7px 16px;
+  font-size: 0.88rem;
+}
+
+#catalogo-modal.modo-general #cerrar-catalogo-btn:hover {
+  background: var(--acento-suave-2);
+}
+
+.catalogo-ayuda {
+  margin: 2px 0 14px;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+}
+
 .catalogo-cuadros {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
 }
 
+/* Mismo lenguaje que los botones suaves de la app (MAGICA, Escanear): fondo de
+   acento claro y texto de acento, en vez de una caja blanca con borde gris. */
 .catalogo-cuadro {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 84px;
-  padding: 12px 14px;
-  border: 1.5px solid var(--borde-tipo-btn);
-  border-radius: 12px;
-  background: var(--superficie);
-  color: var(--texto);
-  text-align: left;
+  gap: 6px;
+  min-height: 96px;
+  padding: 14px 12px;
+  border: 1.5px solid var(--acento-suave-2);
+  border-radius: 14px;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  text-align: center;
   cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.08s ease;
 }
 
-.catalogo-cuadro:hover,
+.catalogo-cuadro:hover { background: var(--acento-suave-2); }
+
+/* Se hunde al tocarlo: en el celular es la única confirmación de que el dedo
+   cayó donde debía */
 .catalogo-cuadro:active {
-  background: var(--acento-suave);
-  border-color: var(--acento);
+  transform: scale(0.97);
+  background: var(--acento-suave-2);
 }
 
 .cuadro-nombre {
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.3;
+  color: var(--texto);
 }
 
 .cuadro-precio {
-  font-size: 1.3rem;
+  font-size: 1.45rem;
   font-weight: 700;
   color: var(--acento-texto);
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .catalogo-item {

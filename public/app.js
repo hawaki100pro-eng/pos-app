@@ -307,13 +307,19 @@ async function abrirCatalogo(modo) {
 
   const soloGenerales = modo === 'generales';
   const buscador = document.getElementById('catalogo-buscar');
+  const modal = document.getElementById('catalogo-modal');
   document.getElementById('catalogo-titulo').textContent = soloGenerales ? 'General' : 'Seleccionar producto';
   // Las categorías son pocas: un buscador ahí solo estorbaría
   buscador.classList.toggle('hidden', soloGenerales);
   buscador.value = '';
+  // La ventana se ajusta al contenido en vez de ocupar la pantalla entera
+  modal.classList.toggle('modo-general', soloGenerales);
+  document.getElementById('catalogo-ayuda').classList.toggle('hidden', !soloGenerales);
+  // MAGICA ocupa la pantalla entera, así que no necesita oscurecer nada detrás
+  document.getElementById('catalogo-fondo').classList.toggle('hidden', !soloGenerales);
 
   renderCatalogoModal(productosParaCatalogo());
-  document.getElementById('catalogo-modal').classList.remove('hidden');
+  modal.classList.remove('hidden');
   if (!soloGenerales) buscador.focus(); // listo para teclear el código de la etiqueta
 }
 
@@ -326,9 +332,14 @@ function productosParaCatalogo() {
 document.getElementById('buscar-catalogo-btn').addEventListener('click', () => abrirCatalogo('todos'));
 document.getElementById('general-btn').addEventListener('click', () => abrirCatalogo('generales'));
 
-document.getElementById('cerrar-catalogo-btn').addEventListener('click', () => {
+function cerrarCatalogo() {
   document.getElementById('catalogo-modal').classList.add('hidden');
-});
+  document.getElementById('catalogo-fondo').classList.add('hidden');
+}
+
+document.getElementById('cerrar-catalogo-btn').addEventListener('click', cerrarCatalogo);
+// Tocar fuera del panel lo cierra, como en cualquier ventana
+document.getElementById('catalogo-fondo').addEventListener('click', cerrarCatalogo);
 
 // Minúsculas y sin tildes, para que "cafe" encuentre "Café"
 function normalizarTexto(t) {
@@ -374,7 +385,7 @@ function renderCatalogoModal(productos) {
       `;
       cuadro.addEventListener('click', () => {
         agregarProductoALaVenta(p);
-        document.getElementById('catalogo-modal').classList.add('hidden');
+        cerrarCatalogo();
       });
       lista.appendChild(cuadro);
     });
@@ -403,7 +414,7 @@ function renderCatalogoModal(productos) {
       inputProducto.dataset.stockMax = p.controla_stock ? p.stock : '';
       document.getElementById('item-precio').value = p.precio;
       document.getElementById('item-cantidad').value = 1;
-      document.getElementById('catalogo-modal').classList.add('hidden');
+      cerrarCatalogo();
       document.getElementById('item-cantidad').focus();
     });
     lista.appendChild(card);
