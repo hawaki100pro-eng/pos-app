@@ -1217,6 +1217,48 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   max-width: 600px;
 }
 
+/* Panel General: cuadros grandes, varios por fila, para tocar sin apuntar */
+.catalogo-cuadros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.catalogo-cuadro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--borde-tipo-btn);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  text-align: left;
+  cursor: pointer;
+}
+
+.catalogo-cuadro:hover,
+.catalogo-cuadro:active {
+  background: var(--acento-suave);
+  border-color: var(--acento);
+}
+
+.cuadro-nombre {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.cuadro-precio {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--acento-texto);
+  line-height: 1.1;
+}
+
 .catalogo-item {
   border: 1px solid var(--borde-tarjeta);
   border-radius: 10px;

@@ -102,6 +102,12 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
           MAGICA
         </button>
+        <!-- Las categorías sueltas son pocas y se venden a diario: aquí van en
+             cuadros grandes, a un toque, sin buscarlas entre todas las tallas. -->
+        <button id="general-btn" type="button" class="btn-secundario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          General
+        </button>
         <!-- Con pistola no hace falta tocar nada: el lector escribe el código y da
              Enter, y app.js lo reconoce por la velocidad de las teclas. Este botón
              es para leer la etiqueta con la cámara del celular. -->
@@ -318,10 +324,11 @@
     <button id="logout-btn-a" class="logout-pie">Salir</button>
   </div>
 
-  <!-- Modal catálogo para vendedor -->
+  <!-- Modal catálogo para vendedor. Sirve para las dos puertas: MAGICA lo abre
+       con todo el catálogo, y General solo con las categorías sueltas. -->
   <div id="catalogo-modal" class="container hidden">
     <div class="top-bar">
-      <h2>Seleccionar producto</h2>
+      <h2 id="catalogo-titulo">Seleccionar producto</h2>
       <button id="cerrar-catalogo-btn">Cerrar</button>
     </div>
     <input type="text" id="catalogo-buscar" placeholder="Buscar por modelo, talla o color...">

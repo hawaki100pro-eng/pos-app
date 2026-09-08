@@ -295,14 +295,36 @@ document.getElementById('agregar-item-btn').addEventListener('click', () => {
 
 let productosDisponibles = [];
 
-document.getElementById('buscar-catalogo-btn').addEventListener('click', async () => {
+// El modal se abre de dos maneras:
+//   'todos'     → MAGICA: el catálogo completo, con buscador
+//   'generales' → General: solo las categorías sueltas, en cuadros grandes
+let modoCatalogo = 'todos';
+
+async function abrirCatalogo(modo) {
+  modoCatalogo = modo;
   const res = await fetch('/api/productos/disponibles');
   productosDisponibles = await res.json();
-  document.getElementById('catalogo-buscar').value = '';
-  renderCatalogoModal(productosDisponibles);
+
+  const soloGenerales = modo === 'generales';
+  const buscador = document.getElementById('catalogo-buscar');
+  document.getElementById('catalogo-titulo').textContent = soloGenerales ? 'General' : 'Seleccionar producto';
+  // Las categorías son pocas: un buscador ahí solo estorbaría
+  buscador.classList.toggle('hidden', soloGenerales);
+  buscador.value = '';
+
+  renderCatalogoModal(productosParaCatalogo());
   document.getElementById('catalogo-modal').classList.remove('hidden');
-  document.getElementById('catalogo-buscar').focus(); // listo para teclear el código de la etiqueta
-});
+  if (!soloGenerales) buscador.focus(); // listo para teclear el código de la etiqueta
+}
+
+function productosParaCatalogo() {
+  return modoCatalogo === 'generales'
+    ? productosDisponibles.filter((p) => !p.controla_stock)
+    : productosDisponibles;
+}
+
+document.getElementById('buscar-catalogo-btn').addEventListener('click', () => abrirCatalogo('todos'));
+document.getElementById('general-btn').addEventListener('click', () => abrirCatalogo('generales'));
 
 document.getElementById('cerrar-catalogo-btn').addEventListener('click', () => {
   document.getElementById('catalogo-modal').classList.add('hidden');
@@ -317,7 +339,7 @@ function normalizarTexto(t) {
 // Así "chunky negro", "CHUNKY 37" o "a-001 38" encuentran lo esperado.
 document.getElementById('catalogo-buscar').addEventListener('input', (e) => {
   const palabras = normalizarTexto(e.target.value).split(/\s+/).filter(Boolean);
-  const filtrados = productosDisponibles.filter((p) => {
+  const filtrados = productosParaCatalogo().filter((p) => {
     const texto = normalizarTexto(`${p.modelo} ${p.talla} ${p.color}`);
     return palabras.every((palabra) => texto.includes(palabra));
   });
@@ -326,11 +348,39 @@ document.getElementById('catalogo-buscar').addEventListener('input', (e) => {
 
 function renderCatalogoModal(productos) {
   const lista = document.getElementById('catalogo-lista');
+  const soloGenerales = modoCatalogo === 'generales';
+  lista.className = soloGenerales ? 'catalogo-cuadros' : '';
   lista.innerHTML = '';
+
   if (productos.length === 0) {
-    lista.innerHTML = '<p style="text-align:center;color:#888;">Sin resultados</p>';
+    lista.innerHTML = soloGenerales
+      ? `<p style="text-align:center;color:#888;">Todavía no hay categorías generales.<br>
+         Se crean en el inventario marcando «Es una categoría suelta».</p>`
+      : '<p style="text-align:center;color:#888;">Sin resultados</p>';
     return;
   }
+
+  // En modo General cada categoría es un cuadro grande con su nombre y precio,
+  // y un toque la manda directo a la nota: son las que más se venden y no tiene
+  // sentido pasar por los campos de abajo.
+  if (soloGenerales) {
+    productos.forEach((p) => {
+      const cuadro = document.createElement('button');
+      cuadro.type = 'button';
+      cuadro.className = 'catalogo-cuadro';
+      cuadro.innerHTML = `
+        <span class="cuadro-nombre">${p.modelo}</span>
+        <span class="cuadro-precio">$${Number(p.precio).toFixed(2)}</span>
+      `;
+      cuadro.addEventListener('click', () => {
+        agregarProductoALaVenta(p);
+        document.getElementById('catalogo-modal').classList.add('hidden');
+      });
+      lista.appendChild(cuadro);
+    });
+    return;
+  }
+
   // Tarjetas táctiles: se toca en cualquier parte de la tarjeta para seleccionar (pensado para móvil)
   productos.forEach((p) => {
     const card = document.createElement('div');
@@ -417,6 +467,52 @@ let escaneando = false;
 let resaltado = null;            // id del producto recién escaneado
 let temporizadorResaltado = null;
 
+/* Mete un producto del catálogo en la nota de venta. Lo usan el escaneo y el
+   panel General, así los dos se comportan igual: si ya está en la lista sube la
+   cantidad en vez de repetir la línea, y respeta el tope de stock.
+
+   conPitido es true al escanear, porque ahí la vendedora está mirando el zapato
+   y no la pantalla. Al tocar en pantalla ya ve lo que pasó, y un pitido por cada
+   toque sería ruido en la tienda. */
+function agregarProductoALaVenta(p, { conPitido = false } = {}) {
+  const nombre = p.nombre || nombreProducto(p);
+  // Una categoría suelta no tiene tope: queda en null y el recuadro de cantidad
+  // la deja subir libremente.
+  const tope = p.controla_stock ? p.stock : null;
+  const yaEsta = items.find((i) => i.producto_id === p.id);
+
+  if (yaEsta) {
+    if (tope != null && yaEsta.cantidad + 1 > tope) {
+      if (conPitido) pitido(false);
+      mensajeVenta(`Solo quedan ${tope} de ${nombre} en el sistema.`, true);
+      return false;
+    }
+    yaEsta.cantidad++;
+    yaEsta.stock_max = tope;   // por si otra vendedora movió el stock entretanto
+  } else {
+    items.push({
+      producto: nombre,
+      cantidad: 1,
+      precio_unitario: Number(p.precio),
+      precio_lista: Number(p.precio),   // el del catálogo, para calcular el descuento
+      producto_id: p.id,
+      stock_max: tope,
+    });
+  }
+
+  // La línea recién agregada se resalta un momento: si salió la talla
+  // equivocada, se ve al toque y no al final de la venta.
+  resaltado = p.id;
+  clearTimeout(temporizadorResaltado);
+  temporizadorResaltado = setTimeout(() => { resaltado = null; renderItems(); }, 2500);
+
+  renderItems();
+  if (conPitido) pitido(true);
+  const cuantos = yaEsta ? ` (x${yaEsta.cantidad})` : '';
+  mensajeVenta(`${nombre} · $${Number(p.precio).toFixed(2)}${cuantos}`, false);
+  return true;
+}
+
 async function escanear(codigo) {
   if (escaneando) return;          // no encimar dos lecturas
   escaneando = true;
@@ -435,40 +531,7 @@ async function escanear(codigo) {
       return mensajeVenta(data.error || 'No se pudo leer el código', true);
     }
 
-    // Si ya está en la lista, sube la cantidad en vez de repetir la línea
-    const nombre = data.nombre || nombreProducto(data);
-    // Cuánto se puede vender de esto. Una categoría suelta no tiene tope, así
-    // que queda en null y el recuadro de cantidad la deja subir libremente.
-    const tope = data.controla_stock ? data.stock : null;
-    const yaEsta = items.find((i) => i.producto_id === data.id);
-    if (yaEsta) {
-      if (tope != null && yaEsta.cantidad + 1 > tope) {
-        pitido(false);
-        return mensajeVenta(`Solo quedan ${tope} de ${nombre} en el sistema.`, true);
-      }
-      yaEsta.cantidad++;
-      yaEsta.stock_max = tope;   // por si otra vendedora movió el stock entretanto
-    } else {
-      items.push({
-        producto: nombre,
-        cantidad: 1,
-        precio_unitario: Number(data.precio),
-        precio_lista: Number(data.precio),   // el del catálogo, para calcular el descuento
-        producto_id: data.id,
-        stock_max: tope,
-      });
-    }
-
-    // La línea recién escaneada se resalta un momento: si salió la talla
-    // equivocada, se ve al toque y no al final de la venta.
-    resaltado = data.id;
-    clearTimeout(temporizadorResaltado);
-    temporizadorResaltado = setTimeout(() => { resaltado = null; renderItems(); }, 2500);
-
-    renderItems();
-    pitido(true);
-    const cuantos = yaEsta ? ` (x${yaEsta.cantidad})` : '';
-    mensajeVenta(`${nombre} · $${Number(data.precio).toFixed(2)}${cuantos}`, false);
+    agregarProductoALaVenta(data, { conPitido: true });
   } finally {
     escaneando = false;
   }
