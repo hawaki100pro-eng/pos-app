@@ -1263,7 +1263,7 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 }
 
 .catalogo-ayuda {
-  margin: 2px 0 14px;
+  margin: 10px 0 2px;
   font-size: 0.82rem;
   color: var(--texto-suave);
 }

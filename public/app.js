@@ -309,8 +309,12 @@ async function abrirCatalogo(modo) {
   const buscador = document.getElementById('catalogo-buscar');
   const modal = document.getElementById('catalogo-modal');
   document.getElementById('catalogo-titulo').textContent = soloGenerales ? 'General' : 'Seleccionar producto';
-  // Las categorías son pocas: un buscador ahí solo estorbaría
-  buscador.classList.toggle('hidden', soloGenerales);
+  // Los dos modos buscan, pero cada uno dentro de lo suyo: General nunca mezcla
+  // las sandalias con stock (ver productosParaCatalogo)
+  buscador.classList.remove('hidden');
+  buscador.placeholder = soloGenerales
+    ? 'Buscar categoría...'
+    : 'Buscar por modelo, talla o color...';
   buscador.value = '';
   // La ventana se ajusta al contenido en vez de ocupar la pantalla entera
   modal.classList.toggle('modo-general', soloGenerales);
@@ -320,7 +324,10 @@ async function abrirCatalogo(modo) {
 
   renderCatalogoModal(productosParaCatalogo());
   modal.classList.remove('hidden');
-  if (!soloGenerales) buscador.focus(); // listo para teclear el código de la etiqueta
+  // En General no se enfoca el buscador: el teclado del celular taparía los
+  // cuadros, y lo normal ahí es tocar, no escribir. En MAGICA sí, que se entra
+  // a teclear el código de la etiqueta.
+  if (!soloGenerales) buscador.focus();
 }
 
 function productosParaCatalogo() {
@@ -364,7 +371,10 @@ function renderCatalogoModal(productos) {
   lista.innerHTML = '';
 
   if (productos.length === 0) {
-    lista.innerHTML = soloGenerales
+    // "No hay ninguna" y "tu búsqueda no encontró nada" son problemas distintos
+    // y se resuelven distinto: conviene no darle el mismo mensaje a los dos.
+    const buscando = document.getElementById('catalogo-buscar').value.trim() !== '';
+    lista.innerHTML = (soloGenerales && !buscando)
       ? `<p style="text-align:center;color:#888;">Todavía no hay categorías generales.<br>
          Se crean en el inventario marcando «Es una categoría suelta».</p>`
       : '<p style="text-align:center;color:#888;">Sin resultados</p>';
