@@ -855,24 +855,27 @@ function renderItems() {
         <span class="item-nombre">${item.producto} — $${subtotal.toFixed(2)}</span>
         ${dcto ? `<span class="item-descuento">antes $${dcto.lista.toFixed(2)} · rebaja $${dcto.dolares.toFixed(2)} (${dcto.porcentaje.toFixed(1)}%)</span>` : ''}
       </div>
-      <label class="item-cantidad-campo">
-        <span>x</span>
-        <input type="number" min="1" step="1" inputmode="numeric" value="${item.cantidad}"
-               aria-label="Cantidad de ${item.producto}">
-      </label>
-      <label class="item-precio-campo">
-        <span>$</span>
-        <input type="number" min="0" step="0.01" value="${item.precio_unitario.toFixed(2)}"
-               aria-label="Precio de ${item.producto}">
-      </label>
-      <button class="quitar-item-btn">Quitar</button>
+      <div class="item-controles">
+        <div class="paso-cantidad">
+          <button type="button" class="paso" data-paso="-1" aria-label="Quitar uno" ${item.cantidad <= 1 ? 'disabled' : ''}>−</button>
+          <input type="number" min="1" step="1" inputmode="numeric" value="${item.cantidad}"
+                 aria-label="Cantidad de ${item.producto}">
+          <button type="button" class="paso" data-paso="1" aria-label="Agregar uno">+</button>
+        </div>
+        <label class="item-precio-campo">
+          <span>$</span>
+          <input type="number" min="0" step="0.01" inputmode="decimal" value="${item.precio_unitario.toFixed(2)}"
+                 aria-label="Precio de ${item.producto}">
+        </label>
+        <button class="quitar-item-btn" aria-label="Quitar ${item.producto}">Quitar</button>
+      </div>
     `;
 
-    // Para vender tres pares iguales se escribe 3 aquí, en vez de pasar la
-    // pistola tres veces. Se aplica al salir del campo, no en cada tecla.
-    const campoCantidad = row.querySelector('.item-cantidad-campo input');
-    campoCantidad.addEventListener('change', () => {
-      const nueva = parseInt(campoCantidad.value, 10);
+    const campoCantidad = row.querySelector('.paso-cantidad input');
+
+    // Un solo camino para cambiar la cantidad, lo toque quien lo toque: los
+    // botones de − y +, o el número escrito a mano.
+    function fijarCantidad(nueva) {
       if (!Number.isInteger(nueva) || nueva < 1) {
         campoCantidad.value = item.cantidad;
         return;
@@ -887,10 +890,18 @@ function renderItems() {
       }
       item.cantidad = nueva;
       renderItems();
+    }
+
+    // Los botones evitan el teclado, que en el celular tapa media pantalla:
+    // para dos o tres pares es más rápido tocar + que escribir.
+    row.querySelectorAll('.paso').forEach((btn) => {
+      btn.addEventListener('click', () => fijarCantidad(item.cantidad + Number(btn.dataset.paso)));
     });
 
-    // Se actualiza al salir del campo, no en cada tecla: si no, al escribir "3"
-    // para llegar a 30 la línea se recalcularía con un precio de 3
+    // Se aplica al salir del campo, no en cada tecla: si no, al escribir "12"
+    // la línea se recalcularía primero con 1.
+    campoCantidad.addEventListener('change', () => fijarCantidad(parseInt(campoCantidad.value, 10)));
+
     const campoPrecio = row.querySelector('.item-precio-campo input');
     campoPrecio.addEventListener('change', () => {
       const nuevo = parseFloat(campoPrecio.value);
@@ -900,6 +911,12 @@ function renderItems() {
       }
       item.precio_unitario = nuevo;
       renderItems();
+    });
+
+    // Al tocar un número se selecciona entero: así escribir 30 lo reemplaza,
+    // en vez de dejar 15.0030 según dónde haya caído el cursor.
+    [campoCantidad, campoPrecio].forEach((campo) => {
+      campo.addEventListener('focus', () => campo.select());
     });
 
     row.querySelector('.quitar-item-btn').addEventListener('click', () => {

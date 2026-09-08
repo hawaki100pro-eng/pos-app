@@ -365,40 +365,101 @@ th, td {
   flex: none;
 }
 
-/* Cantidad editable: para vender tres pares iguales sin escanear tres veces */
-.item-cantidad-campo {
+/* Controles de la línea: cantidad, precio y quitar, en su propio renglón con
+   sitio de sobra para el dedo. Todo aquí mide 44 px de alto, que es el tamaño
+   por debajo del cual se empieza a fallar el toque en un celular. */
+.item-controles {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.85rem;
-  color: var(--texto-suave);
-  font-weight: 600;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
-.item-cantidad-campo input {
-  width: 62px;
-  padding: 6px 8px;
-  font-size: 0.9rem;
-  text-align: right;
+/* Cantidad con − y +: para dos o tres pares es más rápido tocar que escribir,
+   y sobre todo evita que el teclado numérico tape media pantalla. */
+.paso-cantidad {
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid var(--borde-campo);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--campo);
 }
+
+.paso-cantidad .paso {
+  width: 38px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.paso-cantidad .paso:hover { background: var(--acento-suave-2); }
+.paso-cantidad .paso:active { transform: scale(0.94); }
+
+/* Al llegar a uno se apaga: bajar de ahí sería quitar la línea, y para eso
+   está el botón Quitar. */
+.paso-cantidad .paso:disabled {
+  background: var(--superficie-2);
+  color: var(--texto-tenue);
+  cursor: default;
+  transform: none;
+}
+
+.paso-cantidad input {
+  width: 46px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.paso-cantidad input:focus { outline: none; }
+
+/* Se quitan las flechitas del navegador: ya están los botones de − y + */
+.paso-cantidad input::-webkit-outer-spin-button,
+.paso-cantidad input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.paso-cantidad input { -moz-appearance: textfield; appearance: textfield; }
 
 /* Precio editable: aquí se baja el precio para hacer un descuento */
 .item-precio-campo {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   margin-right: auto;   /* el precio a la izquierda, Quitar a la derecha */
-  font-size: 0.85rem;
+  padding: 0 10px 0 12px;
+  min-height: 44px;
+  border: 1.5px solid var(--borde-campo);
+  border-radius: 999px;
+  background: var(--campo);
+  font-size: 1rem;
   color: var(--texto-suave);
-  font-weight: 600;
+  font-weight: 700;
 }
 
+.item-precio-campo:focus-within { border-color: var(--acento); }
+
 .item-precio-campo input {
-  width: 78px;
-  padding: 6px 8px;
-  font-size: 0.9rem;
+  width: 68px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 1.05rem;
+  font-weight: 700;
   text-align: right;
 }
+
+.item-precio-campo input:focus { outline: none; }
 
 .descuento-resumen {
   color: var(--acento-texto);
@@ -408,13 +469,16 @@ th, td {
 
 .descuento-resumen:empty { display: none; }
 
-.item-row button {
+/* Solo el de Quitar va en rojo: los de − y + de la cantidad son otra cosa y
+   antes esta regla los pintaba a ellos también. */
+.item-row .quitar-item-btn {
   background: #dc2626;
-  padding: 4px 10px;
-  font-size: 0.85rem;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 0.9rem;
 }
 
-.item-row button:hover { background: #b91c1c; }
+.item-row .quitar-item-btn:hover { background: #b91c1c; }
 
 #caja-abierta-card {
   display: flex;
