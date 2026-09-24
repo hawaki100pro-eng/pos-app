@@ -862,11 +862,13 @@ function renderItems() {
                  aria-label="Cantidad de ${item.producto}">
           <button type="button" class="paso" data-paso="1" aria-label="Agregar uno">+</button>
         </div>
-        <label class="item-precio-campo">
-          <span>$</span>
+        <div class="paso-precio">
+          <button type="button" class="paso" data-paso-precio="-1" aria-label="Bajar precio" ${item.precio_unitario <= 0 ? 'disabled' : ''}>−</button>
+          <span class="paso-precio-signo">$</span>
           <input type="number" min="0" step="0.01" inputmode="decimal" value="${item.precio_unitario.toFixed(2)}"
                  aria-label="Precio de ${item.producto}">
-        </label>
+          <button type="button" class="paso" data-paso-precio="1" aria-label="Subir precio">+</button>
+        </div>
         <button class="quitar-item-btn" aria-label="Quitar ${item.producto}">Quitar</button>
       </div>
     `;
@@ -894,7 +896,7 @@ function renderItems() {
 
     // Los botones evitan el teclado, que en el celular tapa media pantalla:
     // para dos o tres pares es más rápido tocar + que escribir.
-    row.querySelectorAll('.paso').forEach((btn) => {
+    row.querySelectorAll('.paso-cantidad .paso').forEach((btn) => {
       btn.addEventListener('click', () => fijarCantidad(item.cantidad + Number(btn.dataset.paso)));
     });
 
@@ -902,16 +904,25 @@ function renderItems() {
     // la línea se recalcularía primero con 1.
     campoCantidad.addEventListener('change', () => fijarCantidad(parseInt(campoCantidad.value, 10)));
 
-    const campoPrecio = row.querySelector('.item-precio-campo input');
-    campoPrecio.addEventListener('change', () => {
-      const nuevo = parseFloat(campoPrecio.value);
+    const campoPrecio = row.querySelector('.paso-precio input');
+
+    // El mismo camino para el precio, lo toque quien lo toque: los botones de
+    // − y + (de a $1), o el monto escrito a mano (admite centavos).
+    function fijarPrecio(nuevo) {
+      nuevo = Math.round(nuevo * 100) / 100; // evita colas como 5.999999
       if (isNaN(nuevo) || nuevo < 0) {
         campoPrecio.value = item.precio_unitario.toFixed(2);
         return;
       }
       item.precio_unitario = nuevo;
       renderItems();
+    }
+
+    row.querySelectorAll('.paso-precio .paso').forEach((btn) => {
+      btn.addEventListener('click', () => fijarPrecio(item.precio_unitario + Number(btn.dataset.pasoPrecio)));
     });
+
+    campoPrecio.addEventListener('change', () => fijarPrecio(parseFloat(campoPrecio.value)));
 
     // Al tocar un número se selecciona entero: así escribir 30 lo reemplaza,
     // en vez de dejar 15.0030 según dónde haya caído el cursor.

@@ -378,7 +378,8 @@ th, td {
 
 /* Cantidad con − y +: para dos o tres pares es más rápido tocar que escribir,
    y sobre todo evita que el teclado numérico tape media pantalla. */
-.paso-cantidad {
+.paso-cantidad,
+.paso-precio {
   display: flex;
   align-items: stretch;
   border: 1.5px solid var(--borde-campo);
@@ -387,7 +388,8 @@ th, td {
   background: var(--campo);
 }
 
-.paso-cantidad .paso {
+.paso-cantidad .paso,
+.paso-precio .paso {
   width: 38px;
   min-height: 44px;
   padding: 0;
@@ -400,12 +402,15 @@ th, td {
   line-height: 1;
 }
 
-.paso-cantidad .paso:hover { background: var(--acento-suave-2); }
-.paso-cantidad .paso:active { transform: scale(0.94); }
+.paso-cantidad .paso:hover,
+.paso-precio .paso:hover { background: var(--acento-suave-2); }
+.paso-cantidad .paso:active,
+.paso-precio .paso:active { transform: scale(0.94); }
 
-/* Al llegar a uno se apaga: bajar de ahí sería quitar la línea, y para eso
-   está el botón Quitar. */
-.paso-cantidad .paso:disabled {
+/* En cantidad, al llegar a uno se apaga: bajar de ahí sería quitar la línea, y
+   para eso está el botón Quitar. En precio, se apaga en $0. */
+.paso-cantidad .paso:disabled,
+.paso-precio .paso:disabled {
   background: var(--superficie-2);
   color: var(--texto-tenue);
   cursor: default;
@@ -424,42 +429,43 @@ th, td {
   text-align: center;
 }
 
-.paso-cantidad input:focus { outline: none; }
+.paso-cantidad input:focus,
+.paso-precio input:focus { outline: none; }
 
 /* Se quitan las flechitas del navegador: ya están los botones de − y + */
 .paso-cantidad input::-webkit-outer-spin-button,
-.paso-cantidad input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.paso-cantidad input { -moz-appearance: textfield; appearance: textfield; }
+.paso-cantidad input::-webkit-inner-spin-button,
+.paso-precio input::-webkit-outer-spin-button,
+.paso-precio input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.paso-cantidad input,
+.paso-precio input { -moz-appearance: textfield; appearance: textfield; }
 
-/* Precio editable: aquí se baja el precio para hacer un descuento */
-.item-precio-campo {
+/* Precio con − y +: aquí se sube o baja el precio (de a $1 con los botones,
+   o con centavos escribiéndolo). El signo $ va pegado al monto. */
+.paso-precio {
+  margin-right: auto;   /* el precio a la izquierda, Quitar a la derecha */
+}
+
+.paso-precio-signo {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-right: auto;   /* el precio a la izquierda, Quitar a la derecha */
-  padding: 0 10px 0 12px;
-  min-height: 44px;
-  border: 1.5px solid var(--borde-campo);
-  border-radius: 999px;
-  background: var(--campo);
-  font-size: 1rem;
+  padding-left: 10px;
   color: var(--texto-suave);
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
-.item-precio-campo:focus-within { border-color: var(--acento); }
-
-.item-precio-campo input {
-  width: 68px;
-  padding: 0;
+.paso-precio input {
+  width: 62px;
+  min-height: 44px;
+  padding: 0 8px 0 2px;
   border: none;
+  border-radius: 0;
   background: none;
   font-size: 1.05rem;
   font-weight: 700;
-  text-align: right;
+  text-align: left;
 }
-
-.item-precio-campo input:focus { outline: none; }
 
 .descuento-resumen {
   color: var(--acento-texto);
