@@ -445,6 +445,9 @@ function renderCatalogoModal(productos) {
   // y un toque la manda directo a la nota: son las que más se venden y no tiene
   // sentido pasar por los campos de abajo.
   if (soloGenerales) {
+    // Paleta con todas las categorías de la vista: colores únicos, sin repetir,
+    // y con la misma regla que el inventario para que coincidan.
+    const paleta = paletaCategorias(productos.map((p) => partirModelo(p.modelo).familia));
     productos.forEach((p) => {
       const cuadro = document.createElement('button');
       cuadro.type = 'button';
@@ -455,9 +458,11 @@ function renderCatalogoModal(productos) {
       `;
       // Cada categoría con su color propio (el mismo que en el inventario),
       // para reconocerla de un vistazo al registrar.
-      const tono = colorFamilia(partirModelo(p.modelo).familia);
-      cuadro.style.background = tono.fondo;
-      cuadro.style.borderLeft = `6px solid ${tono.borde}`;
+      const tono = paleta.get(partirModelo(p.modelo).familia);
+      if (tono) {
+        cuadro.style.background = tono.fondo;
+        cuadro.style.borderLeft = `6px solid ${tono.borde}`;
+      }
       cuadro.addEventListener('click', () => {
         agregarProductoALaVenta(p);
         cerrarCatalogo();
@@ -1649,18 +1654,23 @@ function partirModelo(modelo) {
   return { familia: nombre.slice(0, i).trim(), codigo: nombre.slice(i).trim() };
 }
 
-// Color propio y estable por categoría (familia): el mismo nombre da siempre
-// el mismo tono, para reconocer la categoría de un vistazo. Se usa tanto en el
-// inventario como en los cuadros de la vista General.
-function colorFamilia(familia) {
-  const nombre = String(familia ?? '');
-  let h = 0;
-  for (let i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
-  const tono = h % 360;
-  return {
-    borde: `hsl(${tono}, 70%, 50%)`,
-    fondo: `hsla(${tono}, 70%, 55%, 0.16)`,
-  };
+// Paleta de categorías: reparte los tonos en partes iguales del círculo de
+// color según la lista de categorías, así NINGÚN color se repite. Se ordena
+// por nombre para que el resultado sea estable y coincida entre el inventario
+// y la vista General (ambas parten de las mismas categorías sueltas).
+function paletaCategorias(nombres) {
+  const unicos = [...new Set(nombres.map((n) => String(n ?? '')))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  const total = unicos.length || 1;
+  const mapa = new Map();
+  unicos.forEach((nombre, i) => {
+    const tono = Math.round((i * 360) / total);
+    mapa.set(nombre, {
+      borde: `hsl(${tono}, 70%, 50%)`,
+      fondo: `hsla(${tono}, 70%, 55%, 0.16)`,
+    });
+  });
+  return mapa;
 }
 
 async function cargarProductos() {
@@ -1731,6 +1741,16 @@ function renderInventario() {
 
   const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
 
+  // Solo las categorías sueltas (sin stock) llevan color, y ninguno se repite:
+  // se arma la paleta con esas familias antes de dibujar.
+  const familiasSueltas = [];
+  familias.forEach((porModelo, familia) => {
+    let stock = 0;
+    porModelo.forEach((porColor) => porColor.forEach((items) => (stock += sumaStock(items))));
+    if (stock === 0) familiasSueltas.push(familia);
+  });
+  const paleta = paletaCategorias(familiasSueltas);
+
   familias.forEach((porModelo, familia) => {
   // Buscando, todo se abre solo: si no, habría que ir tocando familia por familia
   // para ver qué coincidió. Al limpiar vuelve el estado manual.
@@ -1740,10 +1760,10 @@ function renderInventario() {
   const trFamilia = document.createElement('tr');
   trFamilia.className = 'grupo-familia';
   trFamilia.innerHTML = `<td colspan="6">${familiaAbierta ? '▾' : '▸'} ${familia} <span class="grupo-info">${porModelo.size} modelo(s) · ${todosFamilia.length} variante(s) · stock total: ${sumaStock(todosFamilia)}</span></td>`;
-  // Solo las categorías sueltas (sin stock) llevan color propio, para
-  // reconocerlas de un vistazo. Las que tienen stock quedan con el fondo normal.
-  if (sumaStock(todosFamilia) === 0) {
-    const tono = colorFamilia(familia);
+  // Las categorías con stock quedan con el fondo normal; las sueltas, con su
+  // color único de la paleta.
+  const tono = paleta.get(familia);
+  if (tono) {
     trFamilia.firstElementChild.style.background = tono.fondo;
     trFamilia.firstElementChild.style.borderLeft = `6px solid ${tono.borde}`;
   }
