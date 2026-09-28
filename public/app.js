@@ -300,6 +300,23 @@ let productosDisponibles = [];
 //   'generales' → General: solo las categorías sueltas, en cuadros grandes
 let modoCatalogo = 'todos';
 
+// En General las categorías sueltas se separan en pestañas por grupo. Orden fijo
+// para que las pestañas siempre salgan igual; "otros" va al final.
+const ORDEN_GRUPOS = ['sandalias', 'zapatillas', 'otros'];
+let grupoCatalogoActivo = null;
+
+// El grupo de un producto, normalizado: lo que no sea sandalias/zapatillas es "otros",
+// así una categoría sin grupo (o con un valor raro) siempre cae en una pestaña.
+function grupoDe(p) {
+  const g = String(p.grupo || 'otros').toLowerCase();
+  return g === 'sandalias' || g === 'zapatillas' ? g : 'otros';
+}
+
+function etiquetaGrupo(grupo) {
+  const g = String(grupo || 'otros').toLowerCase();
+  return g === 'sandalias' ? 'Sandalias' : g === 'zapatillas' ? 'Zapatillas' : 'Otros';
+}
+
 async function abrirCatalogo(modo) {
   modoCatalogo = modo;
   const res = await fetch('/api/productos/disponibles');
@@ -322,6 +339,19 @@ async function abrirCatalogo(modo) {
   // MAGICA ocupa la pantalla entera, así que no necesita oscurecer nada detrás
   document.getElementById('catalogo-fondo').classList.toggle('hidden', !soloGenerales);
 
+  // Pestañas por grupo: solo en General. Se arman con los grupos que de verdad
+  // tienen categorías, en el orden fijo (sandalias, zapatillas, otros).
+  const cajaGrupos = document.getElementById('catalogo-grupos');
+  if (soloGenerales) {
+    const sueltas = productosDisponibles.filter((p) => !p.controla_stock);
+    const presentes = ORDEN_GRUPOS.filter((g) => sueltas.some((p) => grupoDe(p) === g));
+    // Si la pestaña que estaba activa ya no tiene productos, se pasa a la primera
+    if (!presentes.includes(grupoCatalogoActivo)) grupoCatalogoActivo = presentes[0] || null;
+    renderGruposTabs(presentes);
+  } else {
+    cajaGrupos.classList.add('hidden');
+  }
+
   renderCatalogoModal(productosParaCatalogo());
   modal.classList.remove('hidden');
   // En General no se enfoca el buscador: el teclado del celular taparía los
@@ -331,9 +361,36 @@ async function abrirCatalogo(modo) {
 }
 
 function productosParaCatalogo() {
-  return modoCatalogo === 'generales'
-    ? productosDisponibles.filter((p) => !p.controla_stock)
-    : productosDisponibles;
+  if (modoCatalogo !== 'generales') return productosDisponibles;
+  // Solo las categorías sueltas del grupo elegido en las pestañas
+  return productosDisponibles.filter((p) => !p.controla_stock && grupoDe(p) === grupoCatalogoActivo);
+}
+
+// Dibuja las pestañas de grupo del panel General. Con un solo grupo no aparecen:
+// no tendría sentido una pestaña sola.
+function renderGruposTabs(presentes) {
+  const cont = document.getElementById('catalogo-grupos');
+  cont.innerHTML = '';
+  if (presentes.length <= 1) {
+    cont.classList.add('hidden');
+    return;
+  }
+  cont.classList.remove('hidden');
+  presentes.forEach((g) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'grupo-tab' + (g === grupoCatalogoActivo ? ' activa' : '');
+    btn.textContent = etiquetaGrupo(g);
+    btn.addEventListener('click', () => {
+      grupoCatalogoActivo = g;
+      renderGruposTabs(presentes);
+      // Al cambiar de pestaña se respeta lo que haya escrito en el buscador
+      const palabras = normalizarTexto(document.getElementById('catalogo-buscar').value)
+        .split(/\s+/).filter(Boolean);
+      renderCatalogoModal(productosParaCatalogo().filter((p) => coincideEnCatalogo(p, palabras)));
+    });
+    cont.appendChild(btn);
+  });
 }
 
 document.getElementById('buscar-catalogo-btn').addEventListener('click', () => abrirCatalogo('todos'));
@@ -1788,6 +1845,9 @@ function aplicarModoCategoria() {
   document.getElementById('prod-modelo').placeholder = suelta
     ? 'Nombre (ej: Zapatilla de dama)'
     : 'Modelo (ej: Sandalia Roma)';
+  // El grupo solo aplica a las categorías sueltas: se muestra solo cuando el
+  // producto es una categoría suelta.
+  document.getElementById('grupo-fila').classList.toggle('hidden', !suelta);
 }
 
 chkSinStock.addEventListener('change', aplicarModoCategoria);
@@ -2018,7 +2078,7 @@ function crearFilaProducto(p) {
     // En celular el CSS oculta modelo y color (ya se leen en las cabeceras del grupo) y deja
     // talla, precio y stock en una sola línea, por eso cada celda lleva su clase.
     tr.innerHTML = `
-      <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
+      <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${suelta ? `<span class="badge-grupo">${etiquetaGrupo(p.grupo)}</span>` : ''}${notaEliminado}</td>
       <td class="celda-talla">${suelta ? '—' : p.talla}</td>
       <td class="celda-color">${suelta ? '—' : p.color}</td>
       <td class="celda-precio">$${p.precio.toFixed(2)}</td>
@@ -2137,6 +2197,14 @@ async function editarProducto(p) {
     if (color === null) return;
   }
 
+  // El grupo separa el panel General en pestañas. El servidor normaliza lo escrito:
+  // cualquier cosa que no sea sandalias/zapatillas cae en "otros".
+  let grupo = p.grupo;
+  if (suelta) {
+    grupo = window.prompt('Grupo (sandalias / zapatillas / otros):', p.grupo || 'otros');
+    if (grupo === null) return;
+  }
+
   const precioStr = window.prompt('Precio:', p.precio);
   if (precioStr === null) return;
 
@@ -2172,6 +2240,7 @@ async function editarProducto(p) {
       precio,
       stock,
       controla_stock: p.controla_stock ? true : false,
+      grupo,
     }),
   });
   if (!res.ok) { const d = await res.json(); alert(d.error); return; }
@@ -2196,6 +2265,7 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const precio = parseFloat(document.getElementById('prod-precio').value);
   const stock = parseInt(document.getElementById('prod-stock').value, 10);
   const controla_stock = !document.getElementById('prod-sin-stock').checked;
+  const grupo = document.getElementById('prod-grupo').value;
 
   if (!modelo || isNaN(precio) || precio < 0) {
     msg.textContent = 'Escribe al menos el nombre y el precio';
@@ -2211,7 +2281,7 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const res = await fetch('/api/productos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modelo, talla, color, precio, stock, controla_stock }),
+    body: JSON.stringify({ modelo, talla, color, precio, stock, controla_stock, grupo }),
   });
   const data = await res.json();
   if (!res.ok) {

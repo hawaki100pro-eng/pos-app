@@ -779,6 +779,15 @@ app.get('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   res.json(r.rows);
 });
 
+// El grupo solo tiene sentido en las categorías sueltas (Sandalias / Zapatillas /
+// Otros, para las pestañas del panel General). Cualquier valor que no sea uno de
+// los conocidos cae en 'otros', así una categoría suelta siempre tiene grupo y
+// nunca desaparece del panel.
+function normalizarGrupo(valor) {
+  const g = String(valor || '').trim().toLowerCase();
+  return g === 'sandalias' || g === 'zapatillas' ? g : 'otros';
+}
+
 app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   const { modelo, precio } = req.body;
   // Una categoría suelta no tiene talla, ni color, ni stock: es un solo producto
@@ -787,6 +796,8 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   const talla = controlaStock ? req.body.talla : '';
   const color = controlaStock ? req.body.color : '';
   const stock = controlaStock ? req.body.stock : 0;
+  // Solo las categorías sueltas llevan grupo; las tallas con stock lo dejan en null.
+  const grupo = controlaStock ? null : normalizarGrupo(req.body.grupo);
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -805,15 +816,15 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   );
   if (existente.rows[0]) {
     const r = await pool.query(
-      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1 WHERE id = $3 RETURNING *',
-      [Math.round(stock), precio, existente.rows[0].id]
+      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1, grupo = $3 WHERE id = $4 RETURNING *',
+      [Math.round(stock), precio, grupo, existente.rows[0].id]
     );
     return res.status(200).json({ ...r.rows[0], stock_sumado: Math.round(stock) });
   }
 
   const r = await pool.query(
-    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock]
+    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock, grupo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, grupo]
   );
 
   // El código de la etiqueta se pone en un segundo paso, y aparte: si fallara,
@@ -833,7 +844,7 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
 app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const { modelo, precio } = req.body;
 
-  const actual = await pool.query('SELECT stock, controla_stock FROM productos WHERE id = $1', [req.params.id]);
+  const actual = await pool.query('SELECT stock, controla_stock, grupo FROM productos WHERE id = $1', [req.params.id]);
   if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
   // Si no viene en el cuerpo se conserva lo que ya tenía: así una edición que no
@@ -844,6 +855,11 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const talla = controlaStock ? req.body.talla : '';
   const color = controlaStock ? req.body.color : '';
   const stock = controlaStock ? req.body.stock : 0;
+  // El grupo solo aplica a categorías sueltas. Si no viene en el cuerpo se conserva
+  // el que ya tenía, para no borrarlo en una edición que no lo toca.
+  const grupo = controlaStock
+    ? null
+    : (req.body.grupo == null ? actual.rows[0].grupo : normalizarGrupo(req.body.grupo));
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -862,9 +878,9 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const r = await pool.query(
     // Si el stock se corrige hacia abajo, las etiquetas impresas no pueden quedar por encima
     `UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5,
-       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6
-     WHERE id=$7 RETURNING *`,
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, req.params.id]
+       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6, grupo=$7
+     WHERE id=$8 RETURNING *`,
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, grupo, req.params.id]
   );
   res.json(r.rows[0]);
 });

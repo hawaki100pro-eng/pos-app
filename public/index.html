@@ -301,6 +301,17 @@
         Tarjeta de precios
       </button>
     </label>
+
+    <!-- Grupo de la categoría suelta: separa el panel General en pestañas.
+         Solo se habilita cuando "Es una categoría suelta" está marcado. -->
+    <label class="opcion-grupo" id="grupo-fila">
+      <span>Grupo:</span>
+      <select id="prod-grupo">
+        <option value="sandalias">Sandalias (incluye tacones, corcho, plataformas, baletas…)</option>
+        <option value="zapatillas">Zapatillas</option>
+        <option value="otros">Otros</option>
+      </select>
+    </label>
     <p id="producto-msg"></p>
 
     <!-- Va aparte del formulario de arriba a propósito: mezclarlo con los campos
@@ -336,6 +347,9 @@
       <button id="cerrar-catalogo-btn">Cerrar</button>
     </div>
     <input type="text" id="catalogo-buscar" placeholder="Buscar por modelo, talla o color...">
+    <!-- Pestañas por grupo (Sandalias / Zapatillas / Otros). Solo aparecen en el
+         panel General y cuando hay más de un grupo con productos. -->
+    <div id="catalogo-grupos" class="catalogo-grupos hidden"></div>
     <p id="catalogo-ayuda" class="catalogo-ayuda hidden">Toca una para agregarla a la venta</p>
     <div id="catalogo-lista" style="margin-top:12px;"></div>
   </div>

@@ -124,6 +124,38 @@ async function init() {
   // Todo lo demás (precio, nombre, búsqueda, descuentos) funciona como siempre.
   await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS controla_stock INTEGER NOT NULL DEFAULT 1`);
 
+  // Migración: grupo de la categoría suelta, para separar el panel General en
+  // pestañas (Sandalias / Zapatillas / Otros). Solo aplica a las categorías
+  // sueltas; las tallas con stock no lo usan. Una categoría sin grupo se muestra
+  // en "Otros", así nunca desaparece del panel.
+  //
+  // La primera vez se intenta adivinar el grupo por el nombre, para no dejar al
+  // admin clasificando todo desde cero: lo que diga "zapatilla" va a zapatillas;
+  // sandalias, tacones, corcho, plataformas y baletas van a sandalias; el resto
+  // queda sin grupo (aparece en "Otros") para que el admin lo asigne a mano.
+  // El translate() quita las tildes, así "tacón" y "plataforma" se reconocen
+  // aunque estén acentuadas. El candado en configuracion es imprescindible: sin
+  // él este relleno se repetiría en cada arranque y pisaría lo que el admin haya
+  // corregido después.
+  await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS grupo TEXT`);
+  const gruposListos = await pool.query(
+    "SELECT clave FROM configuracion WHERE clave = 'grupos_categorias_inicializado'"
+  );
+  if (gruposListos.rowCount === 0) {
+    await pool.query(`
+      UPDATE productos SET grupo = 'zapatillas'
+       WHERE controla_stock = 0 AND grupo IS NULL
+         AND translate(lower(modelo), 'áéíóúü', 'aeiouu') LIKE '%zapatilla%'
+    `);
+    await pool.query(`
+      UPDATE productos SET grupo = 'sandalias'
+       WHERE controla_stock = 0 AND grupo IS NULL
+         AND translate(lower(modelo), 'áéíóúü', 'aeiouu') ~ '(sandalia|sandal|tacon|corcho|plataforma|baleta)'
+    `);
+    await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('grupos_categorias_inicializado', '1')");
+    console.log('Grupos de categorías: se preclasificaron las categorías sueltas por su nombre');
+  }
+
   // Migración: cuántas etiquetas se imprimieron ya de cada talla. Lo que falta
   // etiquetar es la resta contra el stock, así al ingresar mercadería nueva solo
   // salen los pares nuevos y no hay que reimprimir todo el modelo.

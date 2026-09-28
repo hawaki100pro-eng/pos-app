@@ -987,6 +987,43 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   font-size: 0.82rem;
 }
 
+/* Selector de grupo de la categoría suelta: sale debajo de la casilla y solo
+   cuando el producto es una categoría suelta (JS le pone/quita .hidden). */
+.opcion-grupo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0 4px;
+  font-size: 0.85rem;
+  color: var(--texto-suave-2);
+  font-weight: 600;
+}
+
+.opcion-grupo select {
+  flex: 1 1 auto;
+  min-width: 180px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--borde-campo);
+  border-radius: 8px;
+  background: var(--campo);
+  color: var(--texto);
+  font-size: 0.9rem;
+}
+
+/* Etiqueta del grupo en la tabla del inventario, junto al nombre de la categoría */
+.badge-grupo {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 /* Los campos que no aplican a una categoría se apagan en vez de desaparecer:
    así no salta la maqueta al marcar la casilla */
 .item-row-nueva input:disabled {
@@ -1336,6 +1373,39 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   margin: 10px 0 2px;
   font-size: 0.82rem;
   color: var(--texto-suave);
+}
+
+/* Pestañas por grupo del panel General. Se envuelven en pantallas angostas para
+   no forzar scroll horizontal. */
+.catalogo-grupos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 2px;
+}
+
+.grupo-tab {
+  flex: 1 1 auto;
+  min-width: 96px;
+  padding: 9px 14px;
+  border: 1.5px solid var(--acento-suave-2);
+  border-radius: 999px;
+  background: var(--campo);
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.grupo-tab:hover { background: var(--acento-suave); }
+
+/* La pestaña activa se rellena con el acento, para que se vea de un vistazo cuál
+   grupo se está mirando */
+.grupo-tab.activa {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
 }
 
 .catalogo-cuadros {
