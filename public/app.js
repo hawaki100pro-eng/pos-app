@@ -453,6 +453,11 @@ function renderCatalogoModal(productos) {
         <span class="cuadro-nombre">${p.modelo}</span>
         <span class="cuadro-precio">$${Number(p.precio).toFixed(2)}</span>
       `;
+      // Cada categoría con su color propio (el mismo que en el inventario),
+      // para reconocerla de un vistazo al registrar.
+      const tono = colorFamilia(partirModelo(p.modelo).familia);
+      cuadro.style.background = tono.fondo;
+      cuadro.style.borderLeft = `6px solid ${tono.borde}`;
       cuadro.addEventListener('click', () => {
         agregarProductoALaVenta(p);
         cerrarCatalogo();
@@ -1644,6 +1649,20 @@ function partirModelo(modelo) {
   return { familia: nombre.slice(0, i).trim(), codigo: nombre.slice(i).trim() };
 }
 
+// Color propio y estable por categoría (familia): el mismo nombre da siempre
+// el mismo tono, para reconocer la categoría de un vistazo. Se usa tanto en el
+// inventario como en los cuadros de la vista General.
+function colorFamilia(familia) {
+  const nombre = String(familia ?? '');
+  let h = 0;
+  for (let i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
+  const tono = h % 360;
+  return {
+    borde: `hsl(${tono}, 70%, 50%)`,
+    fondo: `hsla(${tono}, 70%, 55%, 0.16)`,
+  };
+}
+
 async function cargarProductos() {
   const res = await fetch('/api/productos');
   if (!res.ok) return;
@@ -1711,18 +1730,6 @@ function renderInventario() {
   });
 
   const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
-
-  // Color propio y estable por categoría (familia): el mismo nombre da siempre
-  // el mismo tono, para reconocer la categoría de un vistazo al registrar.
-  const colorFamilia = (familia) => {
-    let h = 0;
-    for (let i = 0; i < familia.length; i++) h = (h * 31 + familia.charCodeAt(i)) >>> 0;
-    const tono = h % 360;
-    return {
-      borde: `hsl(${tono}, 70%, 50%)`,
-      fondo: `hsla(${tono}, 70%, 55%, 0.16)`,
-    };
-  };
 
   familias.forEach((porModelo, familia) => {
   // Buscando, todo se abre solo: si no, habría que ir tocando familia por familia
