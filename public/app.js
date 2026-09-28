@@ -1712,6 +1712,18 @@ function renderInventario() {
 
   const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
 
+  // Color propio y estable por categoría (familia): el mismo nombre da siempre
+  // el mismo tono, para reconocer la categoría de un vistazo al registrar.
+  const colorFamilia = (familia) => {
+    let h = 0;
+    for (let i = 0; i < familia.length; i++) h = (h * 31 + familia.charCodeAt(i)) >>> 0;
+    const tono = h % 360;
+    return {
+      borde: `hsl(${tono}, 70%, 50%)`,
+      fondo: `hsla(${tono}, 70%, 55%, 0.16)`,
+    };
+  };
+
   familias.forEach((porModelo, familia) => {
   // Buscando, todo se abre solo: si no, habría que ir tocando familia por familia
   // para ver qué coincidió. Al limpiar vuelve el estado manual.
@@ -1721,6 +1733,13 @@ function renderInventario() {
   const trFamilia = document.createElement('tr');
   trFamilia.className = 'grupo-familia';
   trFamilia.innerHTML = `<td colspan="6">${familiaAbierta ? '▾' : '▸'} ${familia} <span class="grupo-info">${porModelo.size} modelo(s) · ${todosFamilia.length} variante(s) · stock total: ${sumaStock(todosFamilia)}</span></td>`;
+  // Solo las categorías sueltas (sin stock) llevan color propio, para
+  // reconocerlas de un vistazo. Las que tienen stock quedan con el fondo normal.
+  if (sumaStock(todosFamilia) === 0) {
+    const tono = colorFamilia(familia);
+    trFamilia.firstElementChild.style.background = tono.fondo;
+    trFamilia.firstElementChild.style.borderLeft = `6px solid ${tono.borde}`;
+  }
   trFamilia.addEventListener('click', () => {
     if (familiaAbierta) familiasAbiertas.delete(familia);
     else familiasAbiertas.add(familia);
