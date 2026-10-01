@@ -107,6 +107,9 @@ async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   detenerRefrescoAuto();
   items = [];
+  // Que el próximo usuario no herede la campana del anterior
+  ventasNuevas = [];
+  campanaYaCargada = false;
   loginScreen.classList.remove('hidden');
   loginScreen.prepend(logoHawaki);
   vendedorScreen.classList.add('hidden');
@@ -1121,8 +1124,43 @@ function puedeRefrescar() {
 // dispositivo. No interrumpe: solo late y suma. Las ventas propias no cuentan.
 // Lo último que se marcó como visto se recuerda por usuario en este dispositivo.
 let ventasNuevas = [];
+// La primera carga tras entrar no suena: solo suenan las ventas que llegan después
+let campanaYaCargada = false;
 
 const campanaBtn = document.getElementById('campana-btn');
+
+// "Ding" de dos notas, hecho con el propio navegador (sin archivos de audio).
+// Los navegadores no dejan sonar nada hasta que se toca la página una vez:
+// al iniciar sesión ya hay ese toque; tras recargar, el primer toque lo activa.
+let audioCampana = null;
+
+function prepararAudio() {
+  try {
+    audioCampana = audioCampana || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCampana.state === 'suspended') audioCampana.resume();
+  } catch { /* navegador sin audio: la campana sigue funcionando en silencio */ }
+}
+
+['pointerdown', 'keydown'].forEach((evento) => document.addEventListener(evento, prepararAudio));
+
+function sonarCampana() {
+  prepararAudio();
+  if (!audioCampana || audioCampana.state !== 'running') return;
+  [880, 1320].forEach((frecuencia, i) => {
+    const oscilador = audioCampana.createOscillator();
+    const volumen = audioCampana.createGain();
+    oscilador.type = 'sine';
+    oscilador.frequency.value = frecuencia;
+    oscilador.connect(volumen);
+    volumen.connect(audioCampana.destination);
+    const inicio = audioCampana.currentTime + i * 0.15;
+    volumen.gain.setValueAtTime(0.0001, inicio);
+    volumen.gain.exponentialRampToValueAtTime(0.35, inicio + 0.02);
+    volumen.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.5);
+    oscilador.start(inicio);
+    oscilador.stop(inicio + 0.55);
+  });
+}
 const campanaLista = document.getElementById('campana-lista');
 
 function escaparHtml(texto) {
@@ -1161,7 +1199,10 @@ async function cargarCampana() {
   }
   const yaContadas = new Set(ventasNuevas.map((v) => v.id));
   ventasNuevas = ventas.filter((v) => v.id > vista && v.vendedor !== usuarioActual);
-  pintarCampana(ventasNuevas.some((v) => !yaContadas.has(v.id)));
+  const entroUnaNueva = ventasNuevas.some((v) => !yaContadas.has(v.id));
+  if (entroUnaNueva && campanaYaCargada) sonarCampana();
+  campanaYaCargada = true;
+  pintarCampana(entroUnaNueva);
 }
 
 function pintarCampana(entroUnaNueva) {
