@@ -96,6 +96,7 @@ function mostrarPantalla(user) {
     document.getElementById('venta-slot-vendedor').appendChild(ventaForm);
     cargarEstadoCaja();
     cargarMisVentas();
+    iniciarRefrescoAuto(); // sus ventas aparecen solas, sin recargar
   }
 }
 
@@ -1116,10 +1117,18 @@ function iniciarRefrescoAuto() {
   detenerRefrescoAuto();
   refrescoAutoId = setInterval(() => {
     if (!puedeRefrescar()) return;
-    cargarDashboard();
-    cargarGastos();
-    cargarProductos();
-    cargarEstadoCaja();
+    if (rolActual === 'admin' || rolActual === 'dueno') {
+      cargarDashboard();
+      cargarGastos();
+      cargarProductos();
+      cargarEstadoCaja();
+    } else {
+      // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
+      // en otro dispositivo (o por él mismo en otra pestaña) aparecen con su botón
+      // de Imprimir sin tener que recargar.
+      cargarMisVentas();
+      cargarEstadoCaja();
+    }
   }, REFRESCO_SEGUNDOS * 1000);
 }
 
