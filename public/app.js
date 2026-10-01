@@ -8,6 +8,7 @@ let items = []; // { producto, cantidad, precio_unitario }
 let editandoItems = []; // ítems en edición dentro del modal de editar venta
 let editandoVentaId = null;
 let rolActual = null;
+let usuarioActual = null;
 
 // El servidor guarda y devuelve las fechas en UTC; esto las muestra en hora de Ecuador (UTC-5)
 function formatFecha(fechaStr) {
@@ -69,6 +70,7 @@ function armarSaludo(usuario) {
 function mostrarPantalla(user) {
   const rol = user.rol;
   rolActual = rol;
+  usuarioActual = user.usuario;
   loginScreen.classList.add('hidden');
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
@@ -88,6 +90,7 @@ function mostrarPantalla(user) {
     if (rol === 'dueno') cargarUsuarios();
     cargarGastos();
     cargarProductos();
+    cargarCampana();
     iniciarRefrescoAuto(); // las ventas de los vendedores aparecen solas
   } else {
     vendedorScreen.classList.remove('hidden');
@@ -1113,12 +1116,111 @@ function puedeRefrescar() {
   return true;
 }
 
+// --- Campanita de ventas nuevas (admin y dueño) ---
+// Cuenta las ventas de los vendedores que todavía no se miraron en este
+// dispositivo. No interrumpe: solo late y suma. Las ventas propias no cuentan.
+// Lo último que se marcó como visto se recuerda por usuario en este dispositivo.
+let ventasNuevas = [];
+
+const campanaBtn = document.getElementById('campana-btn');
+const campanaLista = document.getElementById('campana-lista');
+
+function escaparHtml(texto) {
+  const div = document.createElement('div');
+  div.textContent = texto == null ? '' : String(texto);
+  return div.innerHTML;
+}
+
+function claveUltimaVista() {
+  return `ultimaVentaVista:${usuarioActual}`;
+}
+
+function leerUltimaVista() {
+  try {
+    const valor = localStorage.getItem(claveUltimaVista());
+    return valor == null ? null : Number(valor);
+  } catch {
+    return null;
+  }
+}
+
+function guardarUltimaVista(id) {
+  try { localStorage.setItem(claveUltimaVista(), String(id)); } catch { /* sin almacenamiento: solo dura la sesión */ }
+}
+
+async function cargarCampana() {
+  if (rolActual !== 'admin' && rolActual !== 'dueno') return;
+  const res = await fetch('/api/ventas/recientes');
+  if (!res.ok) return;
+  const ventas = await res.json();
+  let vista = leerUltimaVista();
+  if (vista == null) {
+    // Primera vez en este dispositivo: arranca en cero en vez de avisar de todo el historial
+    vista = ventas.reduce((max, v) => Math.max(max, v.id), 0);
+    guardarUltimaVista(vista);
+  }
+  const yaContadas = new Set(ventasNuevas.map((v) => v.id));
+  ventasNuevas = ventas.filter((v) => v.id > vista && v.vendedor !== usuarioActual);
+  pintarCampana(ventasNuevas.some((v) => !yaContadas.has(v.id)));
+}
+
+function pintarCampana(entroUnaNueva) {
+  const contador = document.getElementById('campana-contador');
+  const total = ventasNuevas.length;
+  contador.textContent = total > 99 ? '99+' : String(total);
+  contador.classList.toggle('hidden', total === 0);
+  campanaBtn.title = total ? `${total} venta(s) nueva(s)` : 'Sin ventas nuevas';
+  if (entroUnaNueva) {
+    // Se quita y se vuelve a poner la clase para que la animación arranque de nuevo
+    campanaBtn.classList.remove('campana-late');
+    void campanaBtn.offsetWidth;
+    campanaBtn.classList.add('campana-late');
+  }
+  pintarListaCampana();
+}
+
+function pintarListaCampana() {
+  if (!ventasNuevas.length) {
+    campanaLista.innerHTML = '<p class="campana-vacia">Sin ventas nuevas</p>';
+    return;
+  }
+  campanaLista.innerHTML = ventasNuevas.map((v) => {
+    const total = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
+    const metodo = v.metodo_pago === 'transferencia' ? 'Transferencia' : 'Efectivo';
+    return `<div class="campana-item">
+      <strong>${escaparHtml(v.vendedor)}</strong> vendió <strong>${total}</strong>
+      <div class="campana-item-detalle">#${v.id} · ${metodo} · ${escaparHtml(v.cliente || 'Consumidor final')} · ${formatFecha(v.fecha)}
+        <a href="print.html?id=${v.id}" target="_blank">Imprimir</a></div>
+    </div>`;
+  }).join('') + '<button type="button" id="campana-vistas" class="campana-vistas">Marcar como vistas</button>';
+  document.getElementById('campana-vistas').addEventListener('click', () => {
+    guardarUltimaVista(ventasNuevas.reduce((max, v) => Math.max(max, v.id), leerUltimaVista() || 0));
+    ventasNuevas = [];
+    pintarCampana(false);
+    campanaLista.classList.add('hidden');
+  });
+}
+
+campanaBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  pintarListaCampana();
+  campanaLista.classList.toggle('hidden');
+});
+
+// Tocar fuera de la lista la cierra
+document.addEventListener('click', (e) => {
+  if (!campanaLista.classList.contains('hidden') && !campanaLista.contains(e.target)) {
+    campanaLista.classList.add('hidden');
+  }
+});
+
 function refrescarDatos() {
   if (rolActual === 'admin' || rolActual === 'dueno') {
     cargarDashboard();
     cargarGastos();
     cargarProductos();
     cargarEstadoCaja();
+    cargarCampana();
   } else {
     // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
     // en otro dispositivo (o por él mismo en otra pestaña) aparecen con su botón
@@ -1153,7 +1255,14 @@ function refrescarPorAviso() {
 function conectarAvisos() {
   if (fuenteEventos || typeof EventSource === 'undefined') return;
   fuenteEventos = new EventSource('/api/eventos');
-  fuenteEventos.addEventListener('cambio', refrescarPorAviso);
+  fuenteEventos.addEventListener('cambio', (e) => {
+    // La campana no toca ningún campo, así que se actualiza al momento aunque
+    // se esté escribiendo; el resto de la pantalla espera su turno.
+    let area = null;
+    try { area = JSON.parse(e.data).area; } catch { /* aviso sin área */ }
+    if (area === 'ventas') cargarCampana();
+    refrescarPorAviso();
+  });
   // Al reconectar tras un corte pudo perderse algún aviso: se pone al día
   let primeraConexion = true;
   fuenteEventos.addEventListener('open', () => {
