@@ -1113,28 +1113,75 @@ function puedeRefrescar() {
   return true;
 }
 
+function refrescarDatos() {
+  if (rolActual === 'admin' || rolActual === 'dueno') {
+    cargarDashboard();
+    cargarGastos();
+    cargarProductos();
+    cargarEstadoCaja();
+  } else {
+    // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
+    // en otro dispositivo (o por él mismo en otra pestaña) aparecen con su botón
+    // de Imprimir sin tener que recargar.
+    cargarMisVentas();
+    cargarEstadoCaja();
+  }
+}
+
+// --- Avisos instantáneos del servidor ---
+// El servidor avisa apenas alguien vende, anula o cambia algo, y la pantalla se
+// actualiza al momento. El refresco cada 20 s queda de respaldo por si la
+// conexión se cae.
+let fuenteEventos = null;
+let avisoPendienteId = null;
+
+// Si el aviso llega mientras se está escribiendo o con un modal abierto, se
+// espera a que termine en vez de interrumpir.
+function refrescarPorAviso() {
+  if (avisoPendienteId) return; // ya hay uno esperando turno
+  const intentar = () => {
+    avisoPendienteId = null;
+    if (!puedeRefrescar()) {
+      avisoPendienteId = setTimeout(intentar, 2000);
+      return;
+    }
+    refrescarDatos();
+  };
+  intentar();
+}
+
+function conectarAvisos() {
+  if (fuenteEventos || typeof EventSource === 'undefined') return;
+  fuenteEventos = new EventSource('/api/eventos');
+  fuenteEventos.addEventListener('cambio', refrescarPorAviso);
+  // Al reconectar tras un corte pudo perderse algún aviso: se pone al día
+  let primeraConexion = true;
+  fuenteEventos.addEventListener('open', () => {
+    if (!primeraConexion) refrescarPorAviso();
+    primeraConexion = false;
+  });
+}
+
+function desconectarAvisos() {
+  if (fuenteEventos) fuenteEventos.close();
+  fuenteEventos = null;
+  if (avisoPendienteId) clearTimeout(avisoPendienteId);
+  avisoPendienteId = null;
+}
+
 function iniciarRefrescoAuto() {
   detenerRefrescoAuto();
+  conectarAvisos();
   refrescoAutoId = setInterval(() => {
     if (!puedeRefrescar()) return;
-    if (rolActual === 'admin' || rolActual === 'dueno') {
-      cargarDashboard();
-      cargarGastos();
-      cargarProductos();
-      cargarEstadoCaja();
-    } else {
-      // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
-      // en otro dispositivo (o por él mismo en otra pestaña) aparecen con su botón
-      // de Imprimir sin tener que recargar.
-      cargarMisVentas();
-      cargarEstadoCaja();
-    }
+    refrescarDatos();
   }, REFRESCO_SEGUNDOS * 1000);
 }
 
 function detenerRefrescoAuto() {
   if (refrescoAutoId) clearInterval(refrescoAutoId);
   refrescoAutoId = null;
+  desconectarAvisos();
 }
 
 async function cargarDashboard() {

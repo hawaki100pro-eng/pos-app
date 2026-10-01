@@ -45,6 +45,51 @@ function requireDueño(req, res, next) {
   next();
 }
 
+// --- Avisos en tiempo real (Server-Sent Events) ---
+// Cada navegador deja abierta una conexión a /api/eventos. Cuando un cambio
+// (venta, anulación, caja, gasto, producto...) termina bien, el servidor manda
+// un aviso cortito con el área que cambió y cada pantalla recarga solo eso.
+// El aviso no lleva datos: cada uno vuelve a pedirlos con su propia sesión,
+// así un vendedor nunca recibe nada que no podría ver.
+// Si la conexión se cae, el navegador sigue con el refresco cada 20 s.
+
+const conexionesEventos = new Set();
+
+function avisarCambio(area) {
+  const mensaje = `event: cambio\ndata: ${JSON.stringify({ area })}\n\n`;
+  conexionesEventos.forEach((res) => res.write(mensaje));
+}
+
+app.get('/api/eventos', requireLogin, (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // que ningún proxy retenga los avisos
+  });
+  res.flushHeaders();
+  res.write('retry: 5000\n\n'); // si se corta, reintentar a los 5 s
+  conexionesEventos.add(res);
+  req.on('close', () => conexionesEventos.delete(res));
+});
+
+// Latido: Railway corta las conexiones que pasan mucho rato sin tráfico
+setInterval(() => {
+  conexionesEventos.forEach((res) => res.write(': ping\n\n'));
+}, 25 * 1000);
+
+// Toda escritura en /api que termine bien dispara el aviso. Así no hay que
+// acordarse de avisar en cada ruta nueva.
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || ['/login', '/logout'].includes(req.path)) return next();
+  // Se lee ahora: al terminar la respuesta, req.path ya vuelve a traer el /api
+  const area = req.path.split('/')[1] || 'otro'; // ventas, caja, gastos, productos...
+  res.on('finish', () => {
+    if (res.statusCode < 400) avisarCambio(area);
+  });
+  next();
+});
+
 async function getTurnoAbierto() {
   const r = await pool.query(`SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1`);
   return r.rows[0] || null;
