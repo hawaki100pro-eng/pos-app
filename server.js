@@ -396,6 +396,20 @@ app.get('/api/ventas/recientes', requireLogin, async (req, res) => {
     ORDER BY v.id DESC
     LIMIT 30
   `, soloMias ? [req.session.user.id] : []);
+  // Lo que lleva cada venta, para el resumen de la campanita (una sola consulta
+  // para las 30, en vez de una por venta)
+  const ids = r.rows.map((v) => v.id);
+  const detalle = ids.length
+    ? await pool.query(
+      'SELECT venta_id, producto, cantidad, precio_unitario FROM detalle_venta WHERE venta_id = ANY($1) ORDER BY id',
+      [ids]
+    )
+    : { rows: [] };
+  r.rows.forEach((v) => {
+    v.detalle = detalle.rows
+      .filter((d) => d.venta_id === v.id)
+      .map(({ producto, cantidad, precio_unitario }) => ({ producto, cantidad, precio_unitario }));
+  });
   res.json(r.rows);
 });
 

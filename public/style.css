@@ -1505,7 +1505,52 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   font-size: 0.82rem;
 }
 
-.campana-item a { color: var(--acento-texto); margin-left: 6px; }
+/* Lo que lleva la venta, como en la nota: cantidad × producto ..... total */
+.campana-productos {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--superficie-2);
+  font-size: 0.85rem;
+}
+
+.campana-producto {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.campana-producto span:first-child { overflow-wrap: anywhere; }
+.campana-producto span:last-child { white-space: nowrap; font-weight: 600; }
+.campana-producto-mas { color: var(--texto-suave); font-size: 0.8rem; margin-top: 2px; }
+
+/* Ver = solo contorno; Imprimir = relleno, porque es lo que más se toca */
+.campana-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.campana-accion {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--acento);
+  border-radius: 999px;
+  color: var(--acento-texto);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.campana-accion:hover { background: var(--acento-suave); }
+
+.campana-accion-principal {
+  background: var(--acento);
+  color: #fff;
+}
+
+.campana-accion-principal:hover { background: var(--acento-oscuro); }
 .campana-vacia { margin: 10px 0 4px; color: var(--texto-tenue); text-align: center; }
 
 .campana-vistas {

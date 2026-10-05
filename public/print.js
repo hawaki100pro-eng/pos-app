@@ -94,4 +94,14 @@
   proforma.classList.remove('hidden');
 
   document.getElementById('imprimir-btn').addEventListener('click', () => window.print());
+
+  // El botón "Imprimir" de la campanita abre esta página con ?imprimir=1: el
+  // cuadro de impresión sale solo y, al terminar, la pestaña se cierra y se
+  // vuelve al POS. Se espera a las fuentes: si no, la hoja puede salir con la
+  // tipografía provisional y los renglones corridos.
+  if (params.get('imprimir') === '1') {
+    try { await document.fonts.ready; } catch (e) { /* si falla, se imprime igual */ }
+    window.addEventListener('afterprint', () => window.close());
+    window.print();
+  }
 })();

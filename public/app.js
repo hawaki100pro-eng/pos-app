@@ -1228,10 +1228,21 @@ function pintarListaCampana() {
   campanaLista.innerHTML = ventasNuevas.map((v) => {
     const total = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
     const metodo = v.metodo_pago === 'transferencia' ? 'Transferencia' : 'Efectivo';
+    // Resumen de lo que lleva: "1 × Zapatilla Havaina #DESC   $14.00".
+    // Con muchas líneas se muestran 3 y se dice cuántas más hay.
+    const lineas = v.detalle || [];
+    const resumen = lineas.slice(0, 3).map((d) => `<div class="campana-producto">
+        <span>${d.cantidad} × ${escaparHtml(d.producto)}</span>
+        <span>$${(d.cantidad * d.precio_unitario).toFixed(2)}</span>
+      </div>`).join('') + (lineas.length > 3 ? `<div class="campana-producto-mas">y ${lineas.length - 3} producto(s) más</div>` : '');
     return `<div class="campana-item">
       <strong>${escaparHtml(v.vendedor)}</strong> vendió <strong>${total}</strong>
-      <div class="campana-item-detalle">#${v.id} · ${metodo} · ${escaparHtml(v.cliente || 'Consumidor final')} · ${formatFecha(v.fecha)}
-        <a href="print.html?id=${v.id}" target="_blank">Imprimir</a></div>
+      <div class="campana-item-detalle">#${v.id} · ${metodo} · ${escaparHtml(v.cliente || 'Consumidor final')} · ${formatFecha(v.fecha)}</div>
+      ${resumen ? `<div class="campana-productos">${resumen}</div>` : ''}
+      <div class="campana-acciones">
+        <a class="campana-accion" href="print.html?id=${v.id}" target="_blank">Ver</a>
+        <a class="campana-accion campana-accion-principal" href="print.html?id=${v.id}&imprimir=1" target="_blank">Imprimir</a>
+      </div>
     </div>`;
   }).join('') + '<button type="button" id="campana-vistas" class="campana-vistas">Marcar como vistas</button>';
   document.getElementById('campana-vistas').addEventListener('click', () => {
