@@ -203,8 +203,12 @@ app.post('/api/caja/cerrar', requireLogin, requireAdmin, async (req, res) => {
   const { conteo, motivo, monto_queda, transferencias_confirmadas } = req.body || {};
 
   // El conteo llega como { "2000": 10, "500": 9, ... } (centavos → cantidad)
+  // Sin conteo solo llega desde una pestaña abierta antes de que existiera el
+  // cuadre (cierra directo, sin la ventana de contar): se le dice que recargue
   if (!conteo || typeof conteo !== 'object') {
-    return res.status(400).json({ error: 'Falta el conteo del efectivo' });
+    return res.status(400).json({
+      error: 'Esta pantalla tiene una versión vieja del POS. Recarga la página (Ctrl + F5) y vuelve a tocar "Cerrar caja" para contar el efectivo.',
+    });
   }
   let contadoCentavos = 0;
   const conteoLimpio = {};
