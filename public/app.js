@@ -156,6 +156,12 @@ async function cargarEstadoCaja() {
   } else {
     cerradaMsg.classList.remove('hidden');
     formWrap.classList.add('hidden');
+    // Se sugiere abrir con el sencillo que se dejó en el último cierre (sin pisar
+    // lo que ya se esté escribiendo)
+    const inputInicial = document.getElementById('monto-inicial-input');
+    if (data.sugerido_inicial != null && inputInicial.value === '') {
+      inputInicial.value = Number(data.sugerido_inicial).toFixed(2);
+    }
   }
 }
 
@@ -1159,6 +1165,7 @@ function puedeRefrescar() {
   if (activo && ['INPUT', 'TEXTAREA'].includes(activo.tagName)) return false;
   if (!document.getElementById('catalogo-modal').classList.contains('hidden')) return false;
   if (!document.getElementById('editar-venta-modal').classList.contains('hidden')) return false;
+  if (!document.getElementById('cierre-caja-modal').classList.contains('hidden')) return false;
   if (document.hidden) return false;
   return true;
 }
@@ -1657,19 +1664,191 @@ document.getElementById('vaciar-caja-btn').addEventListener('click', async () =>
   cargarDashboard();
 });
 
-document.getElementById('cerrar-caja-btn').addEventListener('click', async () => {
+// --- Cierre de caja con cuadre ---
+// El sistema dice cuánto efectivo debería haber; se cuenta billete por billete
+// y se ve la diferencia al momento (verde cuadra, amarillo centavos, rojo desde
+// $1, que además pide motivo). El servidor vuelve a calcular todo al guardar.
+let resumenCierre = null;
+
+const cierreModal = document.getElementById('cierre-caja-modal');
+const cierreFondo = document.getElementById('cierre-caja-fondo');
+
+function etiquetaDenominacion(centavos) {
+  return centavos >= 100 ? `$${centavos / 100}` : `${centavos}¢`;
+}
+
+function textoDiferencia(dif) {
+  if (Math.abs(dif) < 0.005) return '$0.00';
+  return `${dif < 0 ? '−' : '+'}$${Math.abs(dif).toFixed(2)}`;
+}
+
+async function abrirCierreCaja() {
   const msg = document.getElementById('caja-msg');
-  const res = await fetch('/api/caja/cerrar', { method: 'POST' });
+  const res = await fetch('/api/caja/resumen-cierre');
   const data = await res.json();
   if (!res.ok) {
     msg.textContent = data.error;
     msg.className = 'error';
     return;
   }
-  msg.textContent = `Caja cerrada con $${data.monto_actual.toFixed(2)}`;
+  resumenCierre = data;
+
+  const filas = [
+    ['Monto inicial', data.monto_inicial],
+    [`+ Ventas en efectivo (${data.ventas_efectivo.cantidad})`, data.ventas_efectivo.total],
+    [`− Gastos (${data.gastos.cantidad})`, -data.gastos.total],
+  ];
+  // Si se vació la caja a mitad de turno, el desglose no cuadra solo: se muestra
+  if (Math.abs(data.ajustes) >= 0.005) filas.push(['Ajustes (caja vaciada en el turno)', data.ajustes]);
+  document.getElementById('cierre-resumen').innerHTML = filas.map(([texto, monto]) =>
+    `<div class="cierre-fila"><span>${texto}</span><span>${monto < 0 ? '−' : ''}$${Math.abs(monto).toFixed(2)}</span></div>`
+  ).join('') + `<div class="cierre-fila cierre-esperado"><span>Debería haber</span><span>$${data.esperado.toFixed(2)}</span></div>`;
+
+  document.getElementById('cierre-transfer-total').textContent = data.transferencias.total.toFixed(2);
+  document.getElementById('cierre-transferencias').classList.toggle('hidden', data.transferencias.cantidad === 0);
+  document.getElementById('cierre-transfer-ok').checked = false;
+
+  document.getElementById('cierre-conteo').innerHTML = data.denominaciones.map((c) =>
+    `<label class="cierre-denominacion"><span>${etiquetaDenominacion(c)} ×</span>
+      <input type="number" min="0" step="1" inputmode="numeric" data-centavos="${c}" placeholder="0"></label>`
+  ).join('');
+  document.querySelectorAll('#cierre-conteo input').forEach((input) => input.addEventListener('input', recalcularCierre));
+
+  // De sencillo se sugiere dejar lo mismo con que se abrió el turno
+  document.getElementById('cierre-queda').value = data.monto_inicial.toFixed(2);
+  const motivo = document.getElementById('cierre-motivo');
+  motivo.value = '';
+  document.getElementById('cierre-msg').textContent = '';
+  recalcularCierre();
+
+  cierreFondo.classList.remove('hidden');
+  cierreModal.classList.remove('hidden');
+  document.querySelector('#cierre-conteo input').focus();
+}
+
+function leerConteoCierre() {
+  const conteo = {};
+  let centavos = 0;
+  document.querySelectorAll('#cierre-conteo input').forEach((input) => {
+    const cantidad = Math.max(0, parseInt(input.value, 10) || 0);
+    if (cantidad) conteo[input.dataset.centavos] = cantidad;
+    centavos += Number(input.dataset.centavos) * cantidad;
+  });
+  return { conteo, contado: centavos / 100 };
+}
+
+function recalcularCierre() {
+  if (!resumenCierre) return;
+  const { contado } = leerConteoCierre();
+  const dif = Math.round((contado - resumenCierre.esperado) * 100) / 100;
+  const abs = Math.abs(dif);
+  const estado = abs < 0.005 ? 'cuadra' : abs < 1 ? 'centavos' : 'diferencia';
+  const mensaje = estado === 'cuadra' ? 'Cuadra exacto'
+    : dif < 0 ? (estado === 'centavos' ? 'Faltan unos centavos' : 'Falta efectivo')
+    : (estado === 'centavos' ? 'Sobran unos centavos' : 'Sobra efectivo');
+  const resultado = document.getElementById('cierre-resultado');
+  resultado.className = `cierre-resultado ${estado}`;
+  resultado.innerHTML = `<div class="cierre-fila"><span>Contado</span><strong>$${contado.toFixed(2)}</strong></div>
+    <div class="cierre-fila cierre-dif"><span>${mensaje}</span><span>${textoDiferencia(dif)}</span></div>`;
+  document.getElementById('cierre-motivo').classList.toggle('hidden', estado !== 'diferencia');
+
+  const queda = Math.max(0, parseFloat(document.getElementById('cierre-queda').value) || 0);
+  document.getElementById('cierre-retiro').textContent = Math.max(0, contado - queda).toFixed(2);
+}
+
+function cerrarVentanaCierre() {
+  cierreModal.classList.add('hidden');
+  cierreFondo.classList.add('hidden');
+  resumenCierre = null;
+}
+
+document.getElementById('cerrar-caja-btn').addEventListener('click', abrirCierreCaja);
+document.getElementById('cierre-cancelar').addEventListener('click', cerrarVentanaCierre);
+cierreFondo.addEventListener('click', cerrarVentanaCierre);
+document.getElementById('cierre-queda').addEventListener('input', recalcularCierre);
+document.getElementById('cierre-motivo').addEventListener('input', () => {
+  document.getElementById('cierre-msg').textContent = '';
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !cierreModal.classList.contains('hidden')) cerrarVentanaCierre();
+});
+
+document.getElementById('cierre-confirmar').addEventListener('click', async () => {
+  const msgCierre = document.getElementById('cierre-msg');
+  const { conteo, contado } = leerConteoCierre();
+  const dif = Math.round((contado - resumenCierre.esperado) * 100) / 100;
+  const motivo = document.getElementById('cierre-motivo').value.trim();
+  const queda = parseFloat(document.getElementById('cierre-queda').value) || 0;
+  if (Math.abs(dif) >= 1 && !motivo) {
+    msgCierre.textContent = 'La diferencia es de $1 o más: escribe el motivo antes de cerrar';
+    msgCierre.className = 'error';
+    document.getElementById('cierre-motivo').focus();
+    return;
+  }
+  if (queda < 0 || queda > contado) {
+    msgCierre.textContent = 'No puedes dejar de sencillo más de lo que contaste';
+    msgCierre.className = 'error';
+    return;
+  }
+
+  const res = await fetch('/api/caja/cerrar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      conteo,
+      motivo,
+      monto_queda: queda,
+      transferencias_confirmadas: document.getElementById('cierre-transfer-ok').checked,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    msgCierre.textContent = data.error;
+    msgCierre.className = 'error';
+    return;
+  }
+  cerrarVentanaCierre();
+  const msg = document.getElementById('caja-msg');
+  const resultado = Math.abs(data.diferencia) < 0.005 ? 'cuadró exacto'
+    : `${data.diferencia < 0 ? 'faltante' : 'sobrante'} $${Math.abs(data.diferencia).toFixed(2)}`;
+  msg.textContent = `Caja cerrada · contado $${data.monto_contado.toFixed(2)} · ${resultado} · retiro $${data.monto_retirado.toFixed(2)}`;
   msg.className = '';
+  document.getElementById('monto-inicial-input').value = data.monto_queda.toFixed(2);
   cargarDashboard();
   cargarEstadoCaja(); // al cerrar caja se oculta la Nota de venta del admin
+  if (document.getElementById('cierres-caja').open) cargarCierresCaja();
+});
+
+// Historial de cierres: se carga al desplegarlo
+async function cargarCierresCaja() {
+  const res = await fetch('/api/caja/historial');
+  if (!res.ok) return;
+  const cierres = await res.json();
+  const tbody = document.querySelector('#cierres-tabla tbody');
+  if (!cierres.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="cierres-vacio">Todavía no hay cierres</td></tr>';
+    return;
+  }
+  tbody.innerHTML = cierres.map((t) => {
+    // Los turnos cerrados antes del cuadre no tienen conteo: se dejan con guiones
+    const sinCuadre = t.monto_contado == null;
+    const dif = Number(t.diferencia) || 0;
+    const claseDif = sinCuadre ? '' : Math.abs(dif) < 0.005 ? 'cuadra' : Math.abs(dif) < 1 ? 'centavos' : 'diferencia';
+    const dinero = (n) => (n == null ? '—' : `$${Number(n).toFixed(2)}`);
+    return `<tr>
+      <td>${formatFecha(t.fecha_cierre)}</td>
+      <td>${escaparHtml(t.cerrado_por_usuario || '—')}</td>
+      <td>${dinero(t.monto_esperado)}</td>
+      <td>${dinero(t.monto_contado)}</td>
+      <td><span class="cierre-dif-badge ${claseDif}">${sinCuadre ? '—' : textoDiferencia(dif)}</span></td>
+      <td>${dinero(t.monto_retirado)}</td>
+      <td>${escaparHtml(t.motivo_diferencia || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('cierres-caja').addEventListener('toggle', (e) => {
+  if (e.target.open) cargarCierresCaja();
 });
 
 // --- Gastos (descuentan de la caja) ---

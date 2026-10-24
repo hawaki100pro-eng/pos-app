@@ -52,6 +52,14 @@
   --pago-transfer-fondo: #e0f2fe;
   --pago-transfer-borde: #0369a1;
   --pago-transfer-texto: #075985;
+
+  /* Cuadre de caja: amarillo centavos, rojo diferencia de $1 o más */
+  --cuadre-aviso-fondo: #fef9c3;
+  --cuadre-aviso-borde: #ca8a04;
+  --cuadre-aviso-texto: #854d0e;
+  --cuadre-mal-fondo: #fee2e2;
+  --cuadre-mal-borde: #dc2626;
+  --cuadre-mal-texto: #991b1b;
 }
 
 /* --- Modo noche --- */
@@ -106,6 +114,13 @@
   --pago-transfer-fondo: #14313d;
   --pago-transfer-borde: #38bdf8;
   --pago-transfer-texto: #7dd3fc;
+
+  --cuadre-aviso-fondo: #3a3110;
+  --cuadre-aviso-borde: #eab308;
+  --cuadre-aviso-texto: #fde047;
+  --cuadre-mal-fondo: #3d1f22;
+  --cuadre-mal-borde: #f87171;
+  --cuadre-mal-texto: #fca5a5;
 }
 
 * { box-sizing: border-box; }
@@ -1741,3 +1756,126 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 }
 
 .venta-registrada-cerrar:hover { color: var(--texto); }
+
+/* --- Cierre de caja con cuadre --- */
+.cierre-modal {
+  position: fixed;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(560px, calc(100vw - 24px));
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.cierre-modal h2 { margin: 0 0 6px; }
+
+.cierre-seccion {
+  margin: 16px 0 6px;
+  color: var(--acento-texto);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cierre-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.cierre-fila > :last-child { white-space: nowrap; }
+
+.cierre-esperado {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--borde-tarjeta);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.cierre-transferencias {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--pago-transfer-fondo);
+  color: var(--pago-transfer-texto);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.cierre-check { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.cierre-conteo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.cierre-denominacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--borde-tipo-btn);
+  border-radius: 8px;
+  background: var(--superficie-2);
+  font-weight: 600;
+}
+
+.cierre-denominacion span { white-space: nowrap; }
+.cierre-denominacion input { width: 58px; padding: 6px; text-align: center; }
+
+.cierre-resultado {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 2px solid;
+  border-radius: 12px;
+}
+
+.cierre-resultado.cuadra { background: var(--pago-efectivo-fondo); border-color: var(--pago-efectivo-borde); color: var(--pago-efectivo-texto); }
+.cierre-resultado.centavos { background: var(--cuadre-aviso-fondo); border-color: var(--cuadre-aviso-borde); color: var(--cuadre-aviso-texto); }
+.cierre-resultado.diferencia { background: var(--cuadre-mal-fondo); border-color: var(--cuadre-mal-borde); color: var(--cuadre-mal-texto); }
+
+.cierre-dif { font-weight: 700; }
+.cierre-dif span:last-child { font-size: 1.5rem; font-weight: 800; }
+
+#cierre-motivo { width: 100%; margin-top: 8px; }
+
+.cierre-queda input { width: 90px; margin-left: 4px; }
+
+.cierre-retiro { font-weight: 700; }
+
+.cierre-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* --- Historial de cierres --- */
+.cierres-caja { margin: 6px 0 14px; }
+
+.cierres-caja summary {
+  cursor: pointer;
+  color: var(--acento-texto);
+  font-weight: 700;
+}
+
+.tabla-scroll { overflow-x: auto; }
+.cierres-caja table { margin-top: 8px; font-size: 0.88rem; }
+.cierres-vacio { text-align: center; color: var(--texto-tenue); }
+
+.cierre-dif-badge { padding: 2px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+.cierre-dif-badge.cuadra { background: var(--pago-efectivo-fondo); color: var(--pago-efectivo-texto); }
+.cierre-dif-badge.centavos { background: var(--cuadre-aviso-fondo); color: var(--cuadre-aviso-texto); }
+.cierre-dif-badge.diferencia { background: var(--cuadre-mal-fondo); color: var(--cuadre-mal-texto); }

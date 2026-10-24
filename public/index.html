@@ -255,6 +255,19 @@
     </div>
     <p id="caja-msg"></p>
 
+    <!-- Historial de cierres: arranca plegado; se carga al abrirlo -->
+    <details id="cierres-caja" class="cierres-caja">
+      <summary>Cierres de caja</summary>
+      <div class="tabla-scroll">
+        <table id="cierres-tabla">
+          <thead>
+            <tr><th>Cierre</th><th>Cerró</th><th>Debía haber</th><th>Contado</th><th>Diferencia</th><th>Retiro</th><th>Motivo</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+
     <!-- Aquí se inserta el formulario de Nota de venta cuando entra un admin o el dueño -->
     <div id="venta-slot-admin"></div>
 
@@ -469,6 +482,44 @@
       <span id="tema-texto">Modo noche</span>
     </button>
   </footer>
+
+  <!-- Cierre de caja con cuadre: el sistema dice cuánto debería haber, se cuenta
+       billete por billete y se ve la diferencia. app.js lo llena y lo envía. -->
+  <div id="cierre-caja-fondo" class="catalogo-fondo hidden"></div>
+  <div id="cierre-caja-modal" class="container cierre-modal hidden" role="dialog" aria-labelledby="cierre-titulo">
+    <h2 id="cierre-titulo">Cerrar caja</h2>
+
+    <div class="cierre-seccion">Lo que dice el sistema</div>
+    <div id="cierre-resumen"></div>
+    <label id="cierre-transferencias" class="cierre-transferencias">
+      <span>Transferencias del turno (no están en el cajón): <strong>$<span id="cierre-transfer-total">0.00</span></strong></span>
+      <span class="cierre-check"><input type="checkbox" id="cierre-transfer-ok"> Las confirmé en el banco</span>
+    </label>
+
+    <div class="cierre-seccion">Lo que contaste</div>
+    <div id="cierre-conteo" class="cierre-conteo"></div>
+    <div id="cierre-resultado" class="cierre-resultado"></div>
+    <input type="text" id="cierre-motivo" class="hidden" placeholder="Motivo de la diferencia (obligatorio desde $1)">
+
+    <div class="cierre-seccion">Qué haces con el efectivo</div>
+    <div class="cierre-fila">
+      <span>Dejar de sencillo para el próximo turno</span>
+      <span class="cierre-queda">$<input type="number" id="cierre-queda" min="0" step="0.01" value="0"></span>
+    </div>
+    <div class="cierre-fila cierre-retiro">
+      <span>Retiras (queda registrado)</span>
+      <strong>$<span id="cierre-retiro">0.00</span></strong>
+    </div>
+
+    <p id="cierre-msg"></p>
+    <div class="cierre-botones">
+      <button type="button" id="cierre-cancelar" class="btn-secundario">Cancelar</button>
+      <button type="button" id="cierre-confirmar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Cerrar caja
+      </button>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

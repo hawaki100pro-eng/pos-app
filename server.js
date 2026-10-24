@@ -122,7 +122,63 @@ app.get('/api/me', requireLogin, (req, res) => {
 
 app.get('/api/caja/estado', requireLogin, async (req, res) => {
   const turno = await getTurnoAbierto();
-  res.json({ turno });
+  // Con la caja cerrada, al admin y al dueño se les sugiere abrir con el sencillo
+  // que se dejó en el último cierre
+  let sugerido_inicial = null;
+  if (!turno && ['admin', 'dueno'].includes(req.session.user.rol)) {
+    const r = await pool.query(
+      `SELECT monto_queda FROM turnos_caja WHERE estado = 'cerrado' AND monto_queda IS NOT NULL ORDER BY id DESC LIMIT 1`
+    );
+    if (r.rows[0]) sugerido_inicial = r.rows[0].monto_queda;
+  }
+  res.json({ turno, sugerido_inicial });
+});
+
+// --- Cuadre de caja ---
+// Billetes y monedas que se cuentan al cerrar, en centavos para no arrastrar
+// errores de decimales al sumar. El navegador usa la misma lista (app.js).
+const DENOMINACIONES_CENTAVOS = [10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5, 1];
+
+const redondear2 = (n) => Math.round(n * 100) / 100;
+
+// Lo que dice el sistema del turno abierto, para la ventana de cierre. El
+// "debería haber" es el monto actual de la caja (el que ya se fue ajustando con
+// cada venta, anulación y gasto); el desglose es para que se entienda de dónde sale.
+app.get('/api/caja/resumen-cierre', requireLogin, requireAdmin, async (req, res) => {
+  const turno = await getTurnoAbierto();
+  if (!turno) return res.status(400).json({ error: 'No hay un turno de caja abierto' });
+  const ventas = await pool.query(
+    `SELECT metodo_pago, COUNT(*)::int AS cantidad, COALESCE(SUM(total), 0) AS total
+     FROM ventas WHERE turno_id = $1 AND anulada = 0 AND eliminada = 0
+     GROUP BY metodo_pago`,
+    [turno.id]
+  );
+  const gastos = await pool.query(
+    `SELECT COUNT(*)::int AS cantidad, COALESCE(SUM(monto), 0) AS total FROM gastos WHERE turno_id = $1`,
+    [turno.id]
+  );
+  const porMetodo = (m) => {
+    const fila = ventas.rows.find((v) => v.metodo_pago === m);
+    return { cantidad: fila ? fila.cantidad : 0, total: fila ? redondear2(Number(fila.total)) : 0 };
+  };
+  const efectivo = porMetodo('efectivo');
+  const transferencia = porMetodo('transferencia');
+  const gasto = { cantidad: gastos.rows[0].cantidad, total: redondear2(Number(gastos.rows[0].total)) };
+  const esperado = redondear2(turno.monto_actual);
+  // Si se vació la caja a mitad de turno, el desglose no suma igual que el
+  // monto actual: esa diferencia se muestra aparte como "ajustes"
+  const ajustes = redondear2(esperado - (turno.monto_inicial + efectivo.total - gasto.total));
+  res.json({
+    turno_id: turno.id,
+    fecha_apertura: turno.fecha_apertura,
+    monto_inicial: redondear2(turno.monto_inicial),
+    ventas_efectivo: efectivo,
+    transferencias: transferencia,
+    gastos: gasto,
+    ajustes,
+    esperado,
+    denominaciones: DENOMINACIONES_CENTAVOS,
+  });
 });
 
 app.post('/api/caja/abrir', requireLogin, requireAdmin, async (req, res) => {
@@ -140,16 +196,69 @@ app.post('/api/caja/abrir', requireLogin, requireAdmin, async (req, res) => {
   res.status(201).json(r.rows[0]);
 });
 
+// Cerrar con cuadre: se cuenta billete por billete, se compara con lo que debía
+// haber y queda guardado quién cerró, la diferencia (con motivo si es de $1 o
+// más), cuánto se retiró y cuánto se dejó de sencillo.
 app.post('/api/caja/cerrar', requireLogin, requireAdmin, async (req, res) => {
-  const turno = await getTurnoAbierto();
-  if (!turno) {
-    return res.status(400).json({ error: 'No hay un turno de caja abierto' });
+  const { conteo, motivo, monto_queda, transferencias_confirmadas } = req.body || {};
+
+  // El conteo llega como { "2000": 10, "500": 9, ... } (centavos → cantidad)
+  if (!conteo || typeof conteo !== 'object') {
+    return res.status(400).json({ error: 'Falta el conteo del efectivo' });
   }
-  const r = await pool.query(
-    `UPDATE turnos_caja SET estado = 'cerrado', fecha_cierre = NOW() WHERE id = $1 RETURNING *`,
-    [turno.id]
-  );
-  res.json(r.rows[0]);
+  let contadoCentavos = 0;
+  const conteoLimpio = {};
+  for (const d of DENOMINACIONES_CENTAVOS) {
+    const cantidad = conteo[d] == null || conteo[d] === '' ? 0 : Number(conteo[d]);
+    if (!Number.isInteger(cantidad) || cantidad < 0) {
+      return res.status(400).json({ error: 'Las cantidades contadas deben ser números enteros, sin negativos' });
+    }
+    if (cantidad > 0) conteoLimpio[d] = cantidad;
+    contadoCentavos += d * cantidad;
+  }
+  const contado = contadoCentavos / 100;
+  const queda = monto_queda == null || monto_queda === '' ? 0 : redondear2(Number(monto_queda));
+  if (!Number.isFinite(queda) || queda < 0 || queda > contado) {
+    return res.status(400).json({ error: 'Lo que se deja de sencillo no puede ser negativo ni mayor a lo contado' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // FOR UPDATE: si justo entra una venta, espera a que termine; así el
+    // "debería haber" no cambia entre que se lee y se guarda el cierre
+    const t = await client.query(
+      `SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1 FOR UPDATE`
+    );
+    const turno = t.rows[0];
+    if (!turno) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'No hay un turno de caja abierto' });
+    }
+    const esperado = redondear2(turno.monto_actual);
+    const diferencia = redondear2(contado - esperado);
+    const motivoLimpio = typeof motivo === 'string' ? motivo.trim() : '';
+    if (Math.abs(diferencia) >= 1 && !motivoLimpio) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'La diferencia es de $1 o más: escribe el motivo antes de cerrar' });
+    }
+    const r = await client.query(
+      `UPDATE turnos_caja SET estado = 'cerrado', fecha_cierre = NOW(),
+         monto_esperado = $2, monto_contado = $3, diferencia = $4, motivo_diferencia = $5,
+         conteo = $6, monto_retirado = $7, monto_queda = $8, cerrado_por = $9,
+         transferencias_confirmadas = $10
+       WHERE id = $1 RETURNING *`,
+      [turno.id, esperado, contado, diferencia, motivoLimpio || null, JSON.stringify(conteoLimpio),
+        redondear2(contado - queda), queda, req.session.user.id, !!transferencias_confirmadas]
+    );
+    await client.query('COMMIT');
+    res.json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 app.post('/api/caja/vaciar', requireLogin, requireDueño, async (req, res) => {
@@ -164,12 +273,16 @@ app.post('/api/caja/vaciar', requireLogin, requireDueño, async (req, res) => {
   res.json(r.rows[0]);
 });
 
+// Historial de cierres: los últimos 60 turnos cerrados, con su cuadre
 app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
   const r = await pool.query(`
-    SELECT t.*, u.usuario AS abierto_por_usuario
+    SELECT t.*, u.usuario AS abierto_por_usuario, c.usuario AS cerrado_por_usuario
     FROM turnos_caja t
     JOIN usuarios u ON u.id = t.abierto_por
+    LEFT JOIN usuarios c ON c.id = t.cerrado_por
+    WHERE t.estado = 'cerrado'
     ORDER BY t.id DESC
+    LIMIT 60
   `);
   res.json(r.rows);
 });
