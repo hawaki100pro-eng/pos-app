@@ -42,6 +42,16 @@
   --badge-anulada-texto: #dc2626;
   --badge-transfer-fondo: #e0f2fe;
   --badge-transfer-texto: #0369a1;
+
+  /* Método de pago: verde efectivo, azul transferencia (tarjeta del total y botones) */
+  --pago-efectivo-tarjeta: #166534;
+  --pago-efectivo-fondo: #dcfce7;
+  --pago-efectivo-borde: #16a34a;
+  --pago-efectivo-texto: #166534;
+  --pago-transfer-tarjeta: #075985;
+  --pago-transfer-fondo: #e0f2fe;
+  --pago-transfer-borde: #0369a1;
+  --pago-transfer-texto: #075985;
 }
 
 /* --- Modo noche --- */
@@ -87,6 +97,15 @@
   --badge-anulada-texto: #fca5a5;
   --badge-transfer-fondo: #14313d;
   --badge-transfer-texto: #7dd3fc;
+
+  --pago-efectivo-tarjeta: #14532d;
+  --pago-efectivo-fondo: #12301f;
+  --pago-efectivo-borde: #22c55e;
+  --pago-efectivo-texto: #86efac;
+  --pago-transfer-tarjeta: #0c4a6e;
+  --pago-transfer-fondo: #14313d;
+  --pago-transfer-borde: #38bdf8;
+  --pago-transfer-texto: #7dd3fc;
 }
 
 * { box-sizing: border-box; }
@@ -1558,4 +1577,92 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   margin-top: 10px;
   padding: 8px 14px;
   font-size: 0.9rem;
+}
+
+/* --- Total y método de pago de la nota de venta ---
+   El total va en una tarjeta grande que toma el color del método elegido
+   (verde efectivo, azul transferencia), para que se note antes de confirmar. */
+.total-card {
+  display: flex;
+  flex-wrap: wrap; /* si el monto no cabe al lado, baja a su propia línea */
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 10px 0 4px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  color: #fff;
+  transition: background-color 0.2s ease;
+}
+
+.total-card.efectivo { background: var(--pago-efectivo-tarjeta); }
+.total-card.transferencia { background: var(--pago-transfer-tarjeta); }
+
+.total-card-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.total-card-detalle {
+  margin-top: 3px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.total-card-monto {
+  margin-left: auto;
+  /* En celular se achica un poco para no partir la etiqueta en varias líneas */
+  font-size: clamp(1.7rem, 8vw, 2.3rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Dos botones grandes en vez de los radios chicos. El radio sigue ahí (la
+   venta lo lee), solo que escondido: se toca la tarjeta entera. */
+.metodo-pago-grande { gap: 10px; }
+
+.metodo-pago-grande .metodo-opcion {
+  flex: 1;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 2px solid var(--borde-tipo-btn);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto-tenue);
+  font-weight: 700;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.metodo-pago-grande .metodo-opcion input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.metodo-pago-grande .metodo-opcion svg { width: 22px; height: 22px; }
+
+.metodo-pago-grande .metodo-efectivo.seleccionado {
+  background: var(--pago-efectivo-fondo);
+  border-color: var(--pago-efectivo-borde);
+  color: var(--pago-efectivo-texto);
+}
+
+.metodo-pago-grande .metodo-transferencia.seleccionado {
+  background: var(--pago-transfer-fondo);
+  border-color: var(--pago-transfer-borde);
+  color: var(--pago-transfer-texto);
+}
+
+.metodo-pago-grande .seleccionado::after { content: '✓'; }
+
+/* Con el teclado (Tab) también se ve cuál está enfocado */
+.metodo-pago-grande .metodo-opcion:has(input:focus-visible) {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
 }

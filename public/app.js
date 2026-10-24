@@ -966,7 +966,29 @@ function renderItems() {
   }
 
   document.getElementById('carrito-total').textContent = total.toFixed(2);
+  const pares = items.reduce((acc, item) => acc + Number(item.cantidad), 0);
+  document.getElementById('total-pares').textContent = `${pares} ${pares === 1 ? 'par' : 'pares'}`;
+  actualizarMetodoPago();
 }
+
+// La tarjeta del total y el botón elegido toman el color del método de pago:
+// verde efectivo, azul transferencia. Se llama al tocar un método y desde
+// renderItems, que corre también después de volver a Efectivo al confirmar.
+function actualizarMetodoPago() {
+  const metodo = document.querySelector('input[name="metodo-pago"]:checked').value;
+  const esTransferencia = metodo === 'transferencia';
+  const tarjeta = document.getElementById('total-card');
+  tarjeta.classList.toggle('transferencia', esTransferencia);
+  tarjeta.classList.toggle('efectivo', !esTransferencia);
+  document.getElementById('total-metodo').textContent = esTransferencia ? 'por transferencia' : 'en efectivo';
+  document.querySelectorAll('.metodo-opcion').forEach((opcion) => {
+    opcion.classList.toggle('seleccionado', opcion.querySelector('input').checked);
+  });
+}
+
+document.querySelectorAll('input[name="metodo-pago"]').forEach((radio) => {
+  radio.addEventListener('change', actualizarMetodoPago);
+});
 
 document.getElementById('confirmar-venta-btn').addEventListener('click', async () => {
   const msg = document.getElementById('venta-msg');
