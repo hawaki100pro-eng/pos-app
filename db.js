@@ -191,6 +191,21 @@ async function init() {
   await pool.query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_metodo_pago_check`);
   await pool.query(`ALTER TABLE ventas ADD CONSTRAINT ventas_metodo_pago_check CHECK (metodo_pago IN ('efectivo', 'transferencia'))`);
 
+  // Migración: cuadre de caja. Al cerrar se guarda cuánto debía haber, lo que se
+  // contó (billete por billete), la diferencia y su motivo, quién cerró, cuánto
+  // se retiró y cuánto quedó de sencillo para el turno siguiente.
+  await pool.query(`
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS monto_esperado REAL;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS monto_contado REAL;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS diferencia REAL;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS motivo_diferencia TEXT;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS conteo JSONB;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS monto_retirado REAL;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS monto_queda REAL;
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS cerrado_por INTEGER REFERENCES usuarios(id);
+    ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS transferencias_confirmadas BOOLEAN;
+  `);
+
   // Migración: código de la etiqueta (SKU). Se rellena una sola vez para los
   // productos que ya existían; de ahí en adelante lo pone el alta de producto.
   //

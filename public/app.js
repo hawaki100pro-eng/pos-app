@@ -8,6 +8,7 @@ let items = []; // { producto, cantidad, precio_unitario }
 let editandoItems = []; // ítems en edición dentro del modal de editar venta
 let editandoVentaId = null;
 let rolActual = null;
+let usuarioActual = null;
 
 // El servidor guarda y devuelve las fechas en UTC; esto las muestra en hora de Ecuador (UTC-5)
 function formatFecha(fechaStr) {
@@ -69,6 +70,7 @@ function armarSaludo(usuario) {
 function mostrarPantalla(user) {
   const rol = user.rol;
   rolActual = rol;
+  usuarioActual = user.usuario;
   loginScreen.classList.add('hidden');
   vendedorScreen.classList.add('hidden');
   adminScreen.classList.add('hidden');
@@ -88,6 +90,7 @@ function mostrarPantalla(user) {
     if (rol === 'dueno') cargarUsuarios();
     cargarGastos();
     cargarProductos();
+    cargarCampana();
     iniciarRefrescoAuto(); // las ventas de los vendedores aparecen solas
   } else {
     vendedorScreen.classList.remove('hidden');
@@ -96,6 +99,7 @@ function mostrarPantalla(user) {
     document.getElementById('venta-slot-vendedor').appendChild(ventaForm);
     cargarEstadoCaja();
     cargarMisVentas();
+    iniciarRefrescoAuto(); // sus ventas aparecen solas, sin recargar
   }
 }
 
@@ -103,6 +107,10 @@ async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   detenerRefrescoAuto();
   items = [];
+  // Que el próximo usuario no herede la campana del anterior
+  ventasNuevas = [];
+  campanaYaCargada = false;
+  ocultarVentaRegistrada();
   loginScreen.classList.remove('hidden');
   loginScreen.prepend(logoHawaki);
   vendedorScreen.classList.add('hidden');
@@ -148,6 +156,12 @@ async function cargarEstadoCaja() {
   } else {
     cerradaMsg.classList.remove('hidden');
     formWrap.classList.add('hidden');
+    // Se sugiere abrir con el sencillo que se dejó en el último cierre (sin pisar
+    // lo que ya se esté escribiendo)
+    const inputInicial = document.getElementById('monto-inicial-input');
+    if (data.sugerido_inicial != null && inputInicial.value === '') {
+      inputInicial.value = Number(data.sugerido_inicial).toFixed(2);
+    }
   }
 }
 
@@ -502,6 +516,9 @@ function renderCatalogoModal(productos) {
   // y un toque la manda directo a la nota: son las que más se venden y no tiene
   // sentido pasar por los campos de abajo.
   if (soloGenerales) {
+    // Paleta con todas las categorías de la vista: colores únicos, sin repetir,
+    // y con la misma regla que el inventario para que coincidan.
+    const paleta = paletaCategorias(productos.map((p) => partirModelo(p.modelo).familia));
     productos.forEach((p) => {
       const cuadro = document.createElement('button');
       cuadro.type = 'button';
@@ -510,6 +527,13 @@ function renderCatalogoModal(productos) {
         <span class="cuadro-nombre">${p.modelo}</span>
         <span class="cuadro-precio">$${Number(p.precio).toFixed(2)}</span>
       `;
+      // Cada categoría con su color propio (el mismo que en el inventario),
+      // para reconocerla de un vistazo al registrar.
+      const tono = paleta.get(partirModelo(p.modelo).familia);
+      if (tono) {
+        cuadro.style.background = tono.fondo;
+        cuadro.style.borderLeft = `6px solid ${tono.borde}`;
+      }
       cuadro.addEventListener('click', () => {
         agregarProductoALaVenta(p);
         cerrarCatalogo();
@@ -1006,7 +1030,53 @@ function renderItems() {
   }
 
   document.getElementById('carrito-total').textContent = total.toFixed(2);
+  const pares = items.reduce((acc, item) => acc + Number(item.cantidad), 0);
+  document.getElementById('total-pares').textContent = `${pares} ${pares === 1 ? 'par' : 'pares'}`;
+  actualizarMetodoPago();
+  // Empezó la siguiente venta: el aviso de la anterior ya no hace falta
+  if (items.length) ocultarVentaRegistrada();
 }
+
+// La tarjeta del total y el botón elegido toman el color del método de pago:
+// verde efectivo, azul transferencia. Se llama al tocar un método y desde
+// renderItems, que corre también después de volver a Efectivo al confirmar.
+function actualizarMetodoPago() {
+  const metodo = document.querySelector('input[name="metodo-pago"]:checked').value;
+  const esTransferencia = metodo === 'transferencia';
+  const tarjeta = document.getElementById('total-card');
+  tarjeta.classList.toggle('transferencia', esTransferencia);
+  tarjeta.classList.toggle('efectivo', !esTransferencia);
+  document.getElementById('total-metodo').textContent = esTransferencia ? 'por transferencia' : 'en efectivo';
+  document.querySelectorAll('.metodo-opcion').forEach((opcion) => {
+    opcion.classList.toggle('seleccionado', opcion.querySelector('input').checked);
+  });
+}
+
+document.querySelectorAll('input[name="metodo-pago"]').forEach((radio) => {
+  radio.addEventListener('change', actualizarMetodoPago);
+});
+
+// Banner tras confirmar: del color del pago, con Imprimir (directo al cuadro de
+// impresión) bien a la vista. Se quita al cerrarlo o al agregar el primer
+// producto de la siguiente venta (ver renderItems).
+function mostrarVentaRegistrada(data) {
+  const esTransferencia = data.metodo_pago === 'transferencia';
+  const banner = document.getElementById('venta-registrada-banner');
+  banner.classList.toggle('transferencia', esTransferencia);
+  banner.classList.toggle('efectivo', !esTransferencia);
+  document.getElementById('vr-numero').textContent = data.numero_proforma;
+  document.getElementById('vr-total').textContent = data.total.toFixed(2);
+  document.getElementById('vr-metodo').textContent = esTransferencia ? 'Transferencia' : 'Efectivo';
+  document.getElementById('vr-imprimir').href = `print.html?id=${data.ventaId}&imprimir=1`;
+  document.getElementById('vr-ver').href = `print.html?id=${data.ventaId}`;
+  document.getElementById('venta-registrada').classList.remove('hidden');
+}
+
+function ocultarVentaRegistrada() {
+  document.getElementById('venta-registrada').classList.add('hidden');
+}
+
+document.getElementById('vr-cerrar').addEventListener('click', ocultarVentaRegistrada);
 
 document.getElementById('confirmar-venta-btn').addEventListener('click', async () => {
   const msg = document.getElementById('venta-msg');
@@ -1041,12 +1111,9 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
     return;
   }
 
-  msg.textContent = `Venta ${data.numero_proforma} registrada por $${data.total.toFixed(2)} (${data.metodo_pago})`;
+  msg.textContent = '';
   msg.className = '';
-
-  const imprimirLink = document.getElementById('imprimir-link');
-  imprimirLink.href = `print.html?id=${data.ventaId}`;
-  imprimirLink.classList.remove('hidden');
+  mostrarVentaRegistrada(data);
 
   items = [];
   resetTipoCliente();
@@ -1155,24 +1222,235 @@ function puedeRefrescar() {
   if (activo && ['INPUT', 'TEXTAREA'].includes(activo.tagName)) return false;
   if (!document.getElementById('catalogo-modal').classList.contains('hidden')) return false;
   if (!document.getElementById('editar-venta-modal').classList.contains('hidden')) return false;
+  if (!document.getElementById('cierre-caja-modal').classList.contains('hidden')) return false;
   if (document.hidden) return false;
   return true;
 }
 
-function iniciarRefrescoAuto() {
-  detenerRefrescoAuto();
-  refrescoAutoId = setInterval(() => {
-    if (!puedeRefrescar()) return;
+// --- Campanita de ventas nuevas (admin y dueño) ---
+// Cuenta las ventas de los vendedores que todavía no se miraron en este
+// dispositivo. No interrumpe: solo late y suma. Las ventas propias no cuentan.
+// Lo último que se marcó como visto se recuerda por usuario en este dispositivo.
+let ventasNuevas = [];
+// La primera carga tras entrar no suena: solo suenan las ventas que llegan después
+let campanaYaCargada = false;
+
+const campanaBtn = document.getElementById('campana-btn');
+
+// "Ding" de dos notas, hecho con el propio navegador (sin archivos de audio).
+// Los navegadores no dejan sonar nada hasta que se toca la página una vez:
+// al iniciar sesión ya hay ese toque; tras recargar, el primer toque lo activa.
+let audioCampana = null;
+
+function prepararAudio() {
+  try {
+    audioCampana = audioCampana || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCampana.state === 'suspended') audioCampana.resume();
+  } catch { /* navegador sin audio: la campana sigue funcionando en silencio */ }
+}
+
+['pointerdown', 'keydown'].forEach((evento) => document.addEventListener(evento, prepararAudio));
+
+function sonarCampana() {
+  prepararAudio();
+  if (!audioCampana || audioCampana.state !== 'running') return;
+  [880, 1320].forEach((frecuencia, i) => {
+    const oscilador = audioCampana.createOscillator();
+    const volumen = audioCampana.createGain();
+    oscilador.type = 'sine';
+    oscilador.frequency.value = frecuencia;
+    oscilador.connect(volumen);
+    volumen.connect(audioCampana.destination);
+    const inicio = audioCampana.currentTime + i * 0.15;
+    volumen.gain.setValueAtTime(0.0001, inicio);
+    volumen.gain.exponentialRampToValueAtTime(0.35, inicio + 0.02);
+    volumen.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.5);
+    oscilador.start(inicio);
+    oscilador.stop(inicio + 0.55);
+  });
+}
+const campanaLista = document.getElementById('campana-lista');
+
+function escaparHtml(texto) {
+  const div = document.createElement('div');
+  div.textContent = texto == null ? '' : String(texto);
+  return div.innerHTML;
+}
+
+function claveUltimaVista() {
+  return `ultimaVentaVista:${usuarioActual}`;
+}
+
+function leerUltimaVista() {
+  try {
+    const valor = localStorage.getItem(claveUltimaVista());
+    return valor == null ? null : Number(valor);
+  } catch {
+    return null;
+  }
+}
+
+function guardarUltimaVista(id) {
+  try { localStorage.setItem(claveUltimaVista(), String(id)); } catch { /* sin almacenamiento: solo dura la sesión */ }
+}
+
+async function cargarCampana() {
+  if (rolActual !== 'admin' && rolActual !== 'dueno') return;
+  const res = await fetch('/api/ventas/recientes');
+  if (!res.ok) return;
+  const ventas = await res.json();
+  let vista = leerUltimaVista();
+  if (vista == null) {
+    // Primera vez en este dispositivo: arranca en cero en vez de avisar de todo el historial
+    vista = ventas.reduce((max, v) => Math.max(max, v.id), 0);
+    guardarUltimaVista(vista);
+  }
+  const yaContadas = new Set(ventasNuevas.map((v) => v.id));
+  ventasNuevas = ventas.filter((v) => v.id > vista && v.vendedor !== usuarioActual);
+  const entroUnaNueva = ventasNuevas.some((v) => !yaContadas.has(v.id));
+  if (entroUnaNueva && campanaYaCargada) sonarCampana();
+  campanaYaCargada = true;
+  pintarCampana(entroUnaNueva);
+}
+
+function pintarCampana(entroUnaNueva) {
+  const contador = document.getElementById('campana-contador');
+  const total = ventasNuevas.length;
+  contador.textContent = total > 99 ? '99+' : String(total);
+  contador.classList.toggle('hidden', total === 0);
+  campanaBtn.title = total ? `${total} venta(s) nueva(s)` : 'Sin ventas nuevas';
+  if (entroUnaNueva) {
+    // Se quita y se vuelve a poner la clase para que la animación arranque de nuevo
+    campanaBtn.classList.remove('campana-late');
+    void campanaBtn.offsetWidth;
+    campanaBtn.classList.add('campana-late');
+  }
+  pintarListaCampana();
+}
+
+function pintarListaCampana() {
+  if (!ventasNuevas.length) {
+    campanaLista.innerHTML = '<p class="campana-vacia">Sin ventas nuevas</p>';
+    return;
+  }
+  campanaLista.innerHTML = ventasNuevas.map((v) => {
+    const total = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
+    const metodo = v.metodo_pago === 'transferencia' ? 'Transferencia' : 'Efectivo';
+    // Resumen de lo que lleva: "1 × Zapatilla Havaina #DESC   $14.00".
+    // Con muchas líneas se muestran 3 y se dice cuántas más hay.
+    const lineas = v.detalle || [];
+    const resumen = lineas.slice(0, 3).map((d) => `<div class="campana-producto">
+        <span>${d.cantidad} × ${escaparHtml(d.producto)}</span>
+        <span>$${(d.cantidad * d.precio_unitario).toFixed(2)}</span>
+      </div>`).join('') + (lineas.length > 3 ? `<div class="campana-producto-mas">y ${lineas.length - 3} producto(s) más</div>` : '');
+    return `<div class="campana-item">
+      <strong>${escaparHtml(v.vendedor)}</strong> vendió <strong>${total}</strong>
+      <div class="campana-item-detalle">#${v.id} · ${metodo} · ${escaparHtml(v.cliente || 'Consumidor final')} · ${formatFecha(v.fecha)}</div>
+      ${resumen ? `<div class="campana-productos">${resumen}</div>` : ''}
+      <div class="campana-acciones">
+        <a class="campana-accion" href="print.html?id=${v.id}" target="_blank">Ver</a>
+        <a class="campana-accion campana-accion-principal" href="print.html?id=${v.id}&imprimir=1" target="_blank">Imprimir</a>
+      </div>
+    </div>`;
+  }).join('') + '<button type="button" id="campana-vistas" class="campana-vistas">Marcar como vistas</button>';
+  document.getElementById('campana-vistas').addEventListener('click', () => {
+    guardarUltimaVista(ventasNuevas.reduce((max, v) => Math.max(max, v.id), leerUltimaVista() || 0));
+    ventasNuevas = [];
+    pintarCampana(false);
+    campanaLista.classList.add('hidden');
+  });
+}
+
+campanaBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  pintarListaCampana();
+  campanaLista.classList.toggle('hidden');
+});
+
+// Tocar fuera de la lista la cierra
+document.addEventListener('click', (e) => {
+  if (!campanaLista.classList.contains('hidden') && !campanaLista.contains(e.target)) {
+    campanaLista.classList.add('hidden');
+  }
+});
+
+function refrescarDatos() {
+  if (rolActual === 'admin' || rolActual === 'dueno') {
     cargarDashboard();
     cargarGastos();
     cargarProductos();
     cargarEstadoCaja();
+    cargarCampana();
+  } else {
+    // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
+    // en otro dispositivo (o por él mismo en otra pestaña) aparecen con su botón
+    // de Imprimir sin tener que recargar.
+    cargarMisVentas();
+    cargarEstadoCaja();
+  }
+}
+
+// --- Avisos instantáneos del servidor ---
+// El servidor avisa apenas alguien vende, anula o cambia algo, y la pantalla se
+// actualiza al momento. El refresco cada 20 s queda de respaldo por si la
+// conexión se cae.
+let fuenteEventos = null;
+let avisoPendienteId = null;
+
+// Si el aviso llega mientras se está escribiendo o con un modal abierto, se
+// espera a que termine en vez de interrumpir.
+function refrescarPorAviso() {
+  if (avisoPendienteId) return; // ya hay uno esperando turno
+  const intentar = () => {
+    avisoPendienteId = null;
+    if (!puedeRefrescar()) {
+      avisoPendienteId = setTimeout(intentar, 2000);
+      return;
+    }
+    refrescarDatos();
+  };
+  intentar();
+}
+
+function conectarAvisos() {
+  if (fuenteEventos || typeof EventSource === 'undefined') return;
+  fuenteEventos = new EventSource('/api/eventos');
+  fuenteEventos.addEventListener('cambio', (e) => {
+    // La campana no toca ningún campo, así que se actualiza al momento aunque
+    // se esté escribiendo; el resto de la pantalla espera su turno.
+    let area = null;
+    try { area = JSON.parse(e.data).area; } catch { /* aviso sin área */ }
+    if (area === 'ventas') cargarCampana();
+    refrescarPorAviso();
+  });
+  // Al reconectar tras un corte pudo perderse algún aviso: se pone al día
+  let primeraConexion = true;
+  fuenteEventos.addEventListener('open', () => {
+    if (!primeraConexion) refrescarPorAviso();
+    primeraConexion = false;
+  });
+}
+
+function desconectarAvisos() {
+  if (fuenteEventos) fuenteEventos.close();
+  fuenteEventos = null;
+  if (avisoPendienteId) clearTimeout(avisoPendienteId);
+  avisoPendienteId = null;
+}
+
+function iniciarRefrescoAuto() {
+  detenerRefrescoAuto();
+  conectarAvisos();
+  refrescoAutoId = setInterval(() => {
+    if (!puedeRefrescar()) return;
+    refrescarDatos();
   }, REFRESCO_SEGUNDOS * 1000);
 }
 
 function detenerRefrescoAuto() {
   if (refrescoAutoId) clearInterval(refrescoAutoId);
   refrescoAutoId = null;
+  desconectarAvisos();
 }
 
 async function cargarDashboard() {
@@ -1443,19 +1721,191 @@ document.getElementById('vaciar-caja-btn').addEventListener('click', async () =>
   cargarDashboard();
 });
 
-document.getElementById('cerrar-caja-btn').addEventListener('click', async () => {
+// --- Cierre de caja con cuadre ---
+// El sistema dice cuánto efectivo debería haber; se cuenta billete por billete
+// y se ve la diferencia al momento (verde cuadra, amarillo centavos, rojo desde
+// $1, que además pide motivo). El servidor vuelve a calcular todo al guardar.
+let resumenCierre = null;
+
+const cierreModal = document.getElementById('cierre-caja-modal');
+const cierreFondo = document.getElementById('cierre-caja-fondo');
+
+function etiquetaDenominacion(centavos) {
+  return centavos >= 100 ? `$${centavos / 100}` : `${centavos}¢`;
+}
+
+function textoDiferencia(dif) {
+  if (Math.abs(dif) < 0.005) return '$0.00';
+  return `${dif < 0 ? '−' : '+'}$${Math.abs(dif).toFixed(2)}`;
+}
+
+async function abrirCierreCaja() {
   const msg = document.getElementById('caja-msg');
-  const res = await fetch('/api/caja/cerrar', { method: 'POST' });
+  const res = await fetch('/api/caja/resumen-cierre');
   const data = await res.json();
   if (!res.ok) {
     msg.textContent = data.error;
     msg.className = 'error';
     return;
   }
-  msg.textContent = `Caja cerrada con $${data.monto_actual.toFixed(2)}`;
+  resumenCierre = data;
+
+  const filas = [
+    ['Monto inicial', data.monto_inicial],
+    [`+ Ventas en efectivo (${data.ventas_efectivo.cantidad})`, data.ventas_efectivo.total],
+    [`− Gastos (${data.gastos.cantidad})`, -data.gastos.total],
+  ];
+  // Si se vació la caja a mitad de turno, el desglose no cuadra solo: se muestra
+  if (Math.abs(data.ajustes) >= 0.005) filas.push(['Ajustes (caja vaciada en el turno)', data.ajustes]);
+  document.getElementById('cierre-resumen').innerHTML = filas.map(([texto, monto]) =>
+    `<div class="cierre-fila"><span>${texto}</span><span>${monto < 0 ? '−' : ''}$${Math.abs(monto).toFixed(2)}</span></div>`
+  ).join('') + `<div class="cierre-fila cierre-esperado"><span>Debería haber</span><span>$${data.esperado.toFixed(2)}</span></div>`;
+
+  document.getElementById('cierre-transfer-total').textContent = data.transferencias.total.toFixed(2);
+  document.getElementById('cierre-transferencias').classList.toggle('hidden', data.transferencias.cantidad === 0);
+  document.getElementById('cierre-transfer-ok').checked = false;
+
+  document.getElementById('cierre-conteo').innerHTML = data.denominaciones.map((c) =>
+    `<label class="cierre-denominacion"><span>${etiquetaDenominacion(c)} ×</span>
+      <input type="number" min="0" step="1" inputmode="numeric" data-centavos="${c}" placeholder="0"></label>`
+  ).join('');
+  document.querySelectorAll('#cierre-conteo input').forEach((input) => input.addEventListener('input', recalcularCierre));
+
+  // De sencillo se sugiere dejar lo mismo con que se abrió el turno
+  document.getElementById('cierre-queda').value = data.monto_inicial.toFixed(2);
+  const motivo = document.getElementById('cierre-motivo');
+  motivo.value = '';
+  document.getElementById('cierre-msg').textContent = '';
+  recalcularCierre();
+
+  cierreFondo.classList.remove('hidden');
+  cierreModal.classList.remove('hidden');
+  document.querySelector('#cierre-conteo input').focus();
+}
+
+function leerConteoCierre() {
+  const conteo = {};
+  let centavos = 0;
+  document.querySelectorAll('#cierre-conteo input').forEach((input) => {
+    const cantidad = Math.max(0, parseInt(input.value, 10) || 0);
+    if (cantidad) conteo[input.dataset.centavos] = cantidad;
+    centavos += Number(input.dataset.centavos) * cantidad;
+  });
+  return { conteo, contado: centavos / 100 };
+}
+
+function recalcularCierre() {
+  if (!resumenCierre) return;
+  const { contado } = leerConteoCierre();
+  const dif = Math.round((contado - resumenCierre.esperado) * 100) / 100;
+  const abs = Math.abs(dif);
+  const estado = abs < 0.005 ? 'cuadra' : abs < 1 ? 'centavos' : 'diferencia';
+  const mensaje = estado === 'cuadra' ? 'Cuadra exacto'
+    : dif < 0 ? (estado === 'centavos' ? 'Faltan unos centavos' : 'Falta efectivo')
+    : (estado === 'centavos' ? 'Sobran unos centavos' : 'Sobra efectivo');
+  const resultado = document.getElementById('cierre-resultado');
+  resultado.className = `cierre-resultado ${estado}`;
+  resultado.innerHTML = `<div class="cierre-fila"><span>Contado</span><strong>$${contado.toFixed(2)}</strong></div>
+    <div class="cierre-fila cierre-dif"><span>${mensaje}</span><span>${textoDiferencia(dif)}</span></div>`;
+  document.getElementById('cierre-motivo').classList.toggle('hidden', estado !== 'diferencia');
+
+  const queda = Math.max(0, parseFloat(document.getElementById('cierre-queda').value) || 0);
+  document.getElementById('cierre-retiro').textContent = Math.max(0, contado - queda).toFixed(2);
+}
+
+function cerrarVentanaCierre() {
+  cierreModal.classList.add('hidden');
+  cierreFondo.classList.add('hidden');
+  resumenCierre = null;
+}
+
+document.getElementById('cerrar-caja-btn').addEventListener('click', abrirCierreCaja);
+document.getElementById('cierre-cancelar').addEventListener('click', cerrarVentanaCierre);
+cierreFondo.addEventListener('click', cerrarVentanaCierre);
+document.getElementById('cierre-queda').addEventListener('input', recalcularCierre);
+document.getElementById('cierre-motivo').addEventListener('input', () => {
+  document.getElementById('cierre-msg').textContent = '';
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !cierreModal.classList.contains('hidden')) cerrarVentanaCierre();
+});
+
+document.getElementById('cierre-confirmar').addEventListener('click', async () => {
+  const msgCierre = document.getElementById('cierre-msg');
+  const { conteo, contado } = leerConteoCierre();
+  const dif = Math.round((contado - resumenCierre.esperado) * 100) / 100;
+  const motivo = document.getElementById('cierre-motivo').value.trim();
+  const queda = parseFloat(document.getElementById('cierre-queda').value) || 0;
+  if (Math.abs(dif) >= 1 && !motivo) {
+    msgCierre.textContent = 'La diferencia es de $1 o más: escribe el motivo antes de cerrar';
+    msgCierre.className = 'error';
+    document.getElementById('cierre-motivo').focus();
+    return;
+  }
+  if (queda < 0 || queda > contado) {
+    msgCierre.textContent = 'No puedes dejar de sencillo más de lo que contaste';
+    msgCierre.className = 'error';
+    return;
+  }
+
+  const res = await fetch('/api/caja/cerrar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      conteo,
+      motivo,
+      monto_queda: queda,
+      transferencias_confirmadas: document.getElementById('cierre-transfer-ok').checked,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    msgCierre.textContent = data.error;
+    msgCierre.className = 'error';
+    return;
+  }
+  cerrarVentanaCierre();
+  const msg = document.getElementById('caja-msg');
+  const resultado = Math.abs(data.diferencia) < 0.005 ? 'cuadró exacto'
+    : `${data.diferencia < 0 ? 'faltante' : 'sobrante'} $${Math.abs(data.diferencia).toFixed(2)}`;
+  msg.textContent = `Caja cerrada · contado $${data.monto_contado.toFixed(2)} · ${resultado} · retiro $${data.monto_retirado.toFixed(2)}`;
   msg.className = '';
+  document.getElementById('monto-inicial-input').value = data.monto_queda.toFixed(2);
   cargarDashboard();
   cargarEstadoCaja(); // al cerrar caja se oculta la Nota de venta del admin
+  if (document.getElementById('cierres-caja').open) cargarCierresCaja();
+});
+
+// Historial de cierres: se carga al desplegarlo
+async function cargarCierresCaja() {
+  const res = await fetch('/api/caja/historial');
+  if (!res.ok) return;
+  const cierres = await res.json();
+  const tbody = document.querySelector('#cierres-tabla tbody');
+  if (!cierres.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="cierres-vacio">Todavía no hay cierres</td></tr>';
+    return;
+  }
+  tbody.innerHTML = cierres.map((t) => {
+    // Los turnos cerrados antes del cuadre no tienen conteo: se dejan con guiones
+    const sinCuadre = t.monto_contado == null;
+    const dif = Number(t.diferencia) || 0;
+    const claseDif = sinCuadre ? '' : Math.abs(dif) < 0.005 ? 'cuadra' : Math.abs(dif) < 1 ? 'centavos' : 'diferencia';
+    const dinero = (n) => (n == null ? '—' : `$${Number(n).toFixed(2)}`);
+    return `<tr>
+      <td>${formatFecha(t.fecha_cierre)}</td>
+      <td>${escaparHtml(t.cerrado_por_usuario || '—')}</td>
+      <td>${dinero(t.monto_esperado)}</td>
+      <td>${dinero(t.monto_contado)}</td>
+      <td><span class="cierre-dif-badge ${claseDif}">${sinCuadre ? '—' : textoDiferencia(dif)}</span></td>
+      <td>${dinero(t.monto_retirado)}</td>
+      <td>${escaparHtml(t.motivo_diferencia || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('cierres-caja').addEventListener('toggle', (e) => {
+  if (e.target.open) cargarCierresCaja();
 });
 
 // --- Gastos (descuentan de la caja) ---
@@ -1701,6 +2151,25 @@ function partirModelo(modelo) {
   return { familia: nombre.slice(0, i).trim(), codigo: nombre.slice(i).trim() };
 }
 
+// Paleta de categorías: reparte los tonos en partes iguales del círculo de
+// color según la lista de categorías, así NINGÚN color se repite. Se ordena
+// por nombre para que el resultado sea estable y coincida entre el inventario
+// y la vista General (ambas parten de las mismas categorías sueltas).
+function paletaCategorias(nombres) {
+  const unicos = [...new Set(nombres.map((n) => String(n ?? '')))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  const total = unicos.length || 1;
+  const mapa = new Map();
+  unicos.forEach((nombre, i) => {
+    const tono = Math.round((i * 360) / total);
+    mapa.set(nombre, {
+      borde: `hsl(${tono}, 70%, 50%)`,
+      fondo: `hsla(${tono}, 70%, 55%, 0.16)`,
+    });
+  });
+  return mapa;
+}
+
 async function cargarProductos() {
   const res = await fetch('/api/productos');
   if (!res.ok) return;
@@ -1769,6 +2238,16 @@ function renderInventario() {
 
   const sumaStock = (items) => items.reduce((acc, p) => acc + p.stock, 0);
 
+  // Solo las categorías sueltas (sin stock) llevan color, y ninguno se repite:
+  // se arma la paleta con esas familias antes de dibujar.
+  const familiasSueltas = [];
+  familias.forEach((porModelo, familia) => {
+    let stock = 0;
+    porModelo.forEach((porColor) => porColor.forEach((items) => (stock += sumaStock(items))));
+    if (stock === 0) familiasSueltas.push(familia);
+  });
+  const paleta = paletaCategorias(familiasSueltas);
+
   familias.forEach((porModelo, familia) => {
   // Buscando, todo se abre solo: si no, habría que ir tocando familia por familia
   // para ver qué coincidió. Al limpiar vuelve el estado manual.
@@ -1778,6 +2257,13 @@ function renderInventario() {
   const trFamilia = document.createElement('tr');
   trFamilia.className = 'grupo-familia';
   trFamilia.innerHTML = `<td colspan="6">${familiaAbierta ? '▾' : '▸'} ${familia} <span class="grupo-info">${porModelo.size} modelo(s) · ${todosFamilia.length} variante(s) · stock total: ${sumaStock(todosFamilia)}</span></td>`;
+  // Las categorías con stock quedan con el fondo normal; las sueltas, con su
+  // color único de la paleta.
+  const tono = paleta.get(familia);
+  if (tono) {
+    trFamilia.firstElementChild.style.background = tono.fondo;
+    trFamilia.firstElementChild.style.borderLeft = `6px solid ${tono.borde}`;
+  }
   trFamilia.addEventListener('click', () => {
     if (familiaAbierta) familiasAbiertas.delete(familia);
     else familiasAbiertas.add(familia);

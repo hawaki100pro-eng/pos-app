@@ -42,6 +42,24 @@
   --badge-anulada-texto: #dc2626;
   --badge-transfer-fondo: #e0f2fe;
   --badge-transfer-texto: #0369a1;
+
+  /* Método de pago: verde efectivo, azul transferencia (tarjeta del total y botones) */
+  --pago-efectivo-tarjeta: #166534;
+  --pago-efectivo-fondo: #dcfce7;
+  --pago-efectivo-borde: #16a34a;
+  --pago-efectivo-texto: #166534;
+  --pago-transfer-tarjeta: #075985;
+  --pago-transfer-fondo: #e0f2fe;
+  --pago-transfer-borde: #0369a1;
+  --pago-transfer-texto: #075985;
+
+  /* Cuadre de caja: amarillo centavos, rojo diferencia de $1 o más */
+  --cuadre-aviso-fondo: #fef9c3;
+  --cuadre-aviso-borde: #ca8a04;
+  --cuadre-aviso-texto: #854d0e;
+  --cuadre-mal-fondo: #fee2e2;
+  --cuadre-mal-borde: #dc2626;
+  --cuadre-mal-texto: #991b1b;
 }
 
 /* --- Modo noche --- */
@@ -87,6 +105,22 @@
   --badge-anulada-texto: #fca5a5;
   --badge-transfer-fondo: #14313d;
   --badge-transfer-texto: #7dd3fc;
+
+  --pago-efectivo-tarjeta: #14532d;
+  --pago-efectivo-fondo: #12301f;
+  --pago-efectivo-borde: #22c55e;
+  --pago-efectivo-texto: #86efac;
+  --pago-transfer-tarjeta: #0c4a6e;
+  --pago-transfer-fondo: #14313d;
+  --pago-transfer-borde: #38bdf8;
+  --pago-transfer-texto: #7dd3fc;
+
+  --cuadre-aviso-fondo: #3a3110;
+  --cuadre-aviso-borde: #eab308;
+  --cuadre-aviso-texto: #fde047;
+  --cuadre-mal-fondo: #3d1f22;
+  --cuadre-mal-borde: #f87171;
+  --cuadre-mal-texto: #fca5a5;
 }
 
 * { box-sizing: border-box; }
@@ -1494,3 +1528,424 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 
   .catalogo-item { padding: 14px; }
 }
+
+/* --- Campanita de ventas nuevas (panel admin/dueño) ---
+   Discreta a propósito: no interrumpe, solo cuenta. Late cuando entra una venta. */
+/* Flota fija en la esquina: el panel es largo y tiene que verse aunque se
+   esté más abajo, registrando una venta. z-index bajo 10 para que los
+   modales la tapen. */
+.campana-wrap {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 9;
+}
+
+.campana-btn {
+  position: relative;
+  padding: 10px;
+  background: var(--superficie);
+  color: var(--acento-texto);
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.campana-btn:hover { background: var(--acento-suave); }
+.campana-btn svg { width: 26px; height: 26px; }
+
+.campana-contador {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+@keyframes campana-late {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-4deg); }
+}
+
+.campana-btn.campana-late svg {
+  animation: campana-late 0.7s ease 2;
+  transform-origin: 50% 10%;
+}
+
+.campana-lista {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: min(320px, 85vw);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px 14px 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borde-tarjeta);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.campana-item {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 0.92rem;
+}
+
+.campana-item-detalle {
+  margin-top: 2px;
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+}
+
+/* Lo que lleva la venta, como en la nota: cantidad × producto ..... total */
+.campana-productos {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--superficie-2);
+  font-size: 0.85rem;
+}
+
+.campana-producto {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.campana-producto span:first-child { overflow-wrap: anywhere; }
+.campana-producto span:last-child { white-space: nowrap; font-weight: 600; }
+.campana-producto-mas { color: var(--texto-suave); font-size: 0.8rem; margin-top: 2px; }
+
+/* Ver = solo contorno; Imprimir = relleno, porque es lo que más se toca */
+.campana-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.campana-accion {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--acento);
+  border-radius: 999px;
+  color: var(--acento-texto);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.campana-accion:hover { background: var(--acento-suave); }
+
+.campana-accion-principal {
+  background: var(--acento);
+  color: #fff;
+}
+
+.campana-accion-principal:hover { background: var(--acento-oscuro); }
+.campana-vacia { margin: 10px 0 4px; color: var(--texto-tenue); text-align: center; }
+
+.campana-vistas {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+
+/* --- Total y método de pago de la nota de venta ---
+   El total va en una tarjeta grande que toma el color del método elegido
+   (verde efectivo, azul transferencia), para que se note antes de confirmar. */
+.total-card {
+  display: flex;
+  flex-wrap: wrap; /* si el monto no cabe al lado, baja a su propia línea */
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 10px 0 4px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  color: #fff;
+  transition: background-color 0.2s ease;
+}
+
+.total-card.efectivo { background: var(--pago-efectivo-tarjeta); }
+.total-card.transferencia { background: var(--pago-transfer-tarjeta); }
+
+.total-card-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.total-card-detalle {
+  margin-top: 3px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.total-card-monto {
+  margin-left: auto;
+  /* En celular se achica un poco para no partir la etiqueta en varias líneas */
+  font-size: clamp(1.7rem, 8vw, 2.3rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Dos botones grandes en vez de los radios chicos. El radio sigue ahí (la
+   venta lo lee), solo que escondido: se toca la tarjeta entera. */
+.metodo-pago-grande { gap: 10px; }
+
+.metodo-pago-grande .metodo-opcion {
+  flex: 1;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 2px solid var(--borde-tipo-btn);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto-tenue);
+  font-weight: 700;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.metodo-pago-grande .metodo-opcion input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.metodo-pago-grande .metodo-opcion svg { width: 22px; height: 22px; }
+
+.metodo-pago-grande .metodo-efectivo.seleccionado {
+  background: var(--pago-efectivo-fondo);
+  border-color: var(--pago-efectivo-borde);
+  color: var(--pago-efectivo-texto);
+}
+
+.metodo-pago-grande .metodo-transferencia.seleccionado {
+  background: var(--pago-transfer-fondo);
+  border-color: var(--pago-transfer-borde);
+  color: var(--pago-transfer-texto);
+}
+
+.metodo-pago-grande .seleccionado::after { content: '✓'; }
+
+/* Con el teclado (Tab) también se ve cuál está enfocado */
+.metodo-pago-grande .metodo-opcion:has(input:focus-visible) {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/* --- Aviso de venta registrada ---
+   Banner del color del pago (mismos colores que la tarjeta del total) con el
+   botón de imprimir en blanco, grande, a la derecha. */
+.venta-registrada { margin: 4px 0 14px; }
+
+.venta-registrada-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 14px;
+  color: #fff;
+}
+
+.venta-registrada-banner.efectivo { background: var(--pago-efectivo-tarjeta); }
+.venta-registrada-banner.transferencia { background: var(--pago-transfer-tarjeta); }
+
+.venta-registrada-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.venta-registrada-numero {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.venta-registrada-metodo { font-size: 0.85rem; opacity: 0.85; }
+
+.venta-registrada-imprimir {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.1s ease;
+}
+
+.venta-registrada-banner.efectivo .venta-registrada-imprimir { color: var(--pago-efectivo-tarjeta); }
+.venta-registrada-banner.transferencia .venta-registrada-imprimir { color: var(--pago-transfer-tarjeta); }
+.venta-registrada-imprimir:hover { transform: scale(1.04); }
+.venta-registrada-imprimir svg { width: 28px; height: 28px; }
+
+.venta-registrada-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding: 0 4px;
+  font-size: 0.9rem;
+}
+
+.venta-registrada-pie a { color: var(--acento-texto); }
+
+.venta-registrada-cerrar,
+.venta-registrada-cerrar:hover {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.venta-registrada-cerrar:hover { color: var(--texto); }
+
+/* --- Cierre de caja con cuadre --- */
+.cierre-modal {
+  position: fixed;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(560px, calc(100vw - 24px));
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.cierre-modal h2 { margin: 0 0 6px; }
+
+.cierre-seccion {
+  margin: 16px 0 6px;
+  color: var(--acento-texto);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cierre-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.cierre-fila > :last-child { white-space: nowrap; }
+
+.cierre-esperado {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--borde-tarjeta);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.cierre-transferencias {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--pago-transfer-fondo);
+  color: var(--pago-transfer-texto);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.cierre-check { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.cierre-conteo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.cierre-denominacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--borde-tipo-btn);
+  border-radius: 8px;
+  background: var(--superficie-2);
+  font-weight: 600;
+}
+
+.cierre-denominacion span { white-space: nowrap; }
+.cierre-denominacion input { width: 58px; padding: 6px; text-align: center; }
+
+.cierre-resultado {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 2px solid;
+  border-radius: 12px;
+}
+
+.cierre-resultado.cuadra { background: var(--pago-efectivo-fondo); border-color: var(--pago-efectivo-borde); color: var(--pago-efectivo-texto); }
+.cierre-resultado.centavos { background: var(--cuadre-aviso-fondo); border-color: var(--cuadre-aviso-borde); color: var(--cuadre-aviso-texto); }
+.cierre-resultado.diferencia { background: var(--cuadre-mal-fondo); border-color: var(--cuadre-mal-borde); color: var(--cuadre-mal-texto); }
+
+.cierre-dif { font-weight: 700; }
+.cierre-dif span:last-child { font-size: 1.5rem; font-weight: 800; }
+
+#cierre-motivo { width: 100%; margin-top: 8px; }
+
+.cierre-queda input { width: 90px; margin-left: 4px; }
+
+.cierre-retiro { font-weight: 700; }
+
+.cierre-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* --- Historial de cierres --- */
+.cierres-caja { margin: 6px 0 14px; }
+
+.cierres-caja summary {
+  cursor: pointer;
+  color: var(--acento-texto);
+  font-weight: 700;
+}
+
+.tabla-scroll { overflow-x: auto; }
+.cierres-caja table { margin-top: 8px; font-size: 0.88rem; }
+.cierres-vacio { text-align: center; color: var(--texto-tenue); }
+
+.cierre-dif-badge { padding: 2px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+.cierre-dif-badge.cuadra { background: var(--pago-efectivo-fondo); color: var(--pago-efectivo-texto); }
+.cierre-dif-badge.centavos { background: var(--cuadre-aviso-fondo); color: var(--cuadre-aviso-texto); }
+.cierre-dif-badge.diferencia { background: var(--cuadre-mal-fondo); color: var(--cuadre-mal-texto); }
