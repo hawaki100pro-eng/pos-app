@@ -1666,3 +1666,78 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   outline: 2px solid var(--acento);
   outline-offset: 2px;
 }
+
+/* --- Aviso de venta registrada ---
+   Banner del color del pago (mismos colores que la tarjeta del total) con el
+   botón de imprimir en blanco, grande, a la derecha. */
+.venta-registrada { margin: 4px 0 14px; }
+
+.venta-registrada-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 14px;
+  color: #fff;
+}
+
+.venta-registrada-banner.efectivo { background: var(--pago-efectivo-tarjeta); }
+.venta-registrada-banner.transferencia { background: var(--pago-transfer-tarjeta); }
+
+.venta-registrada-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.venta-registrada-numero {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.venta-registrada-metodo { font-size: 0.85rem; opacity: 0.85; }
+
+.venta-registrada-imprimir {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.1s ease;
+}
+
+.venta-registrada-banner.efectivo .venta-registrada-imprimir { color: var(--pago-efectivo-tarjeta); }
+.venta-registrada-banner.transferencia .venta-registrada-imprimir { color: var(--pago-transfer-tarjeta); }
+.venta-registrada-imprimir:hover { transform: scale(1.04); }
+.venta-registrada-imprimir svg { width: 28px; height: 28px; }
+
+.venta-registrada-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding: 0 4px;
+  font-size: 0.9rem;
+}
+
+.venta-registrada-pie a { color: var(--acento-texto); }
+
+.venta-registrada-cerrar,
+.venta-registrada-cerrar:hover {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.venta-registrada-cerrar:hover { color: var(--texto); }

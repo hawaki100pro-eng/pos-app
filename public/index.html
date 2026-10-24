@@ -150,7 +150,27 @@
         Confirmar venta
       </button>
       <p id="venta-msg"></p>
-      <a id="imprimir-link" class="hidden" target="_blank">Imprimir</a>
+
+      <!-- Aviso al confirmar: banner del color del pago (verde efectivo, azul
+           transferencia) con el botón de imprimir bien a la vista. Se quita al
+           empezar la siguiente venta. app.js lo llena. -->
+      <div id="venta-registrada" class="venta-registrada hidden">
+        <div id="venta-registrada-banner" class="venta-registrada-banner efectivo">
+          <div>
+            <div class="venta-registrada-label">Venta registrada</div>
+            <div class="venta-registrada-numero">#<span id="vr-numero"></span> · $<span id="vr-total"></span></div>
+            <div id="vr-metodo" class="venta-registrada-metodo"></div>
+          </div>
+          <a id="vr-imprimir" class="venta-registrada-imprimir" target="_blank">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir
+          </a>
+        </div>
+        <div class="venta-registrada-pie">
+          <a id="vr-ver" target="_blank">Ver nota</a>
+          <button type="button" id="vr-cerrar" class="venta-registrada-cerrar">✕ Cerrar</button>
+        </div>
+      </div>
     </div>
 
     <!-- Solo las ventas de quien entró: el servidor no manda las de los demás.

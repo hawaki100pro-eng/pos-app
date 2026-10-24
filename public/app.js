@@ -110,6 +110,7 @@ async function logout() {
   // Que el próximo usuario no herede la campana del anterior
   ventasNuevas = [];
   campanaYaCargada = false;
+  ocultarVentaRegistrada();
   loginScreen.classList.remove('hidden');
   loginScreen.prepend(logoHawaki);
   vendedorScreen.classList.add('hidden');
@@ -969,6 +970,8 @@ function renderItems() {
   const pares = items.reduce((acc, item) => acc + Number(item.cantidad), 0);
   document.getElementById('total-pares').textContent = `${pares} ${pares === 1 ? 'par' : 'pares'}`;
   actualizarMetodoPago();
+  // Empezó la siguiente venta: el aviso de la anterior ya no hace falta
+  if (items.length) ocultarVentaRegistrada();
 }
 
 // La tarjeta del total y el botón elegido toman el color del método de pago:
@@ -989,6 +992,28 @@ function actualizarMetodoPago() {
 document.querySelectorAll('input[name="metodo-pago"]').forEach((radio) => {
   radio.addEventListener('change', actualizarMetodoPago);
 });
+
+// Banner tras confirmar: del color del pago, con Imprimir (directo al cuadro de
+// impresión) bien a la vista. Se quita al cerrarlo o al agregar el primer
+// producto de la siguiente venta (ver renderItems).
+function mostrarVentaRegistrada(data) {
+  const esTransferencia = data.metodo_pago === 'transferencia';
+  const banner = document.getElementById('venta-registrada-banner');
+  banner.classList.toggle('transferencia', esTransferencia);
+  banner.classList.toggle('efectivo', !esTransferencia);
+  document.getElementById('vr-numero').textContent = data.numero_proforma;
+  document.getElementById('vr-total').textContent = data.total.toFixed(2);
+  document.getElementById('vr-metodo').textContent = esTransferencia ? 'Transferencia' : 'Efectivo';
+  document.getElementById('vr-imprimir').href = `print.html?id=${data.ventaId}&imprimir=1`;
+  document.getElementById('vr-ver').href = `print.html?id=${data.ventaId}`;
+  document.getElementById('venta-registrada').classList.remove('hidden');
+}
+
+function ocultarVentaRegistrada() {
+  document.getElementById('venta-registrada').classList.add('hidden');
+}
+
+document.getElementById('vr-cerrar').addEventListener('click', ocultarVentaRegistrada);
 
 document.getElementById('confirmar-venta-btn').addEventListener('click', async () => {
   const msg = document.getElementById('venta-msg');
@@ -1023,12 +1048,9 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
     return;
   }
 
-  msg.textContent = `Venta ${data.numero_proforma} registrada por $${data.total.toFixed(2)} (${data.metodo_pago})`;
+  msg.textContent = '';
   msg.className = '';
-
-  const imprimirLink = document.getElementById('imprimir-link');
-  imprimirLink.href = `print.html?id=${data.ventaId}`;
-  imprimirLink.classList.remove('hidden');
+  mostrarVentaRegistrada(data);
 
   items = [];
   resetTipoCliente();
