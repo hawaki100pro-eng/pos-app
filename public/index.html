@@ -268,6 +268,40 @@
       </div>
     </details>
 
+    <!-- Bóveda: el efectivo que se retira de la caja y se guarda aparte. Su saldo
+         se acumula entre turnos; cada retiro y reingreso queda registrado. -->
+    <h2 style="color:#7c3aed;">Bóveda</h2>
+    <div id="boveda-card" class="card">
+      <span class="card-label">Saldo en bóveda</span>
+      <span class="card-value">$<span id="boveda-saldo">0.00</span></span>
+      <input type="number" id="boveda-monto" placeholder="Monto" min="0.01" step="0.01">
+      <input type="text" id="boveda-desc" placeholder="Nota (opcional, ej: billetes de $20)">
+      <div class="boveda-botones">
+        <button id="boveda-retirar-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          Retirar a bóveda
+        </button>
+        <button id="boveda-ingresar-btn" type="button" class="btn-secundario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          Ingresar a caja
+        </button>
+      </div>
+      <button id="boveda-ajuste-btn" type="button" class="btn-secundario hidden">Ajustar saldo (dueño)</button>
+      <p id="boveda-msg"></p>
+    </div>
+
+    <details id="boveda-movs" class="cierres-caja">
+      <summary>Movimientos de la bóveda</summary>
+      <div class="tabla-scroll">
+        <table id="boveda-tabla">
+          <thead>
+            <tr><th>Fecha</th><th>Movimiento</th><th>Monto</th><th>Nota</th><th>Por</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+
     <!-- Aquí se inserta el formulario de Nota de venta cuando entra un admin o el dueño -->
     <div id="venta-slot-admin"></div>
 

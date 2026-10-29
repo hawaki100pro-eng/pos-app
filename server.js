@@ -157,6 +157,14 @@ app.get('/api/caja/resumen-cierre', requireLogin, requireAdmin, async (req, res)
     `SELECT COUNT(*)::int AS cantidad, COALESCE(SUM(monto), 0) AS total FROM gastos WHERE turno_id = $1`,
     [turno.id]
   );
+  // Lo que se movió a la bóveda en este turno (retiros menos reingresos). Un neto
+  // positivo salió de la caja hacia la bóveda, así que explica parte de la baja.
+  const retiros = await pool.query(
+    `SELECT COALESCE(SUM(CASE WHEN tipo = 'retiro' THEN monto WHEN tipo = 'reingreso' THEN -monto ELSE 0 END), 0) AS neto
+     FROM boveda_movimientos WHERE turno_id = $1`,
+    [turno.id]
+  );
+  const retiroNeto = redondear2(Number(retiros.rows[0].neto));
   const porMetodo = (m) => {
     const fila = ventas.rows.find((v) => v.metodo_pago === m);
     return { cantidad: fila ? fila.cantidad : 0, total: fila ? redondear2(Number(fila.total)) : 0 };
@@ -167,7 +175,7 @@ app.get('/api/caja/resumen-cierre', requireLogin, requireAdmin, async (req, res)
   const esperado = redondear2(turno.monto_actual);
   // Si se vació la caja a mitad de turno, el desglose no suma igual que el
   // monto actual: esa diferencia se muestra aparte como "ajustes"
-  const ajustes = redondear2(esperado - (turno.monto_inicial + efectivo.total - gasto.total));
+  const ajustes = redondear2(esperado - (turno.monto_inicial + efectivo.total - gasto.total - retiroNeto));
   res.json({
     turno_id: turno.id,
     fecha_apertura: turno.fecha_apertura,
@@ -175,6 +183,7 @@ app.get('/api/caja/resumen-cierre', requireLogin, requireAdmin, async (req, res)
     ventas_efectivo: efectivo,
     transferencias: transferencia,
     gastos: gasto,
+    retiros_boveda: retiroNeto,
     ajustes,
     esperado,
     denominaciones: DENOMINACIONES_CENTAVOS,
@@ -385,6 +394,128 @@ app.get('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
         `SELECT g.*, u.usuario AS registrado_por FROM gastos g JOIN usuarios u ON u.id = g.usuario_id ORDER BY g.id DESC LIMIT 50`
       );
   res.json(r.rows);
+});
+
+// --- Bóveda: el efectivo que se retira de la caja y se guarda aparte ---
+// Su saldo se acumula entre turnos (no se reinicia). Todo movimiento queda
+// registrado, así el dinero nunca sale de la caja sin dejar rastro.
+
+// Saldo actual de la bóveda = suma con signo de sus movimientos. Acepta el pool
+// o un cliente de transacción, para poder leerlo dentro de un BEGIN/COMMIT.
+async function saldoBoveda(ejecutor = pool) {
+  const r = await ejecutor.query(
+    `SELECT COALESCE(SUM(CASE WHEN tipo = 'reingreso' THEN -monto ELSE monto END), 0) AS saldo
+     FROM boveda_movimientos`
+  );
+  return redondear2(Number(r.rows[0].saldo));
+}
+
+app.get('/api/boveda', requireLogin, requireAdmin, async (req, res) => {
+  const saldo = await saldoBoveda();
+  const movs = await pool.query(
+    `SELECT b.*, u.usuario AS registrado_por FROM boveda_movimientos b
+     JOIN usuarios u ON u.id = b.usuario_id
+     ORDER BY b.id DESC LIMIT 60`
+  );
+  res.json({ saldo, movimientos: movs.rows });
+});
+
+// Retiro: sale efectivo de la caja y entra a la bóveda. Baja el monto_actual del
+// turno, así el cuadre de cierre sigue correcto (ese dinero ya no está en el cajón).
+app.post('/api/boveda/retiro', requireLogin, requireAdmin, async (req, res) => {
+  const { monto, descripcion } = req.body;
+  if (monto == null || !(monto > 0)) {
+    return res.status(400).json({ error: 'El monto a retirar debe ser mayor a 0' });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // FOR UPDATE: si justo entra una venta, espera; el monto_actual no cambia a medias
+    const t = await client.query(`SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1 FOR UPDATE`);
+    const turno = t.rows[0];
+    if (!turno) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'No hay caja abierta. Abre un turno antes de retirar a la bóveda.' });
+    }
+    const enCaja = redondear2(turno.monto_actual);
+    if (redondear2(monto) > enCaja + 1e-9) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: `No puedes retirar más de lo que hay en la caja ($${enCaja.toFixed(2)})` });
+    }
+    const r = await client.query(
+      `INSERT INTO boveda_movimientos (tipo, monto, turno_id, usuario_id, descripcion)
+       VALUES ('retiro', $1, $2, $3, $4) RETURNING *`,
+      [redondear2(monto), turno.id, req.session.user.id, (descripcion || '').trim() || null]
+    );
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [redondear2(monto), turno.id]);
+    await client.query('COMMIT');
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Reingreso: vuelve efectivo de la bóveda a la caja (ej: reponer sencillo). Sube
+// el monto_actual del turno y baja el saldo de la bóveda.
+app.post('/api/boveda/reingreso', requireLogin, requireAdmin, async (req, res) => {
+  const { monto, descripcion } = req.body;
+  if (monto == null || !(monto > 0)) {
+    return res.status(400).json({ error: 'El monto a ingresar debe ser mayor a 0' });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1 FOR UPDATE`);
+    const turno = t.rows[0];
+    if (!turno) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'No hay caja abierta. Abre un turno antes de ingresar desde la bóveda.' });
+    }
+    const saldo = await saldoBoveda(client);
+    if (redondear2(monto) > saldo + 1e-9) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: `La bóveda solo tiene $${saldo.toFixed(2)}` });
+    }
+    const r = await client.query(
+      `INSERT INTO boveda_movimientos (tipo, monto, turno_id, usuario_id, descripcion)
+       VALUES ('reingreso', $1, $2, $3, $4) RETURNING *`,
+      [redondear2(monto), turno.id, req.session.user.id, (descripcion || '').trim() || null]
+    );
+    await client.query('UPDATE turnos_caja SET monto_actual = monto_actual + $1 WHERE id = $2', [redondear2(monto), turno.id]);
+    await client.query('COMMIT');
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Ajuste: corrección o saldo inicial de la bóveda, sin tocar la caja. Puede ser
+// positivo (sumar) o negativo (restar). Solo el dueño, y siempre con motivo.
+app.post('/api/boveda/ajuste', requireLogin, requireDueño, async (req, res) => {
+  const { monto, descripcion } = req.body;
+  const m = redondear2(Number(monto));
+  if (!Number.isFinite(m) || m === 0) {
+    return res.status(400).json({ error: 'El ajuste debe ser un monto distinto de 0 (positivo suma, negativo resta)' });
+  }
+  if (!descripcion || !descripcion.trim()) {
+    return res.status(400).json({ error: 'Escribe el motivo del ajuste (ej: saldo inicial de la bóveda)' });
+  }
+  const saldo = await saldoBoveda();
+  if (saldo + m < -1e-9) {
+    return res.status(400).json({ error: `El ajuste dejaría la bóveda en negativo (saldo actual $${saldo.toFixed(2)})` });
+  }
+  const r = await pool.query(
+    `INSERT INTO boveda_movimientos (tipo, monto, usuario_id, descripcion)
+     VALUES ('ajuste', $1, $2, $3) RETURNING *`,
+    [m, req.session.user.id, descripcion.trim()]
+  );
+  res.status(201).json(r.rows[0]);
 });
 
 // --- Ventas (proforma libre) ---

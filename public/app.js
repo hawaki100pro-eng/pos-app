@@ -91,6 +91,7 @@ function mostrarPantalla(user) {
     cargarGastos();
     cargarProductos();
     cargarCampana();
+    cargarBoveda();
     iniciarRefrescoAuto(); // las ventas de los vendedores aparecen solas
   } else {
     vendedorScreen.classList.remove('hidden');
@@ -1171,9 +1172,9 @@ aplicarVisibilidadMisVentas();
 let dineroOculto = localStorage.getItem('dineroOculto') === '1';
 
 function aplicarVisibilidadDinero() {
-  ['caja-inicial', 'caja-actual', 'caja-transferencias'].forEach((id) => {
+  ['caja-inicial', 'caja-actual', 'caja-transferencias', 'boveda-saldo'].forEach((id) => {
     const el = document.getElementById(id);
-    if (el.dataset.valor == null) return;
+    if (!el || el.dataset.valor == null) return;
     el.textContent = dineroOculto ? '••••' : el.dataset.valor;
   });
   // Solo se cambia el texto: el dibujo lo elige el CSS con la clase (ver .btn-dinero)
@@ -1380,6 +1381,7 @@ function refrescarDatos() {
     cargarGastos();
     cargarProductos();
     cargarEstadoCaja();
+    cargarBoveda();
     cargarCampana();
   } else {
     // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
@@ -1755,6 +1757,10 @@ async function abrirCierreCaja() {
     [`+ Ventas en efectivo (${data.ventas_efectivo.cantidad})`, data.ventas_efectivo.total],
     [`− Gastos (${data.gastos.cantidad})`, -data.gastos.total],
   ];
+  // Lo que se movió a la bóveda en el turno (positivo = salió de la caja)
+  if (Math.abs(data.retiros_boveda || 0) >= 0.005) {
+    filas.push([data.retiros_boveda >= 0 ? '− Retirado a la bóveda' : '+ Ingresado desde la bóveda', -data.retiros_boveda]);
+  }
   // Si se vació la caja a mitad de turno, el desglose no cuadra solo: se muestra
   if (Math.abs(data.ajustes) >= 0.005) filas.push(['Ajustes (caja vaciada en el turno)', data.ajustes]);
   document.getElementById('cierre-resumen').innerHTML = filas.map(([texto, monto]) =>
@@ -2001,6 +2007,103 @@ document.getElementById('registrar-gasto-btn').addEventListener('click', async (
   document.getElementById('gasto-monto').value = '';
   cargarGastos();
   cargarDashboard();
+});
+
+// --- Bóveda: retiros de la caja, reingresos y ajustes del dueño ---
+
+function etiquetaMovBoveda(tipo) {
+  return tipo === 'retiro' ? 'Retiro a bóveda' : tipo === 'reingreso' ? 'Ingreso a caja' : 'Ajuste';
+}
+
+async function cargarBoveda() {
+  const res = await fetch('/api/boveda');
+  if (!res.ok) return;
+  const data = await res.json();
+  const saldoEl = document.getElementById('boveda-saldo');
+  saldoEl.dataset.valor = Number(data.saldo).toFixed(2);
+  aplicarVisibilidadDinero(); // el saldo se tapa/destapa igual que la caja
+  // Fijar o corregir el saldo es solo del dueño
+  document.getElementById('boveda-ajuste-btn').classList.toggle('hidden', rolActual !== 'dueno');
+
+  const tbody = document.querySelector('#boveda-tabla tbody');
+  tbody.innerHTML = '';
+  data.movimientos.forEach((m) => {
+    // Efecto en la bóveda: reingreso la baja; retiro y ajuste(+) la suben; ajuste(−) la baja
+    const efecto = m.tipo === 'reingreso' ? -m.monto : m.monto;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${formatFecha(m.fecha)}</td><td>${etiquetaMovBoveda(m.tipo)}</td>` +
+      `<td>${efecto < 0 ? '−' : '+'}$${Math.abs(m.monto).toFixed(2)}</td>` +
+      `<td>${m.descripcion ? m.descripcion : '—'}</td><td>${m.registrado_por}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Retiro (caja → bóveda) e ingreso (bóveda → caja) comparten casi todo
+async function moverBoveda(endpoint, exito) {
+  const msg = document.getElementById('boveda-msg');
+  const monto = parseFloat(document.getElementById('boveda-monto').value);
+  if (isNaN(monto) || monto <= 0) {
+    msg.textContent = 'Escribe un monto válido';
+    msg.className = 'error';
+    return;
+  }
+  const descripcion = document.getElementById('boveda-desc').value.trim();
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ monto, descripcion }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    msg.textContent = data.error;
+    msg.className = 'error';
+    return;
+  }
+  msg.textContent = exito(Number(data.monto));
+  msg.className = '';
+  document.getElementById('boveda-monto').value = '';
+  document.getElementById('boveda-desc').value = '';
+  cargarBoveda();
+  cargarDashboard(); // el monto de la caja cambió
+}
+
+document.getElementById('boveda-retirar-btn').addEventListener('click', () =>
+  moverBoveda('/api/boveda/retiro', (m) => `Retirado $${m.toFixed(2)} de la caja a la bóveda`));
+document.getElementById('boveda-ingresar-btn').addEventListener('click', () =>
+  moverBoveda('/api/boveda/reingreso', (m) => `Ingresado $${m.toFixed(2)} de la bóveda a la caja`));
+
+document.getElementById('boveda-ajuste-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('boveda-msg');
+  const montoStr = window.prompt('Ajustar saldo de la bóveda.\nMonto: positivo suma, negativo resta.\nEj: 500 para el saldo inicial, o -20 para corregir.', '');
+  if (montoStr === null) return;
+  const monto = parseFloat(montoStr);
+  if (isNaN(monto) || monto === 0) {
+    msg.textContent = 'El ajuste debe ser un monto distinto de 0';
+    msg.className = 'error';
+    return;
+  }
+  const descripcion = window.prompt('Motivo del ajuste (ej: saldo inicial de la bóveda):', '');
+  if (descripcion === null) return;
+  if (!descripcion.trim()) {
+    msg.textContent = 'El ajuste necesita un motivo';
+    msg.className = 'error';
+    return;
+  }
+  const res = await fetch('/api/boveda/ajuste', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ monto, descripcion: descripcion.trim() }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    msg.textContent = data.error;
+    msg.className = 'error';
+    return;
+  }
+  msg.textContent = `Ajuste de ${monto < 0 ? '−' : '+'}$${Math.abs(monto).toFixed(2)} aplicado`;
+  msg.className = '';
+  cargarBoveda();
 });
 
 async function cargarUsuarios() {

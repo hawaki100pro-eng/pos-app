@@ -251,6 +251,14 @@ button svg {
 .card-label { color: var(--texto-suave); font-size: 0.85rem; }
 .card-value { font-size: 1.6rem; font-weight: bold; color: var(--texto); }
 
+/* Bóveda: usa la tarjeta normal pero agrega sus campos y botones de movimiento */
+#boveda-card { gap: 10px; }
+#boveda-card #boveda-saldo { color: #7c3aed; }
+#boveda-card input { width: 100%; }
+.boveda-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+.boveda-botones button { flex: 1 1 auto; min-width: 150px; }
+#boveda-msg:empty { display: none; }
+
 table {
   width: 100%;
   border-collapse: collapse;

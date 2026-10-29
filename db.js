@@ -206,6 +206,26 @@ async function init() {
     ALTER TABLE turnos_caja ADD COLUMN IF NOT EXISTS transferencias_confirmadas BOOLEAN;
   `);
 
+  // Migración: la bóveda (el efectivo que se retira de la caja y se guarda aparte,
+  // "abajo de la mesa" o en caja fuerte). A diferencia de la caja, su saldo NO se
+  // reinicia con cada turno: se acumula. Cada movimiento queda registrado para que
+  // el dinero siempre tenga rastro.
+  //   - 'retiro'    → sale de la caja y entra a la bóveda (baja el monto_actual del turno)
+  //   - 'reingreso' → sale de la bóveda y vuelve a la caja (sube el monto_actual del turno)
+  //   - 'ajuste'    → corrección o saldo inicial de la bóveda, sin tocar la caja (puede ser +/−)
+  // El saldo de la bóveda es la suma con signo de todos sus movimientos.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS boveda_movimientos (
+      id SERIAL PRIMARY KEY,
+      tipo TEXT NOT NULL CHECK (tipo IN ('retiro', 'reingreso', 'ajuste')),
+      monto REAL NOT NULL,
+      turno_id INTEGER REFERENCES turnos_caja(id),
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+      descripcion TEXT,
+      fecha TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
   // Migración: código de la etiqueta (SKU). Se rellena una sola vez para los
   // productos que ya existían; de ahí en adelante lo pone el alta de producto.
   //
