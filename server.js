@@ -90,6 +90,45 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// --- Modo de caja ---
+// 'cierre' (el de siempre): se abre, se vende y se cierra con cuadre.
+// 'libre': la caja queda siempre abierta, nadie la cierra y nunca frena una
+// venta. Lo elige solo el dueño; se guarda en configuracion.
+async function getModoCaja() {
+  const r = await pool.query("SELECT valor FROM configuracion WHERE clave = 'modo_caja'");
+  return r.rows[0] && r.rows[0].valor === 'libre' ? 'libre' : 'cierre';
+}
+
+// Abre un turno con el sencillo que quedó en el último cierre (o $0) si no hay
+// uno abierto. El candado evita que dos ventas simultáneas abran dos turnos.
+async function asegurarTurnoLibre(usuarioId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(4242)');
+    let turno = (await client.query(
+      `SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1`
+    )).rows[0];
+    if (!turno) {
+      const ultimo = await client.query(
+        `SELECT monto_queda FROM turnos_caja WHERE estado = 'cerrado' AND monto_queda IS NOT NULL ORDER BY id DESC LIMIT 1`
+      );
+      const inicial = ultimo.rows[0] ? Number(ultimo.rows[0].monto_queda) : 0;
+      turno = (await client.query(
+        `INSERT INTO turnos_caja (monto_inicial, monto_actual, abierto_por) VALUES ($1, $1, $2) RETURNING *`,
+        [inicial, usuarioId]
+      )).rows[0];
+    }
+    await client.query('COMMIT');
+    return turno;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 async function getTurnoAbierto() {
   const r = await pool.query(`SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1`);
   return r.rows[0] || null;
@@ -131,7 +170,24 @@ app.get('/api/caja/estado', requireLogin, async (req, res) => {
     );
     if (r.rows[0]) sugerido_inicial = r.rows[0].monto_queda;
   }
-  res.json({ turno, sugerido_inicial });
+  res.json({ turno, sugerido_inicial, modo_caja: await getModoCaja() });
+});
+
+// El dueño cambia el modo de caja. Al pasar a libre, si la caja está cerrada se
+// abre sola: en ese modo siempre hay una caja abierta.
+app.post('/api/caja/modo', requireLogin, requireDueño, async (req, res) => {
+  const { modo } = req.body || {};
+  if (!['libre', 'cierre'].includes(modo)) {
+    return res.status(400).json({ error: 'El modo de caja debe ser "libre" o "cierre"' });
+  }
+  await pool.query(
+    `INSERT INTO configuracion (clave, valor) VALUES ('modo_caja', $1)
+     ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
+    [modo]
+  );
+  let turno = await getTurnoAbierto();
+  if (modo === 'libre' && !turno) turno = await asegurarTurnoLibre(req.session.user.id);
+  res.json({ modo, turno });
 });
 
 // --- Cuadre de caja ---
@@ -201,6 +257,10 @@ app.post('/api/caja/abrir', requireLogin, requireAdmin, async (req, res) => {
 // más), cuánto se retiró y cuánto se dejó de sencillo.
 app.post('/api/caja/cerrar', requireLogin, requireAdmin, async (req, res) => {
   const { conteo, motivo, monto_queda, transferencias_confirmadas } = req.body || {};
+
+  if ((await getModoCaja()) === 'libre') {
+    return res.status(400).json({ error: 'La caja está en modo libre: el dueño debe pasarla a "Con cierre" para poder cerrarla.' });
+  }
 
   // El conteo llega como { "2000": 10, "500": 9, ... } (centavos → cantidad)
   // Sin conteo solo llega desde una pestaña abierta antes de que existiera el
@@ -436,7 +496,11 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     return res.status(400).json({ error: problema });
   }
 
-  const turno = await getTurnoAbierto();
+  let turno = await getTurnoAbierto();
+  // En caja libre la caja nunca frena una venta: si no hay turno, se abre solo
+  if (!turno && (await getModoCaja()) === 'libre') {
+    turno = await asegurarTurnoLibre(req.session.user.id);
+  }
   if (!turno) {
     return res.status(400).json({ error: 'No hay caja abierta. Pide al administrador que abra el turno.' });
   }

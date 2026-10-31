@@ -150,7 +150,9 @@ async function cargarEstadoCaja() {
   const data = await res.json();
   const cerradaMsg = document.getElementById('caja-cerrada-msg');
   const formWrap = document.getElementById('venta-form-wrap');
-  if (data.turno) {
+  aplicarModoCaja(data.modo_caja);
+  // En caja libre siempre se puede vender: si faltara el turno, la venta lo abre
+  if (data.turno || data.modo_caja === 'libre') {
     cerradaMsg.classList.add('hidden');
     formWrap.classList.remove('hidden');
   } else {
@@ -1662,6 +1664,53 @@ document.getElementById('vaciar-caja-btn').addEventListener('click', async () =>
   msg.textContent = 'Caja vaciada. Todos los montos en $0.00.';
   msg.className = '';
   cargarDashboard();
+});
+
+// --- Modo de caja: "Con cierre" (se cierra con cuadre) o "Caja libre" (queda
+// siempre abierta). Solo el dueño ve el selector; en caja libre se esconde el
+// botón de cerrar para todos y se muestra el aviso.
+let modoCaja = 'cierre';
+
+function aplicarModoCaja(modo) {
+  modoCaja = modo === 'libre' ? 'libre' : 'cierre';
+  const libre = modoCaja === 'libre';
+  document.getElementById('cerrar-caja-btn').classList.toggle('hidden', libre);
+  document.getElementById('caja-libre-aviso').classList.toggle('hidden', !libre);
+  const selector = document.getElementById('modo-caja');
+  selector.classList.toggle('hidden', rolActual !== 'dueno');
+  selector.querySelectorAll('.modo-caja-opcion').forEach((boton) => {
+    const activo = boton.dataset.modo === modoCaja;
+    boton.classList.toggle('activo', activo);
+    boton.setAttribute('aria-pressed', activo ? 'true' : 'false');
+  });
+}
+
+document.querySelectorAll('.modo-caja-opcion').forEach((boton) => {
+  boton.addEventListener('click', async () => {
+    const modo = boton.dataset.modo;
+    if (modo === modoCaja) return;
+    const pregunta = modo === 'libre'
+      ? '¿Pasar a caja libre? La caja quedará siempre abierta y nadie podrá cerrarla hasta que vuelvas a "Con cierre".'
+      : '¿Pasar a "Con cierre"? Vuelve a aparecer el botón para cerrar la caja con cuadre.';
+    if (!confirm(pregunta)) return;
+    const msg = document.getElementById('caja-msg');
+    const res = await fetch('/api/caja/modo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modo }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      msg.textContent = data.error;
+      msg.className = 'error';
+      return;
+    }
+    msg.textContent = modo === 'libre' ? 'Caja libre activada: la caja queda siempre abierta.' : 'Modo con cierre activado.';
+    msg.className = '';
+    aplicarModoCaja(data.modo);
+    cargarDashboard();
+    cargarEstadoCaja();
+  });
 });
 
 // --- Cierre de caja con cuadre ---

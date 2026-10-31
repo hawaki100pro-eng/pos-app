@@ -1879,3 +1879,38 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .cierre-dif-badge.cuadra { background: var(--pago-efectivo-fondo); color: var(--pago-efectivo-texto); }
 .cierre-dif-badge.centavos { background: var(--cuadre-aviso-fondo); color: var(--cuadre-aviso-texto); }
 .cierre-dif-badge.diferencia { background: var(--cuadre-mal-fondo); color: var(--cuadre-mal-texto); }
+
+/* --- Modo de caja (solo el dueño lo cambia) ---
+   Interruptor de dos posiciones: "Con cierre" / "Caja libre". */
+.modo-caja {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--acento-suave);
+}
+
+.modo-caja-opcion,
+.modo-caja-opcion:hover {
+  padding: 7px 16px;
+  background: transparent;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.modo-caja-opcion.activo,
+.modo-caja-opcion.activo:hover {
+  background: var(--superficie);
+  color: var(--acento-texto);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.caja-libre-aviso {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--pago-efectivo-fondo);
+  color: var(--pago-efectivo-texto);
+  font-size: 0.9rem;
+}

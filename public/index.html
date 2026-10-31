@@ -218,6 +218,14 @@
     </div>
 
     <h2 style="color:#2563eb;">Caja con efectivo</h2>
+    <!-- Modo de caja: solo el dueño lo cambia (app.js lo muestra según el rol) -->
+    <div id="modo-caja" class="modo-caja hidden" role="group" aria-label="Modo de caja">
+      <button type="button" class="modo-caja-opcion" data-modo="cierre">Con cierre</button>
+      <button type="button" class="modo-caja-opcion" data-modo="libre">Caja libre</button>
+    </div>
+    <p id="caja-libre-aviso" class="caja-libre-aviso hidden">
+      Caja libre: queda siempre abierta y no se cierra. Para cerrar con cuadre, el dueño la pasa a "Con cierre".
+    </p>
     <div id="caja-abierta-card" class="card hidden">
       <!-- Mismo estilo de tarjeta que los botones de tipo de cliente (.tipo-btn).
            Lleva dos dibujos: el ojo tachado cuando el dinero se ve (para taparlo)
