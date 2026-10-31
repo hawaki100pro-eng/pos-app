@@ -1410,7 +1410,7 @@ async function cargarDashboard() {
     cerradaCard.classList.add('hidden');
     document.getElementById('caja-inicial').dataset.valor = data.turno.monto_inicial.toFixed(2);
     document.getElementById('caja-actual').dataset.valor = data.turno.monto_actual.toFixed(2);
-    document.getElementById('caja-transferencias').dataset.valor = data.totalTransferenciasTurno.toFixed(2);
+    document.getElementById('caja-transferencias').dataset.valor = data.totalTransferenciasHoy.toFixed(2);
     aplicarVisibilidadDinero();
     document.getElementById('vaciar-caja-btn').classList.toggle('hidden', rolActual !== 'dueno');
   } else {

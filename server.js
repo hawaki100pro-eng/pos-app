@@ -654,16 +654,25 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
     v.detalle = detalle.rows;
   }
 
-  let totalTransferenciasTurno = 0;
-  if (turno) {
-    const r = await pool.query(
-      `SELECT COALESCE(SUM(total), 0) AS t FROM ventas WHERE turno_id = $1 AND metodo_pago = 'transferencia' AND anulada = 0 AND eliminada = 0`,
-      [turno.id]
-    );
-    totalTransferenciasTurno = r.rows[0].t;
-  }
+  // Transferencias de HOY (día de Ecuador), no del turno: en caja libre el turno
+  // no se cierra nunca y el número crecería sin parar. Vaciar la caja no las toca
+  // porque ese dinero está en el banco, no en el cajón.
+  const transferenciasR = await pool.query(`
+    SELECT COALESCE(SUM(v.total), 0) AS t FROM ventas v
+    WHERE v.metodo_pago = 'transferencia' AND v.anulada = 0 AND v.eliminada = 0
+    ${FILTROS_PERIODO.hoy}
+  `);
+  const totalTransferenciasHoy = Number(transferenciasR.rows[0].t);
 
-  res.json({ turno, totalTransferenciasTurno, numVentas: parseInt(numVentasR.rows[0].c, 10), periodo, ventas });
+  res.json({
+    turno,
+    totalTransferenciasHoy,
+    // Mismo valor con el nombre de antes, para las pestañas abiertas antes de esta versión
+    totalTransferenciasTurno: totalTransferenciasHoy,
+    numVentas: parseInt(numVentasR.rows[0].c, 10),
+    periodo,
+    ventas,
+  });
 });
 
 // --- Anulación de ventas (no se borran, queda nota con fecha y motivo) ---
