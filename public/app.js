@@ -1488,7 +1488,7 @@ async function cargarDashboard() {
 }
 
 async function eliminarVenta(ventaId) {
-  if (!confirm('¿Eliminar esta venta PERMANENTEMENTE? Se borra de la base de datos y no se puede recuperar.')) return;
+  if (!confirm('¿Eliminar esta venta PERMANENTEMENTE? Se borra del historial y no se puede recuperar.\n\nEl stock y la caja NO cambian: los productos no vuelven al inventario. Si regresaron a la tienda, usa Anular, que sí los devuelve.')) return;
   const res = await fetch(`/api/ventas/${ventaId}/eliminar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

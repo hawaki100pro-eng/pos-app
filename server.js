@@ -728,21 +728,12 @@ app.post('/api/ventas/:id/eliminar', requireLogin, requireDueño, async (req, re
     return res.status(404).json({ error: 'Venta no encontrada' });
   }
 
+  // Eliminar solo borra el registro: NO devuelve el stock ni toca la caja (así lo
+  // pidió el dueño, para que el inventario no se desordene). Para una venta real
+  // que se devuelve está Anular, que sí regresa los productos y deja el registro.
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // Si la venta era en efectivo y no estaba anulada, su monto seguía contando en la caja: hay que restarlo.
-    // Si ya estaba anulada, o era transferencia, la caja nunca tuvo ese monto (o ya se ajustó), no se vuelve a restar.
-    if (!venta.anulada && venta.metodo_pago === 'efectivo') {
-      await client.query('UPDATE turnos_caja SET monto_actual = monto_actual - $1 WHERE id = $2', [venta.total, venta.turno_id]);
-    }
-    // Restaurar stock solo si no estaba anulada (si estaba anulada, el stock ya se restauró al anular)
-    if (!venta.anulada) {
-      const detalleElim = await client.query('SELECT * FROM detalle_venta WHERE venta_id = $1 AND producto_id IS NOT NULL', [venta.id]);
-      for (const d of detalleElim.rows) {
-        await client.query('UPDATE productos SET stock = stock + $1 WHERE id = $2', [d.cantidad, d.producto_id]);
-      }
-    }
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
     await client.query('DELETE FROM ventas WHERE id = $1', [venta.id]);
     await client.query('COMMIT');
