@@ -259,6 +259,99 @@ button svg {
 .boveda-botones button { flex: 1 1 auto; min-width: 150px; }
 #boveda-msg:empty { display: none; }
 
+/* Compras a proveedores: líneas de mercadería y el reparto del pago */
+#compra-card { gap: 10px; }
+#compra-card input { width: 100%; }
+.compra-campo { display: flex; flex-direction: column; gap: 4px; }
+.compra-lineas { display: flex; flex-direction: column; gap: 8px; }
+
+/* Cantidad | Producto | Precio | Subtotal | quitar. En celular se parte en dos filas. */
+.compra-linea {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 6.5rem 5rem 2.2rem;
+  gap: 6px;
+  align-items: center;
+}
+.compra-linea .linea-sub {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+}
+.compra-linea .linea-quitar {
+  padding: 0;
+  min-height: 36px;
+  background: var(--superficie-2);
+  color: var(--texto-suave);
+  border: 1px solid var(--borde-suave);
+}
+.compra-cabecera span { font-size: 0.75rem; color: var(--texto-suave); font-weight: 600; }
+.compra-cabecera span:nth-child(4) { text-align: right; }
+
+/* En celular: el producto arriba a lo ancho; cantidad, precio y subtotal abajo */
+@media (max-width: 560px) {
+  /* El encabezado se queda solo con las columnas de abajo: cantidad, precio, subtotal */
+  .compra-linea.compra-cabecera {
+    grid-template-areas: "cant precio sub";
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .compra-cabecera span:nth-child(1) { grid-area: cant; }
+  .compra-cabecera span:nth-child(2),
+  .compra-cabecera span:nth-child(5) { display: none; }
+  .compra-cabecera span:nth-child(3) { grid-area: precio; }
+  .compra-cabecera span:nth-child(4) { grid-area: sub; }
+  .compra-linea {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "prod prod quitar"
+      "cant precio sub";
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--borde-suave);
+  }
+  .compra-linea .linea-prod { grid-area: prod; }
+  .compra-linea .linea-quitar { grid-area: quitar; width: 2.2rem; }
+  .compra-linea .linea-cant { grid-area: cant; }
+  .compra-linea .linea-precio { grid-area: precio; }
+  .compra-linea .linea-sub { grid-area: sub; }
+}
+
+.compra-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 0 4px;
+  border-top: 2px solid var(--borde-suave);
+  font-weight: 700;
+}
+.compra-total span:last-child { font-size: 1.4rem; font-variant-numeric: tabular-nums; color: #b4552a; }
+
+.compra-pago { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.compra-origen {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--borde-campo);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.compra-origen.origen-boveda { border-color: #7c3aed; }
+.compra-origen.origen-boveda span { color: #7c3aed; }
+.compra-origen.origen-caja { border-color: #0f7a5a; }
+.compra-origen.origen-caja span { color: #0f7a5a; }
+@media (max-width: 420px) { .compra-pago { grid-template-columns: 1fr; } }
+
+.compra-atajos { display: flex; gap: 8px; flex-wrap: wrap; }
+.compra-atajos button { flex: 1 1 auto; }
+
+.compra-reparto { margin: 0; font-size: 0.9rem; font-weight: 600; }
+.compra-reparto:empty { display: none; }
+.compra-reparto.ok { color: #0f7a5a; }
+.compra-reparto.falta { color: #b4452a; }
+#compra-msg:empty { display: none; }
+
 table {
   width: 100%;
   border-collapse: collapse;

@@ -92,6 +92,8 @@ function mostrarPantalla(user) {
     cargarProductos();
     cargarCampana();
     cargarBoveda();
+    cargarCompras();
+    cargarProveedores();
     iniciarRefrescoAuto(); // las ventas de los vendedores aparecen solas
   } else {
     vendedorScreen.classList.remove('hidden');
@@ -1384,6 +1386,8 @@ function refrescarDatos() {
     cargarProductos();
     cargarEstadoCaja();
     cargarBoveda();
+    cargarCompras();
+    cargarProveedores();
     cargarCampana();
   } else {
     // Vendedor: su lista "Mis ventas" se actualiza sola, así las ventas hechas
@@ -1810,6 +1814,10 @@ async function abrirCierreCaja() {
   if (Math.abs(data.retiros_boveda || 0) >= 0.005) {
     filas.push([data.retiros_boveda >= 0 ? '− Retirado a la bóveda' : '+ Ingresado desde la bóveda', -data.retiros_boveda]);
   }
+  // La parte de las compras a proveedores que se pagó con el dinero del cajón
+  if (data.pagos_proveedores && data.pagos_proveedores.total >= 0.005) {
+    filas.push([`− Pagos a proveedores desde la caja (${data.pagos_proveedores.cantidad})`, -data.pagos_proveedores.total]);
+  }
   // Si se vació la caja a mitad de turno, el desglose no cuadra solo: se muestra
   if (Math.abs(data.ajustes) >= 0.005) filas.push(['Ajustes (caja vaciada en el turno)', data.ajustes]);
   document.getElementById('cierre-resumen').innerHTML = filas.map(([texto, monto]) =>
@@ -2061,7 +2069,10 @@ document.getElementById('registrar-gasto-btn').addEventListener('click', async (
 // --- Bóveda: retiros de la caja, reingresos y ajustes del dueño ---
 
 function etiquetaMovBoveda(tipo) {
-  return tipo === 'retiro' ? 'Retiro a bóveda' : tipo === 'reingreso' ? 'Ingreso a caja' : 'Ajuste';
+  if (tipo === 'retiro') return 'Retiro a bóveda';
+  if (tipo === 'reingreso') return 'Ingreso a caja';
+  if (tipo === 'pago') return 'Pago a proveedor';
+  return 'Ajuste';
 }
 
 async function cargarBoveda() {
@@ -2077,8 +2088,8 @@ async function cargarBoveda() {
   const tbody = document.querySelector('#boveda-tabla tbody');
   tbody.innerHTML = '';
   data.movimientos.forEach((m) => {
-    // Efecto en la bóveda: reingreso la baja; retiro y ajuste(+) la suben; ajuste(−) la baja
-    const efecto = m.tipo === 'reingreso' ? -m.monto : m.monto;
+    // Efecto en la bóveda: reingreso y pago la bajan; retiro y ajuste(+) la suben; ajuste(−) la baja
+    const efecto = m.tipo === 'reingreso' || m.tipo === 'pago' ? -m.monto : m.monto;
     const tr = document.createElement('tr');
     tr.innerHTML =
       `<td>${formatFecha(m.fecha)}</td><td>${etiquetaMovBoveda(m.tipo)}</td>` +
@@ -2154,6 +2165,219 @@ document.getElementById('boveda-ajuste-btn').addEventListener('click', async () 
   msg.className = '';
   cargarBoveda();
 });
+
+// --- Compras a proveedores ---
+// Qué entró (líneas de cantidad × precio) y de dónde salió el dinero: una parte
+// de la bóveda y otra de la caja, que tienen que sumar el total.
+
+const redondear2 = (n) => Math.round(n * 100) / 100;
+
+// Una línea nueva de mercadería. Las líneas se dibujan una vez y luego solo se
+// recalculan los montos: si se redibujaran en cada tecla se perdería el foco.
+function agregarLineaCompra() {
+  const fila = document.createElement('div');
+  fila.className = 'compra-linea';
+  fila.innerHTML = `
+    <input type="number" class="linea-cant" min="1" step="1" inputmode="numeric" placeholder="Cant." aria-label="Cantidad">
+    <input type="text" class="linea-prod" placeholder="Producto (ej: Sandalia baja)" aria-label="Producto">
+    <input type="number" class="linea-precio" min="0" step="0.01" inputmode="decimal" placeholder="Precio unit." aria-label="Precio unitario">
+    <span class="linea-sub">$0.00</span>
+    <button type="button" class="linea-quitar" aria-label="Quitar línea">✕</button>
+  `;
+  fila.querySelectorAll('input').forEach((input) => input.addEventListener('input', recalcularCompra));
+  fila.querySelector('.linea-quitar').addEventListener('click', () => {
+    fila.remove();
+    if (!document.querySelector('#compra-lineas .compra-linea')) agregarLineaCompra();
+    recalcularCompra();
+  });
+  document.getElementById('compra-lineas').appendChild(fila);
+  return fila;
+}
+
+function leerLineasCompra() {
+  return [...document.querySelectorAll('#compra-lineas .compra-linea')].map((fila) => ({
+    fila,
+    cantidad: parseFloat(fila.querySelector('.linea-cant').value),
+    producto: fila.querySelector('.linea-prod').value.trim(),
+    precio_unitario: parseFloat(fila.querySelector('.linea-precio').value),
+  }));
+}
+
+function totalCompra() {
+  return redondear2(leerLineasCompra().reduce((acc, l) => {
+    const sub = (l.cantidad > 0 && l.precio_unitario >= 0) ? l.cantidad * l.precio_unitario : 0;
+    return acc + sub;
+  }, 0));
+}
+
+// Recalcula subtotales, total y el aviso de si lo pagado cuadra con el total
+function recalcularCompra() {
+  leerLineasCompra().forEach((l) => {
+    const sub = (l.cantidad > 0 && l.precio_unitario >= 0) ? l.cantidad * l.precio_unitario : 0;
+    l.fila.querySelector('.linea-sub').textContent = `$${sub.toFixed(2)}`;
+  });
+  const total = totalCompra();
+  document.getElementById('compra-total').textContent = total.toFixed(2);
+
+  const deBoveda = parseFloat(document.getElementById('compra-pago-boveda').value) || 0;
+  const deCaja = parseFloat(document.getElementById('compra-pago-caja').value) || 0;
+  const asignado = redondear2(deBoveda + deCaja);
+  const aviso = document.getElementById('compra-reparto');
+  if (total <= 0) {
+    aviso.textContent = '';
+    aviso.className = 'compra-reparto';
+  } else if (Math.abs(asignado - total) < 0.005) {
+    aviso.textContent = `✓ $${deBoveda.toFixed(2)} + $${deCaja.toFixed(2)} = $${total.toFixed(2)} — cuadra con el total`;
+    aviso.className = 'compra-reparto ok';
+  } else if (asignado < total) {
+    aviso.textContent = `Falta asignar $${(total - asignado).toFixed(2)} entre la bóveda y la caja`;
+    aviso.className = 'compra-reparto falta';
+  } else {
+    aviso.textContent = `Sobran $${(asignado - total).toFixed(2)}: lo pagado pasa del total`;
+    aviso.className = 'compra-reparto falta';
+  }
+}
+
+['compra-pago-boveda', 'compra-pago-caja'].forEach((id) =>
+  document.getElementById(id).addEventListener('input', recalcularCompra));
+
+document.getElementById('compra-agregar-linea').addEventListener('click', () => {
+  agregarLineaCompra().querySelector('.linea-cant').focus();
+});
+
+// Atajos para el caso común de pagar todo de un solo lugar
+document.getElementById('compra-todo-boveda').addEventListener('click', () => {
+  document.getElementById('compra-pago-boveda').value = totalCompra().toFixed(2);
+  document.getElementById('compra-pago-caja').value = '';
+  recalcularCompra();
+});
+document.getElementById('compra-todo-caja').addEventListener('click', () => {
+  document.getElementById('compra-pago-caja').value = totalCompra().toFixed(2);
+  document.getElementById('compra-pago-boveda').value = '';
+  recalcularCompra();
+});
+
+function limpiarFormularioCompra() {
+  document.getElementById('compra-proveedor').value = '';
+  document.getElementById('compra-lineas').innerHTML = '';
+  agregarLineaCompra();
+  document.getElementById('compra-pago-boveda').value = '';
+  document.getElementById('compra-pago-caja').value = '';
+  document.getElementById('compra-nota').value = '';
+  recalcularCompra();
+}
+
+document.getElementById('registrar-compra-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('compra-msg');
+  const error = (texto) => { msg.textContent = texto; msg.className = 'error'; };
+
+  const proveedor = document.getElementById('compra-proveedor').value.trim();
+  if (!proveedor) return error('Escribe el nombre del proveedor');
+
+  // Una línea totalmente vacía se ignora; una a medias se avisa
+  const lineas = leerLineasCompra().filter((l) => l.producto || l.cantidad || l.precio_unitario);
+  if (lineas.length === 0) return error('Agrega al menos una línea de mercadería');
+  const incompleta = lineas.some((l) => !l.producto || !(l.cantidad > 0) || !(l.precio_unitario >= 0));
+  if (incompleta) return error('Cada línea necesita cantidad, producto y precio');
+
+  const total = totalCompra();
+  const pagado_boveda = parseFloat(document.getElementById('compra-pago-boveda').value) || 0;
+  const pagado_caja = parseFloat(document.getElementById('compra-pago-caja').value) || 0;
+  if (Math.abs(redondear2(pagado_boveda + pagado_caja) - total) >= 0.005) {
+    return error(`Lo pagado tiene que sumar $${total.toFixed(2)} entre la bóveda y la caja`);
+  }
+
+  const res = await fetch('/api/compras', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      proveedor,
+      items: lineas.map(({ producto, cantidad, precio_unitario }) => ({ producto, cantidad, precio_unitario })),
+      pagado_boveda,
+      pagado_caja,
+      nota: document.getElementById('compra-nota').value.trim(),
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) return error(data.error);
+
+  msg.textContent = `Compra a ${data.proveedor} por $${Number(data.total).toFixed(2)} registrada`;
+  msg.className = '';
+  limpiarFormularioCompra();
+  cargarCompras();
+  cargarProveedores();
+  cargarBoveda();
+  cargarDashboard(); // si se pagó una parte con la caja, su monto cambió
+});
+
+async function cargarProveedores() {
+  const res = await fetch('/api/proveedores');
+  if (!res.ok) return;
+  const lista = document.getElementById('compra-proveedores');
+  lista.innerHTML = '';
+  (await res.json()).forEach((p) => {
+    const op = document.createElement('option');
+    op.value = p.nombre;
+    lista.appendChild(op);
+  });
+}
+
+// "15 × Sandalia baja a $6.50 · 5 × Sandalia tacón a $6.00"
+function resumenDetalleCompra(detalle) {
+  return detalle
+    .map((d) => `${Number(d.cantidad)} × ${d.producto} a $${Number(d.precio_unitario).toFixed(2)}`)
+    .join(' · ');
+}
+
+async function cargarCompras() {
+  const res = await fetch('/api/compras');
+  if (!res.ok) return;
+  const compras = await res.json();
+  const tbody = document.querySelector('#compras-tabla tbody');
+  tbody.innerHTML = '';
+  compras.forEach((c) => {
+    const tr = document.createElement('tr');
+    // Se escribe con textContent: nombres y productos vienen de lo que se tipeó
+    [
+      formatFecha(c.fecha),
+      c.proveedor,
+      resumenDetalleCompra(c.detalle) + (c.nota ? ` (${c.nota})` : ''),
+      `$${Number(c.total).toFixed(2)}`,
+      c.pagado_boveda > 0 ? `$${Number(c.pagado_boveda).toFixed(2)}` : '—',
+      c.pagado_caja > 0 ? `$${Number(c.pagado_caja).toFixed(2)}` : '—',
+      c.registrado_por,
+    ].forEach((texto) => {
+      const td = document.createElement('td');
+      td.textContent = texto;
+      tr.appendChild(td);
+    });
+    const tdAccion = document.createElement('td');
+    // Borrar una compra es permanente: solo el dueño ve el botón
+    if (rolActual === 'dueno') {
+      const btn = document.createElement('button');
+      btn.textContent = '🗑 Eliminar';
+      btn.className = 'accion-btn anular-btn';
+      btn.addEventListener('click', () => eliminarCompra(c));
+      tdAccion.appendChild(btn);
+    }
+    tr.appendChild(tdAccion);
+    tbody.appendChild(tr);
+  });
+}
+
+async function eliminarCompra(c) {
+  const partes = [];
+  if (c.pagado_boveda > 0) partes.push(`$${Number(c.pagado_boveda).toFixed(2)} vuelven a la bóveda`);
+  if (c.pagado_caja > 0) partes.push(`$${Number(c.pagado_caja).toFixed(2)} vuelven a la caja`);
+  if (!confirm(`¿Eliminar la compra a ${c.proveedor} de $${Number(c.total).toFixed(2)}? ${partes.join(' y ')}.`)) return;
+  const res = await fetch(`/api/compras/${c.id}`, { method: 'DELETE' });
+  if (!res.ok) { const d = await res.json(); alert(d.error); return; }
+  cargarCompras();
+  cargarBoveda();
+  cargarDashboard();
+}
+
+limpiarFormularioCompra();
 
 async function cargarUsuarios() {
   const res = await fetch('/api/usuarios');

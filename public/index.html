@@ -310,6 +310,65 @@
       </div>
     </details>
 
+    <!-- Compras a proveedores: qué entró (cantidad × precio) y de dónde salió el
+         dinero (una parte de la bóveda y otra de la caja). No toca el inventario. -->
+    <h2 style="color:#b4552a;">Compras a proveedores</h2>
+    <div id="compra-card" class="card">
+      <label class="compra-campo">
+        <span class="card-label">Proveedor</span>
+        <input type="text" id="compra-proveedor" list="compra-proveedores" autocomplete="off"
+               placeholder="Ej: Méndez">
+        <datalist id="compra-proveedores"></datalist>
+      </label>
+
+      <span class="card-label">Qué entró</span>
+      <!-- Encabezado de columnas: al llenar las casillas se borran sus pistas, y
+           sin esto no se sabría cuál número es la cantidad y cuál el precio -->
+      <div class="compra-linea compra-cabecera" aria-hidden="true">
+        <span>Cant.</span><span>Producto</span><span>Precio unit.</span><span>Subtotal</span><span></span>
+      </div>
+      <div id="compra-lineas" class="compra-lineas"></div>
+      <button type="button" id="compra-agregar-linea" class="btn-secundario">+ Agregar línea</button>
+
+      <div class="compra-total">
+        <span>Total a pagar</span>
+        <span>$<span id="compra-total">0.00</span></span>
+      </div>
+
+      <span class="card-label">Cómo lo pagas</span>
+      <div class="compra-pago">
+        <label class="compra-origen origen-boveda">
+          <span>Desde la bóveda</span>
+          <input type="number" id="compra-pago-boveda" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </label>
+        <label class="compra-origen origen-caja">
+          <span>Desde la caja</span>
+          <input type="number" id="compra-pago-caja" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </label>
+      </div>
+      <div class="compra-atajos">
+        <button type="button" id="compra-todo-boveda" class="btn-secundario">Todo de la bóveda</button>
+        <button type="button" id="compra-todo-caja" class="btn-secundario">Todo de la caja</button>
+      </div>
+      <p id="compra-reparto" class="compra-reparto"></p>
+
+      <input type="text" id="compra-nota" placeholder="Nota (opcional, ej: factura 0012)">
+      <button type="button" id="registrar-compra-btn">Registrar compra</button>
+      <p id="compra-msg"></p>
+    </div>
+
+    <details id="compras-historial" class="cierres-caja">
+      <summary>Compras registradas</summary>
+      <div class="tabla-scroll">
+        <table id="compras-tabla">
+          <thead>
+            <tr><th>Fecha</th><th>Proveedor</th><th>Qué entró</th><th>Total</th><th>Bóveda</th><th>Caja</th><th>Por</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+
     <!-- Aquí se inserta el formulario de Nota de venta cuando entra un admin o el dueño -->
     <div id="venta-slot-admin"></div>
 

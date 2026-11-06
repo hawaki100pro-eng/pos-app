@@ -226,6 +226,47 @@ async function init() {
     );
   `);
 
+  // Migración: compras a proveedores. Una compra guarda QUÉ entró (cada línea con
+  // cantidad y precio), cuánto costó y DE DÓNDE salió el dinero: una parte de la
+  // bóveda y otra de la caja (las dos suman el total). La parte de la bóveda queda
+  // además como un movimiento 'pago' de la bóveda, así su saldo baja solo.
+  // No toca el inventario: el stock se sigue cargando en Inventario.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS proveedores (
+      id SERIAL PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      fecha TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS proveedores_nombre_unico ON proveedores (LOWER(nombre));
+
+    CREATE TABLE IF NOT EXISTS compras (
+      id SERIAL PRIMARY KEY,
+      proveedor_id INTEGER NOT NULL REFERENCES proveedores(id),
+      total REAL NOT NULL,
+      pagado_boveda REAL NOT NULL DEFAULT 0,
+      pagado_caja REAL NOT NULL DEFAULT 0,
+      turno_id INTEGER REFERENCES turnos_caja(id),
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+      nota TEXT,
+      fecha TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS compras_detalle (
+      id SERIAL PRIMARY KEY,
+      compra_id INTEGER NOT NULL REFERENCES compras(id) ON DELETE CASCADE,
+      producto TEXT NOT NULL,
+      cantidad REAL NOT NULL,
+      precio_unitario REAL NOT NULL
+    );
+
+    -- La bóveda admite un cuarto movimiento: 'pago' (sale de la bóveda hacia un
+    -- proveedor), ligado a su compra.
+    ALTER TABLE boveda_movimientos ADD COLUMN IF NOT EXISTS compra_id INTEGER REFERENCES compras(id) ON DELETE CASCADE;
+    ALTER TABLE boveda_movimientos DROP CONSTRAINT IF EXISTS boveda_movimientos_tipo_check;
+    ALTER TABLE boveda_movimientos ADD CONSTRAINT boveda_movimientos_tipo_check
+      CHECK (tipo IN ('retiro', 'reingreso', 'ajuste', 'pago'));
+  `);
+
   // Migración: código de la etiqueta (SKU). Se rellena una sola vez para los
   // productos que ya existían; de ahí en adelante lo pone el alta de producto.
   //
