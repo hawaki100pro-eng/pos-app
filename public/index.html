@@ -276,6 +276,16 @@
       </div>
     </details>
 
+    <!-- Bóveda y compras a proveedores en una sola ventana plegable, para que no
+         ocupen el panel cuando no se usan. Cerrada muestra solo el saldo de la
+         bóveda; app.js recuerda en cada dispositivo si quedó abierta o cerrada. -->
+    <details id="panel-boveda" class="panel-plegable">
+      <summary>
+        <span class="panel-plegable-titulo">Bóveda y proveedores</span>
+        <span class="panel-plegable-resumen">Bóveda: $<span id="boveda-saldo-resumen">0.00</span></span>
+      </summary>
+      <div class="panel-plegable-cuerpo">
+
     <!-- Bóveda: el efectivo que se retira de la caja y se guarda aparte. Su saldo
          se acumula entre turnos; cada retiro y reingreso queda registrado. -->
     <h2 style="color:#7c3aed;">Bóveda</h2>
@@ -366,6 +376,9 @@
           </thead>
           <tbody></tbody>
         </table>
+      </div>
+    </details>
+
       </div>
     </details>
 

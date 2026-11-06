@@ -1176,7 +1176,7 @@ aplicarVisibilidadMisVentas();
 let dineroOculto = localStorage.getItem('dineroOculto') === '1';
 
 function aplicarVisibilidadDinero() {
-  ['caja-inicial', 'caja-actual', 'caja-transferencias', 'boveda-saldo'].forEach((id) => {
+  ['caja-inicial', 'caja-actual', 'caja-transferencias', 'boveda-saldo', 'boveda-saldo-resumen'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el || el.dataset.valor == null) return;
     el.textContent = dineroOculto ? '••••' : el.dataset.valor;
@@ -2081,6 +2081,8 @@ async function cargarBoveda() {
   const data = await res.json();
   const saldoEl = document.getElementById('boveda-saldo');
   saldoEl.dataset.valor = Number(data.saldo).toFixed(2);
+  // El mismo saldo va en la barra de la ventana plegable, para verlo aunque esté cerrada
+  document.getElementById('boveda-saldo-resumen').dataset.valor = saldoEl.dataset.valor;
   aplicarVisibilidadDinero(); // el saldo se tapa/destapa igual que la caja
   // Fijar o corregir el saldo es solo del dueño
   document.getElementById('boveda-ajuste-btn').classList.toggle('hidden', rolActual !== 'dueno');
@@ -2165,6 +2167,18 @@ document.getElementById('boveda-ajuste-btn').addEventListener('click', async () 
   msg.className = '';
   cargarBoveda();
 });
+
+// La ventana "Bóveda y proveedores" recuerda en este dispositivo si se dejó
+// abierta o cerrada. Arranca cerrada: así no ocupa el panel cuando no se usa.
+(function recordarPanelBoveda() {
+  const panel = document.getElementById('panel-boveda');
+  try {
+    panel.open = localStorage.getItem('panelBovedaAbierto') === '1';
+  } catch { /* sin almacenamiento: queda cerrada */ }
+  panel.addEventListener('toggle', () => {
+    try { localStorage.setItem('panelBovedaAbierto', panel.open ? '1' : '0'); } catch { /* sin almacenamiento */ }
+  });
+})();
 
 // --- Compras a proveedores ---
 // Qué entró (líneas de cantidad × precio) y de dónde salió el dinero: una parte

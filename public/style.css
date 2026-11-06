@@ -251,6 +251,50 @@ button svg {
 .card-label { color: var(--texto-suave); font-size: 0.85rem; }
 .card-value { font-size: 1.6rem; font-weight: bold; color: var(--texto); }
 
+/* Ventana plegable "Bóveda y proveedores": una barra que se toca para abrir o
+   cerrar. Cerrada solo muestra el título y el saldo de la bóveda. */
+.panel-plegable {
+  margin: 14px 0;
+  border: 1px solid var(--borde-suave);
+  border-left: 5px solid #7c3aed;
+  border-radius: 10px;
+  background: var(--superficie-2);
+}
+.panel-plegable > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 10px;
+}
+.panel-plegable > summary::-webkit-details-marker { display: none; }
+.panel-plegable > summary::before {
+  content: '▸';
+  color: #7c3aed;
+  font-size: 1.1rem;
+  transition: transform 0.15s ease;
+}
+.panel-plegable[open] > summary::before { transform: rotate(90deg); }
+.panel-plegable > summary:hover { background: var(--acento-suave); }
+.panel-plegable > summary:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
+.panel-plegable-titulo { flex: 1 1 auto; font-size: 1.15rem; font-weight: 700; color: var(--texto); }
+.panel-plegable-resumen {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #7c3aed;
+  font-variant-numeric: tabular-nums;
+}
+.panel-plegable[open] > summary { border-bottom: 1px solid var(--borde-suave); border-radius: 10px 10px 0 0; }
+.panel-plegable-cuerpo { padding: 4px 16px 16px; }
+/* Dentro de la ventana, los títulos de Bóveda y Compras van un escalón más chicos */
+.panel-plegable-cuerpo h2 { font-size: 1.1rem; margin: 16px 0 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .panel-plegable > summary::before { transition: none; }
+}
+
 /* Bóveda: usa la tarjeta normal pero agrega sus campos y botones de movimiento */
 #boveda-card { gap: 10px; }
 #boveda-card #boveda-saldo { color: #7c3aed; }
