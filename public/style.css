@@ -1707,6 +1707,8 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .banco-opcion input { position: absolute; opacity: 0; pointer-events: none; }
+/* "Otros bancos" va solo, a todo el ancho, debajo de los cuatro de la empresa */
+.banco-opcion.banco-otros { grid-column: 1 / -1; }
 .banco-marca {
   flex: none;
   width: 22px;

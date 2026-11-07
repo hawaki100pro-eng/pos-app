@@ -504,6 +504,8 @@ const BANCOS = {
   pichincha: 'Banco Pichincha',
   pacifico: 'Banco del Pacífico',
   bolivariano: 'Banco Bolivariano',
+  // Para cuando el cliente transfirió a un banco que no es ninguno de los de arriba
+  otros: 'Otros bancos',
 };
 
 // La clave del banco si es uno de los de la empresa; si no, null

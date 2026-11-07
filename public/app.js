@@ -990,6 +990,8 @@ const BANCOS = {
   pichincha: { nombre: 'Banco Pichincha', corto: 'Pichincha', color: '#ffdd00', texto: '#0f265c' },
   pacifico: { nombre: 'Banco del Pacífico', corto: 'Pacífico', color: '#0091d5', texto: '#ffffff' },
   bolivariano: { nombre: 'Banco Bolivariano', corto: 'Bolivariano', color: '#0b2f6b', texto: '#ffffff' },
+  // Gris neutro: no es un banco de la empresa, es la salida cuando no es ninguno
+  otros: { nombre: 'Otros bancos', corto: 'Otros bancos', color: '#6b7280', texto: '#ffffff' },
 };
 
 // Etiqueta del color del banco con su nombre corto ("Pichincha"). Nada si la
@@ -1010,7 +1012,7 @@ function bancoElegido() {
   const cont = document.getElementById('banco-opciones');
   Object.entries(BANCOS).forEach(([clave, b]) => {
     const opcion = document.createElement('label');
-    opcion.className = 'banco-opcion';
+    opcion.className = clave === 'otros' ? 'banco-opcion banco-otros' : 'banco-opcion';
     opcion.style.setProperty('--banco', b.color);
     opcion.style.setProperty('--banco-texto', b.texto);
     opcion.innerHTML = `<input type="radio" name="banco" value="${clave}">
