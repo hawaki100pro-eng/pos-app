@@ -1919,6 +1919,14 @@ async function cargarGastos() {
     const acciones = document.createElement('div');
     acciones.className = 'acciones-venta';
 
+    // Comprobante de egreso del gasto (documento interno, numeración CE- aparte)
+    const linkComprobante = document.createElement('a');
+    linkComprobante.href = `egreso.html?id=${g.id}`;
+    linkComprobante.target = '_blank';
+    linkComprobante.textContent = '🧾 Comprobante';
+    linkComprobante.className = 'accion-btn imprimir-link';
+    acciones.appendChild(linkComprobante);
+
     const btnEditar = document.createElement('button');
     btnEditar.textContent = '✎ Editar';
     btnEditar.className = 'accion-btn editar-btn';
@@ -1991,7 +1999,10 @@ document.getElementById('registrar-gasto-btn').addEventListener('click', async (
     return;
   }
 
-  msg.textContent = `Gasto de $${data.monto.toFixed(2)} registrado`;
+  // Cada gasto lleva su comprobante de egreso: el enlace abre directo el cuadro
+  // de impresión (ahí también se puede elegir "Guardar como PDF")
+  const numero = 'CE-' + String(data.id).padStart(6, '0');
+  msg.innerHTML = `Gasto de $${data.monto.toFixed(2)} registrado · <a href="egreso.html?id=${data.id}&imprimir=1" target="_blank">🖨 Imprimir comprobante ${numero}</a>`;
   msg.className = '';
   document.getElementById('gasto-descripcion').value = '';
   document.getElementById('gasto-monto').value = '';

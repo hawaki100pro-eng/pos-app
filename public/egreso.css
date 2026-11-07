@@ -1,0 +1,27 @@
+/* Comprobante de egreso: usa print.css (el de la nota de venta) y solo agrega
+   lo que no tiene la nota: el título más largo, el monto en letras y las firmas. */
+
+/* "COMPROBANTE DE EGRESO" es más largo que "NOTA DE VENTA": letra más chica
+   para que entre en el mismo recuadro */
+.caja-egreso { font-size: 0.72rem; }
+
+.egreso-letras { height: auto; vertical-align: middle !important; }
+.egreso-letras-texto {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.egreso-firmas { border-top: 2px solid #1e293b; }
+.egreso-firmas td {
+  width: 50%;
+  padding: 46px 24px 14px;
+  text-align: center;
+  vertical-align: bottom;
+}
+.egreso-firmas td + td { border-left: 2px solid #1e293b; }
+
+.egreso-linea { border-top: 1px solid #111; margin: 0 10px 6px; }
+.egreso-firma-titulo { margin: 0; font-size: 0.8rem; font-weight: bold; }
+.egreso-firma-sub { margin: 2px 0 0; font-size: 0.72rem; color: #555; }

@@ -455,6 +455,21 @@ app.delete('/api/gastos/:id', requireLogin, requireDueño, async (req, res) => {
 });
 
 // Gastos del turno abierto actual (o, si no hay turno abierto, los últimos registrados)
+// Comprobante de egreso de un gasto: el documento interno que respalda cada
+// salida de efectivo. Lleva su propia numeración (CE- + el número del gasto),
+// aparte de las notas de venta, que son de la serie del SRI y no se tocan.
+app.get('/api/gastos/:id/comprobante', requireLogin, requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Número de gasto inválido' });
+  const r = await pool.query(
+    'SELECT g.*, u.usuario AS registrado_por FROM gastos g JOIN usuarios u ON u.id = g.usuario_id WHERE g.id = $1',
+    [id]
+  );
+  const gasto = r.rows[0];
+  if (!gasto) return res.status(404).json({ error: 'Gasto no encontrado' });
+  res.json({ ...gasto, numero: 'CE-' + String(gasto.id).padStart(6, '0') });
+});
+
 app.get('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
   const turno = await getTurnoAbierto();
   const r = turno

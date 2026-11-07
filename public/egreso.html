@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comprobante de egreso</title>
+<!-- Mismo estilo que la nota de venta (print.css); egreso.css solo agrega lo propio -->
+<link rel="stylesheet" href="print.css">
+<link rel="stylesheet" href="egreso.css">
+</head>
+<body>
+
+  <div id="error-msg" class="hidden"></div>
+
+  <div id="proforma" class="hidden">
+    <button id="imprimir-btn" class="no-print">Imprimir</button>
+
+    <table class="encabezado">
+      <tr>
+        <td class="empresa">
+          <h1>HAWAKI</h1>
+          <p class="nombre-titular">CARLOS ALBERTO BARAHONA IZA</p>
+          <p><strong>Venta de Calzado</strong></p>
+          <p>Eloy Alfaro #319 y General Franco Local 5</p>
+          <p>Cel.: 0997750706 · Guayaquil – Ecuador</p>
+          <p><strong>R.U.C.: 0919343814001</strong></p>
+        </td>
+        <td class="proforma-box">
+          <div class="caja-proforma caja-egreso">COMPROBANTE DE EGRESO</div>
+          <p class="serie">Documento interno</p>
+          <p class="numero" id="numero-egreso">CE-000000</p>
+          <table class="fecha-tabla">
+            <tr><td>DÍA</td><td>MES</td><td>AÑO</td></tr>
+            <tr><td id="fecha-dia"></td><td id="fecha-mes"></td><td id="fecha-anio"></td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table class="datos-cliente">
+      <tr><td class="label">Concepto</td><td class="valor" id="egreso-concepto"></td></tr>
+      <tr><td class="label">Forma de pago</td><td class="valor">Efectivo de caja</td></tr>
+      <tr><td class="label">Registrado por</td><td class="valor" id="egreso-registrado"></td></tr>
+      <tr><td class="label">Hora</td><td class="valor" id="egreso-hora"></td></tr>
+    </table>
+
+    <table class="pie">
+      <tr>
+        <td class="anotaciones egreso-letras">
+          <p class="label">LA SUMA DE:</p>
+          <p id="egreso-letras" class="egreso-letras-texto"></p>
+        </td>
+        <td class="totales">
+          <div class="fila-total fila-granTotal"><span>TOTAL</span><span id="egreso-monto">$0.00</span></div>
+        </td>
+      </tr>
+    </table>
+
+    <table class="egreso-firmas">
+      <tr>
+        <td>
+          <div class="egreso-linea"></div>
+          <p class="egreso-firma-titulo">ENTREGADO POR</p>
+          <p class="egreso-firma-sub">Nombre y firma</p>
+        </td>
+        <td>
+          <div class="egreso-linea"></div>
+          <p class="egreso-firma-titulo">RECIBIDO POR</p>
+          <p class="egreso-firma-sub">Nombre, C.I. y firma</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <script src="egreso.js"></script>
+</body>
+</html>
