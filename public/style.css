@@ -1914,3 +1914,86 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   color: var(--pago-efectivo-texto);
   font-size: 0.9rem;
 }
+
+/* --- Caja con efectivo: tres cuadros en fila ---
+   Inicial | En caja (verde, más grande) | Transferencias de hoy (azul).
+   Arriba a la derecha, Minimizar / Expandir. */
+/* La regla vieja de #caja-abierta-card centraba todo: aquí cada fila ocupa el ancho */
+#caja-abierta-card.caja-card { align-items: stretch; gap: 10px; }
+.caja-cabecera, .caja-cuadros, .caja-acciones { width: 100%; }
+
+.caja-cabecera {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.caja-cabecera .btn-dinero {
+  min-width: 0;
+  padding: 7px 14px;
+  font-size: 0.9rem;
+}
+
+.caja-minimizada-texto { display: none; color: var(--texto-suave); font-size: 0.88rem; }
+
+.caja-cuadros {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 10px;
+}
+
+.caja-cuadro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--borde-suave);
+  border-radius: 12px;
+  background: var(--superficie);
+}
+
+.caja-cuadro .card-value {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.caja-cuadro-efectivo {
+  border: 2px solid var(--pago-efectivo-borde);
+  background: var(--pago-efectivo-fondo);
+}
+
+.caja-cuadro-efectivo .card-label { color: var(--pago-efectivo-texto); font-weight: 700; }
+.caja-cuadro-efectivo .card-value { color: var(--pago-efectivo-texto); font-size: 1.85rem; }
+
+.caja-cuadro-transfer { background: var(--pago-transfer-fondo); border-color: transparent; }
+.caja-cuadro-transfer .card-label,
+.caja-cuadro-transfer .card-value { color: var(--pago-transfer-texto); }
+.caja-cuadro-nota { color: var(--pago-transfer-texto); font-size: 0.72rem; opacity: 0.8; }
+
+.caja-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.caja-acciones:not(:has(button:not(.hidden))) { display: none; }
+
+/* Minimizada: solo la barra con el aviso y Expandir */
+#caja-abierta-card.compacta { width: 100%; padding: 8px 12px; }
+#caja-abierta-card.compacta .caja-cabecera { justify-content: space-between; }
+#caja-abierta-card.compacta .caja-cabecera .btn-dinero { margin: 0; }
+#caja-abierta-card.compacta .caja-minimizada-texto { display: inline; }
+#caja-abierta-card.compacta .caja-cuadros,
+#caja-abierta-card.compacta .caja-acciones { display: none; }
+
+/* En celular: En caja arriba a todo lo ancho, los otros dos debajo */
+@media (max-width: 560px) {
+  .caja-cuadros { grid-template-columns: 1fr 1fr; }
+  .caja-cuadro-efectivo { grid-column: 1 / -1; order: -1; }
+  .caja-cuadro .card-value { font-size: 1.2rem; }
+  .caja-cuadro-efectivo .card-value { font-size: 1.7rem; }
+}

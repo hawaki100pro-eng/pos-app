@@ -1121,10 +1121,14 @@ function aplicarVisibilidadDinero() {
     if (el.dataset.valor == null) return;
     el.textContent = dineroOculto ? '••••' : el.dataset.valor;
   });
-  // Solo se cambia el texto: el dibujo lo elige el CSS con la clase (ver .btn-dinero)
-  document.getElementById('toggle-dinero-texto').textContent = dineroOculto ? 'Mostrar' : 'Ocultar';
-  document.getElementById('toggle-dinero-btn').classList.toggle('dinero-oculto', dineroOculto);
-  // Al ocultar, la tarjeta entera se colapsa a una barra delgada (ver .compacta en style.css)
+  // El botón dice lo que va a hacer: Minimizar si la caja está a la vista,
+  // Expandir si está minimizada. El dibujo lo elige el CSS con la clase (ver .btn-dinero)
+  const boton = document.getElementById('toggle-dinero-btn');
+  document.getElementById('toggle-dinero-texto').textContent = dineroOculto ? 'Expandir' : 'Minimizar';
+  boton.title = dineroOculto ? 'Mostrar los montos de la caja' : 'Esconder los montos de la caja';
+  boton.setAttribute('aria-expanded', dineroOculto ? 'false' : 'true');
+  boton.classList.toggle('dinero-oculto', dineroOculto);
+  // Minimizada, la tarjeta se colapsa a una barra delgada (ver .compacta en style.css)
   document.getElementById('caja-abierta-card').classList.toggle('compacta', dineroOculto);
 }
 
