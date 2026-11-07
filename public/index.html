@@ -145,6 +145,14 @@
         </label>
       </div>
 
+      <!-- Banco de la transferencia: aparece solo al elegir Transferencia y la
+           venta no se confirma sin elegir uno. Cada banco va con su color para
+           reconocerlo de un vistazo. app.js dibuja los botones desde BANCOS. -->
+      <div id="banco-transferencia" class="banco-transferencia hidden">
+        <label id="banco-titulo">¿A qué banco transfirió?</label>
+        <div id="banco-opciones" class="banco-opciones" role="radiogroup" aria-labelledby="banco-titulo"></div>
+      </div>
+
       <button id="confirmar-venta-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
         Confirmar venta
@@ -253,6 +261,8 @@
           <span class="card-label">Transferencias de hoy</span>
           <span class="card-value">$<span id="caja-transferencias">0.00</span></span>
           <span class="caja-cuadro-nota">en el banco, no en la caja</span>
+          <!-- Cuánto entró hoy a cada banco, para comparar con la app de cada uno -->
+          <div id="caja-transfer-bancos" class="caja-transfer-bancos"></div>
         </div>
       </div>
       <div class="caja-acciones">
@@ -470,6 +480,9 @@
       <label><input type="radio" name="editar-metodo-pago" value="efectivo" checked> Efectivo</label>
       <label><input type="radio" name="editar-metodo-pago" value="transferencia"> Transferencia</label>
     </div>
+    <label id="editar-banco-fila" class="hidden">Banco de la transferencia
+      <select id="editar-banco"></select>
+    </label>
 
     <button id="guardar-edicion-btn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>

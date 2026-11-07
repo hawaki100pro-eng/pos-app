@@ -982,6 +982,61 @@ function renderItems() {
   if (items.length) ocultarVentaRegistrada();
 }
 
+// --- Bancos de la empresa para las transferencias ---
+// La misma lista que BANCOS en server.js, con el color de cada banco para
+// reconocerlo de un vistazo (colores de cada marca, aproximados).
+const BANCOS = {
+  guayaquil: { nombre: 'Banco Guayaquil', corto: 'Guayaquil', color: '#d6006f', texto: '#ffffff' },
+  pichincha: { nombre: 'Banco Pichincha', corto: 'Pichincha', color: '#ffdd00', texto: '#0f265c' },
+  pacifico: { nombre: 'Banco del Pacífico', corto: 'Pacífico', color: '#0091d5', texto: '#ffffff' },
+  bolivariano: { nombre: 'Banco Bolivariano', corto: 'Bolivariano', color: '#0b2f6b', texto: '#ffffff' },
+};
+
+// Etiqueta del color del banco con su nombre corto ("Pichincha"). Nada si la
+// venta no lo tiene: efectivo, o una transferencia de antes de pedir el banco.
+function badgeBanco(clave) {
+  const b = BANCOS[clave];
+  if (!b) return '';
+  return `<span class="badge-banco" style="--banco:${b.color};--banco-texto:${b.texto}">${b.corto}</span>`;
+}
+
+function bancoElegido() {
+  const radio = document.querySelector('input[name="banco"]:checked');
+  return radio ? radio.value : null;
+}
+
+// Los cuatro botones de banco del formulario de venta, cada uno con su color
+(function dibujarBotonesBanco() {
+  const cont = document.getElementById('banco-opciones');
+  Object.entries(BANCOS).forEach(([clave, b]) => {
+    const opcion = document.createElement('label');
+    opcion.className = 'banco-opcion';
+    opcion.style.setProperty('--banco', b.color);
+    opcion.style.setProperty('--banco-texto', b.texto);
+    opcion.innerHTML = `<input type="radio" name="banco" value="${clave}">
+      <span class="banco-marca" aria-hidden="true"></span>
+      <span class="banco-nombre">${b.nombre}</span>`;
+    opcion.querySelector('input').addEventListener('change', actualizarMetodoPago);
+    cont.appendChild(opcion);
+  });
+})();
+
+// En la ventana de editar venta (dueño) el banco va en una lista desplegable,
+// que se muestra solo cuando el método es transferencia
+(function llenarBancosEdicion() {
+  const select = document.getElementById('editar-banco');
+  select.innerHTML = '<option value="">Elige el banco</option>' + Object.entries(BANCOS)
+    .map(([clave, b]) => `<option value="${clave}">${b.nombre}</option>`).join('');
+  document.querySelectorAll('input[name="editar-metodo-pago"]').forEach((radio) => {
+    radio.addEventListener('change', mostrarBancoEdicion);
+  });
+})();
+
+function mostrarBancoEdicion() {
+  const metodo = document.querySelector('input[name="editar-metodo-pago"]:checked').value;
+  document.getElementById('editar-banco-fila').classList.toggle('hidden', metodo !== 'transferencia');
+}
+
 // La tarjeta del total y el botón elegido toman el color del método de pago:
 // verde efectivo, azul transferencia. Se llama al tocar un método y desde
 // renderItems, que corre también después de volver a Efectivo al confirmar.
@@ -991,8 +1046,13 @@ function actualizarMetodoPago() {
   const tarjeta = document.getElementById('total-card');
   tarjeta.classList.toggle('transferencia', esTransferencia);
   tarjeta.classList.toggle('efectivo', !esTransferencia);
-  document.getElementById('total-metodo').textContent = esTransferencia ? 'por transferencia' : 'en efectivo';
-  document.querySelectorAll('.metodo-opcion').forEach((opcion) => {
+  // Con transferencia aparecen los bancos y el total dice a cuál entra
+  document.getElementById('banco-transferencia').classList.toggle('hidden', !esTransferencia);
+  const banco = esTransferencia ? bancoElegido() : null;
+  document.getElementById('total-metodo').textContent = !esTransferencia
+    ? 'en efectivo'
+    : banco ? `por transferencia · ${BANCOS[banco].nombre}` : 'por transferencia · elige el banco';
+  document.querySelectorAll('.metodo-opcion, .banco-opcion').forEach((opcion) => {
     opcion.classList.toggle('seleccionado', opcion.querySelector('input').checked);
   });
 }
@@ -1011,7 +1071,9 @@ function mostrarVentaRegistrada(data) {
   banner.classList.toggle('efectivo', !esTransferencia);
   document.getElementById('vr-numero').textContent = data.numero_proforma;
   document.getElementById('vr-total').textContent = data.total.toFixed(2);
-  document.getElementById('vr-metodo').textContent = esTransferencia ? 'Transferencia' : 'Efectivo';
+  document.getElementById('vr-metodo').textContent = esTransferencia
+    ? `Transferencia · ${BANCOS[data.banco] ? BANCOS[data.banco].nombre : ''}`
+    : 'Efectivo';
   document.getElementById('vr-imprimir').href = `print.html?id=${data.ventaId}&imprimir=1`;
   document.getElementById('vr-ver').href = `print.html?id=${data.ventaId}`;
   document.getElementById('venta-registrada').classList.remove('hidden');
@@ -1043,10 +1105,17 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
     return;
   }
   const metodo_pago = document.querySelector('input[name="metodo-pago"]:checked').value;
+  const banco = metodo_pago === 'transferencia' ? bancoElegido() : null;
+  if (metodo_pago === 'transferencia' && !banco) {
+    msg.textContent = 'Elige a qué banco se hizo la transferencia';
+    msg.className = 'error';
+    document.getElementById('banco-transferencia').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items, metodo_pago }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items, metodo_pago, banco }),
   });
   const data = await res.json();
 
@@ -1063,6 +1132,7 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   items = [];
   resetTipoCliente();
   document.querySelector('input[name="metodo-pago"][value="efectivo"]').checked = true;
+  document.querySelectorAll('input[name="banco"]').forEach((radio) => { radio.checked = false; });
   renderItems();
   cargarMisVentas();
   cargarEstadoCaja();
@@ -1083,7 +1153,9 @@ async function cargarMisVentas() {
   ventas.forEach((v) => {
     const tr = document.createElement('tr');
     const totalTexto = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
-    const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
+    const metodoTexto = v.metodo_pago === 'transferencia'
+      ? `<span class="badge-transferencia">Transferencia</span>${badgeBanco(v.banco)}`
+      : 'Efectivo';
     tr.innerHTML = `<td>${v.id}</td><td>${v.cliente || '-'}</td><td>${formatFecha(v.fecha)}</td><td>${totalTexto}</td><td>${metodoTexto}</td><td><a href="print.html?id=${v.id}" target="_blank">Imprimir</a></td>`;
     tbody.appendChild(tr);
   });
@@ -1119,6 +1191,9 @@ function aplicarVisibilidadDinero() {
   ['caja-inicial', 'caja-actual', 'caja-transferencias'].forEach((id) => {
     const el = document.getElementById(id);
     if (el.dataset.valor == null) return;
+    el.textContent = dineroOculto ? '••••' : el.dataset.valor;
+  });
+  document.querySelectorAll('#caja-transfer-bancos [data-valor]').forEach((el) => {
     el.textContent = dineroOculto ? '••••' : el.dataset.valor;
   });
   // El botón dice lo que va a hacer: Minimizar si la caja está a la vista,
@@ -1284,7 +1359,9 @@ function pintarListaCampana() {
   }
   campanaLista.innerHTML = ventasNuevas.map((v) => {
     const total = v.anulada ? `<s>$${v.total.toFixed(2)}</s> (anulada)` : `$${v.total.toFixed(2)}`;
-    const metodo = v.metodo_pago === 'transferencia' ? 'Transferencia' : 'Efectivo';
+    const metodo = v.metodo_pago === 'transferencia'
+      ? `Transferencia${BANCOS[v.banco] ? ` · ${BANCOS[v.banco].corto}` : ''}`
+      : 'Efectivo';
     // Resumen de lo que lleva: "1 × Zapatilla Havaina #DESC   $14.00".
     // Con muchas líneas se muestran 3 y se dice cuántas más hay.
     const lineas = v.detalle || [];
@@ -1402,6 +1479,24 @@ function detenerRefrescoAuto() {
   desconectarAvisos();
 }
 
+// Debajo de "Transferencias de hoy": cuánto entró a cada banco, en el orden de
+// la lista. Las de antes de que se pidiera el banco salen como "Sin banco".
+function renderTransferenciasPorBanco(lista) {
+  const orden = Object.keys(BANCOS);
+  const pos = (clave) => (orden.includes(clave) ? orden.indexOf(clave) : orden.length);
+  const cont = document.getElementById('caja-transfer-bancos');
+  cont.innerHTML = '';
+  [...lista].sort((a, b) => pos(a.banco) - pos(b.banco)).forEach((f) => {
+    const b = BANCOS[f.banco];
+    const fila = document.createElement('div');
+    fila.className = 'caja-transfer-banco';
+    fila.innerHTML = `<span class="banco-punto"${b ? ` style="--banco:${b.color}"` : ''}></span>
+      <span class="caja-transfer-banco-nombre">${b ? b.corto : 'Sin banco'}</span>
+      <span class="caja-transfer-banco-monto">$<span data-valor="${Number(f.total).toFixed(2)}"></span></span>`;
+    cont.appendChild(fila);
+  });
+}
+
 async function cargarDashboard() {
   const periodo = document.getElementById('filtro-periodo').value;
   const res = await fetch(`/api/dashboard?periodo=${periodo}`);
@@ -1415,6 +1510,7 @@ async function cargarDashboard() {
     document.getElementById('caja-inicial').dataset.valor = data.turno.monto_inicial.toFixed(2);
     document.getElementById('caja-actual').dataset.valor = data.turno.monto_actual.toFixed(2);
     document.getElementById('caja-transferencias').dataset.valor = Number(data.totalTransferenciasHoy || 0).toFixed(2);
+    renderTransferenciasPorBanco(data.transferenciasPorBanco || []);
     aplicarVisibilidadDinero();
     document.getElementById('vaciar-caja-btn').classList.toggle('hidden', rolActual !== 'dueno');
   } else {
@@ -1442,7 +1538,9 @@ async function cargarDashboard() {
       ? `<span class="badge-anulada">ANULADA</span><div class="nota-anulacion">${formatFecha(v.fecha_anulacion)} por ${v.anulada_por_usuario}: "${v.motivo_anulacion}"</div>`
       : 'Activa';
 
-    const metodoTexto = v.metodo_pago === 'transferencia' ? '<span class="badge-transferencia">Transferencia</span>' : 'Efectivo';
+    const metodoTexto = v.metodo_pago === 'transferencia'
+      ? `<span class="badge-transferencia">Transferencia</span>${badgeBanco(v.banco)}`
+      : 'Efectivo';
 
     // Punto verde: venta hecha "con datos" (nombre real del cliente o RUC/dirección/teléfono/correo), a diferencia del consumidor final
     const conDatos = (v.cliente && v.cliente.trim() && v.cliente.trim().toLowerCase() !== 'consumidor final')
@@ -1518,6 +1616,8 @@ function abrirEditarVenta(venta) {
   document.getElementById('editar-cliente-email').value = venta.cliente_email || '';
   limpiarAvisosCliente('editar-');
   document.querySelector(`input[name="editar-metodo-pago"][value="${venta.metodo_pago || 'efectivo'}"]`).checked = true;
+  document.getElementById('editar-banco').value = venta.banco || '';
+  mostrarBancoEdicion();
   document.getElementById('editar-msg').textContent = '';
   renderEditarItems();
   document.getElementById('editar-venta-modal').classList.remove('hidden');
@@ -1592,11 +1692,12 @@ document.getElementById('guardar-edicion-btn').addEventListener('click', async (
     return;
   }
   const metodo_pago = document.querySelector('input[name="editar-metodo-pago"]:checked').value;
+  const banco = metodo_pago === 'transferencia' ? (document.getElementById('editar-banco').value || null) : null;
 
   const res = await fetch(`/api/ventas/${editandoVentaId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items: editandoItems, metodo_pago }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items: editandoItems, metodo_pago, banco }),
   });
   const data = await res.json();
   if (!res.ok) {

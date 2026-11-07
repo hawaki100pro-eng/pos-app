@@ -159,6 +159,11 @@ async function init() {
   await pool.query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_metodo_pago_check`);
   await pool.query(`ALTER TABLE ventas ADD CONSTRAINT ventas_metodo_pago_check CHECK (metodo_pago IN ('efectivo', 'transferencia'))`);
 
+  // Migración: a qué banco de la empresa entró cada transferencia. Las ventas en
+  // efectivo lo dejan vacío, igual que las transferencias registradas antes de
+  // este cambio. La lista de bancos vive en BANCOS de server.js.
+  await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS banco TEXT`);
+
   // Migración: cuadre de caja. Al cerrar se guarda cuánto debía haber, lo que se
   // contó (billete por billete), la diferencia y su motivo, quién cerró, cuánto
   // se retiró y cuánto quedó de sencillo para el turno siguiente.

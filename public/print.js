@@ -76,7 +76,10 @@
   }
   const metodoEl = document.getElementById('metodo-pago-valor');
   if (metodoEl) {
-    metodoEl.textContent = venta.metodo_pago === 'transferencia' ? 'TRANSFERENCIA' : 'EFECTIVO';
+    // La transferencia dice a qué banco entró ("TRANSFERENCIA — BANCO PICHINCHA")
+    metodoEl.textContent = venta.metodo_pago !== 'transferencia'
+      ? 'EFECTIVO'
+      : venta.banco_nombre ? `TRANSFERENCIA — ${venta.banco_nombre.toUpperCase()}` : 'TRANSFERENCIA';
   }
 
   if (venta.anulada) {

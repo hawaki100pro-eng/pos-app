@@ -1682,6 +1682,70 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   outline-offset: 2px;
 }
 
+/* --- Banco de la transferencia ---
+   Cuatro botones, dos por fila. Cada uno lleva el color de su banco (--banco,
+   lo pone app.js): una franja y una marca de color sin elegir, y todo el botón
+   pintado de ese color al elegirlo. */
+.banco-transferencia { margin: 4px 0 12px; }
+.banco-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.banco-opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 2px solid var(--borde-tipo-btn);
+  border-left: 8px solid var(--banco);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.banco-opcion input { position: absolute; opacity: 0; pointer-events: none; }
+.banco-marca {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--banco);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.banco-opcion.seleccionado {
+  background: var(--banco);
+  border-color: var(--banco);
+  color: var(--banco-texto);
+}
+.banco-opcion.seleccionado .banco-marca { background: var(--banco-texto); opacity: 0.9; }
+.banco-opcion.seleccionado::after { content: '✓'; margin-left: auto; font-size: 1.1rem; }
+.banco-opcion:has(input:focus-visible) { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* Etiqueta del banco en el historial, Mis ventas y la ventana de editar */
+.badge-banco {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--banco);
+  color: var(--banco-texto);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Desglose de las transferencias de hoy por banco, en el cuadro de la caja */
+.caja-transfer-bancos:empty { display: none; }
+.caja-transfer-bancos { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 0.85rem; }
+.caja-transfer-banco { display: flex; align-items: center; gap: 6px; }
+.banco-punto { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--banco, var(--texto-tenue)); }
+.caja-transfer-banco-nombre { flex: 1; }
+.caja-transfer-banco-monto { font-weight: 700; font-variant-numeric: tabular-nums; }
+
 /* --- Aviso de venta registrada ---
    Banner del color del pago (mismos colores que la tarjeta del total) con el
    botón de imprimir en blanco, grande, a la derecha. */

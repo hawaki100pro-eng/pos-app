@@ -496,6 +496,21 @@ function formatNumeroProforma(numero) {
 // (avisoCedulaRuc y avisoEmail): si se cambia una allá, cambiarla aquí.
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// Bancos de la empresa donde los clientes transfieren. La clave es lo que se
+// guarda en ventas.banco; app.js tiene la misma lista con los colores de cada
+// banco. Para agregar uno, se suma aquí y allá.
+const BANCOS = {
+  guayaquil: 'Banco Guayaquil',
+  pichincha: 'Banco Pichincha',
+  pacifico: 'Banco del Pacífico',
+  bolivariano: 'Banco Bolivariano',
+};
+
+// La clave del banco si es uno de los de la empresa; si no, null
+function bancoValido(valor) {
+  return typeof valor === 'string' && Object.hasOwn(BANCOS, valor) ? valor : null;
+}
+
 function limpiarTexto(valor) {
   return (valor == null ? '' : String(valor)).trim();
 }
@@ -517,6 +532,11 @@ function avisoCedulaRuc(valor) {
 app.post('/api/ventas', requireLogin, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items } = req.body;
   const metodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
+  // Una transferencia tiene que decir a qué banco entró; el efectivo no lleva banco
+  const banco = metodoPago === 'transferencia' ? bancoValido(req.body.banco) : null;
+  if (metodoPago === 'transferencia' && !banco) {
+    return res.status(400).json({ error: 'Elige a qué banco se hizo la transferencia' });
+  }
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Debes incluir al menos un producto' });
   }
@@ -552,9 +572,9 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     await client.query("UPDATE configuracion SET valor = $1 WHERE clave = 'ultimo_numero_proforma'", [String(numeroProforma)]);
 
     const ventaResult = await client.query(
-      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago]
+      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago, banco)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago, banco]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -591,7 +611,7 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ ventaId, total, numero_proforma: formatNumeroProforma(numeroProforma), metodo_pago: metodoPago });
+    res.status(201).json({ ventaId, total, numero_proforma: formatNumeroProforma(numeroProforma), metodo_pago: metodoPago, banco });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(400).json({ error: err.message });
@@ -606,7 +626,7 @@ app.get('/api/ventas/recientes', requireLogin, async (req, res) => {
   // que para eso tienen el panel.
   const soloMias = req.session.user.rol === 'vendedor';
   const r = await pool.query(`
-    SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, v.metodo_pago, u.usuario AS vendedor
+    SELECT v.id, v.cliente, v.fecha, v.total, v.anulada, v.metodo_pago, v.banco, u.usuario AS vendedor
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
     WHERE v.eliminada = 0 ${soloMias ? 'AND v.usuario_id = $1' : ''}
@@ -646,6 +666,8 @@ app.get('/api/ventas/:id', requireLogin, async (req, res) => {
     return res.status(403).json({ error: 'Esa venta es de otro vendedor. Pídesela al administrador.' });
   }
   venta.numero_proforma = formatNumeroProforma(venta.numero_proforma || venta.id);
+  // Nombre completo del banco para el comprobante ("Banco Pichincha")
+  venta.banco_nombre = BANCOS[venta.banco] || null;
   const detalle = await pool.query('SELECT producto, cantidad, precio_unitario, precio_lista FROM detalle_venta WHERE venta_id = $1', [venta.id]);
   venta.detalle = detalle.rows;
   res.json(venta);
@@ -672,7 +694,7 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
   const periodo = ['hoy', '7dias', 'mes', 'todo'].includes(req.query.periodo) ? req.query.periodo : 'hoy';
   const ventasR = await pool.query(`
     SELECT v.id, v.numero_proforma, v.cliente, v.cliente_direccion, v.cliente_ruc, v.cliente_telefono, v.cliente_email,
-           v.fecha, v.total, v.metodo_pago, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
+           v.fecha, v.total, v.metodo_pago, v.banco, v.anulada, v.fecha_anulacion, v.motivo_anulacion,
            u.usuario AS vendedor, au.usuario AS anulada_por_usuario
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
@@ -699,10 +721,23 @@ app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
     ${FILTROS_PERIODO.hoy}
   `);
   const totalTransferenciasHoy = Number(transferenciasR.rows[0].t);
+  // Lo mismo separado por banco, para comparar con la app de cada uno. Las
+  // transferencias de antes de que se pidiera el banco salen como "sin_banco".
+  const porBancoR = await pool.query(`
+    SELECT COALESCE(v.banco, 'sin_banco') AS banco, COUNT(*)::int AS cantidad, COALESCE(SUM(v.total), 0) AS total
+    FROM ventas v
+    WHERE v.metodo_pago = 'transferencia' AND v.anulada = 0 AND v.eliminada = 0
+    ${FILTROS_PERIODO.hoy}
+    GROUP BY COALESCE(v.banco, 'sin_banco')
+  `);
+  const transferenciasPorBanco = porBancoR.rows.map((r) => ({
+    banco: r.banco, cantidad: r.cantidad, total: Number(r.total),
+  }));
 
   res.json({
     turno,
     totalTransferenciasHoy,
+    transferenciasPorBanco,
     // Mismo valor con el nombre de antes, para las pestañas abiertas antes de esta versión
     totalTransferenciasTurno: totalTransferenciasHoy,
     numVentas: parseInt(numVentasR.rows[0].c, 10),
@@ -812,6 +847,22 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     return res.status(400).json({ error: 'No se puede editar una venta anulada o eliminada' });
   }
 
+  // Banco de la transferencia: si se eligió uno tiene que ser de la lista. Si no
+  // se mandó, se conserva el que tenía, para poder corregir otros datos de una
+  // transferencia antigua que se registró antes de que se pidiera el banco.
+  let nuevoBanco = null;
+  if (nuevoMetodoPago === 'transferencia') {
+    if (req.body.banco) {
+      nuevoBanco = bancoValido(req.body.banco);
+      if (!nuevoBanco) return res.status(400).json({ error: 'Ese banco no está en la lista de la empresa' });
+    } else if (venta.metodo_pago === 'transferencia') {
+      nuevoBanco = venta.banco;
+    } else {
+      // Pasa de efectivo a transferencia: ahí sí hay que decir el banco
+      return res.status(400).json({ error: 'Elige a qué banco se hizo la transferencia' });
+    }
+  }
+
   const nuevoTotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
   // El ajuste a la caja depende de cuánto aportaba ANTES (solo si era efectivo) vs cuánto aporta AHORA (solo si sigue siendo efectivo)
   const aportabaCajaAntes = venta.metodo_pago === 'efectivo' ? venta.total : 0;
@@ -823,8 +874,8 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     await client.query('BEGIN');
 
     await client.query(
-      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7 WHERE id = $8`,
-      [cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, venta.id]
+      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7, banco = $8 WHERE id = $9`,
+      [cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, nuevoBanco, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);
