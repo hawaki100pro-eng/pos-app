@@ -94,7 +94,13 @@ app.use('/api', (req, res, next) => {
 // 'cierre' (el de siempre): se abre, se vende y se cierra con cuadre.
 // 'libre': la caja queda siempre abierta, nadie la cierra y nunca frena una
 // venta. Lo elige solo el dueño; se guarda en configuracion.
+// El cierre de caja está quitado POR AHORA (pedido del dueño): la caja funciona
+// siempre como caja libre, sin botón de cerrar, sin historial de cierres ni
+// selector de modo. El código sigue aquí: para volver a activarlo, poner true.
+const CIERRE_DE_CAJA_ACTIVO = false;
+
 async function getModoCaja() {
+  if (!CIERRE_DE_CAJA_ACTIVO) return 'libre';
   const r = await pool.query("SELECT valor FROM configuracion WHERE clave = 'modo_caja'");
   return r.rows[0] && r.rows[0].valor === 'libre' ? 'libre' : 'cierre';
 }
@@ -129,6 +135,14 @@ async function asegurarTurnoLibre(usuarioId) {
   }
 }
 
+// El turno abierto; en caja libre, si no hay ninguno se abre solo (así el panel
+// nunca muestra la caja cerrada ni pide abrirla)
+async function turnoAbiertoOLibre(req) {
+  const turno = await getTurnoAbierto();
+  if (turno || (await getModoCaja()) !== 'libre') return turno;
+  return asegurarTurnoLibre(req.session.user.id);
+}
+
 async function getTurnoAbierto() {
   const r = await pool.query(`SELECT * FROM turnos_caja WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1`);
   return r.rows[0] || null;
@@ -160,7 +174,7 @@ app.get('/api/me', requireLogin, (req, res) => {
 // --- Caja: apertura, cierre y estado del turno ---
 
 app.get('/api/caja/estado', requireLogin, async (req, res) => {
-  const turno = await getTurnoAbierto();
+  const turno = await turnoAbiertoOLibre(req);
   // Con la caja cerrada, al admin y al dueño se les sugiere abrir con el sencillo
   // que se dejó en el último cierre
   let sugerido_inicial = null;
@@ -170,12 +184,15 @@ app.get('/api/caja/estado', requireLogin, async (req, res) => {
     );
     if (r.rows[0]) sugerido_inicial = r.rows[0].monto_queda;
   }
-  res.json({ turno, sugerido_inicial, modo_caja: await getModoCaja() });
+  res.json({ turno, sugerido_inicial, modo_caja: await getModoCaja(), cierre_activo: CIERRE_DE_CAJA_ACTIVO });
 });
 
 // El dueño cambia el modo de caja. Al pasar a libre, si la caja está cerrada se
 // abre sola: en ese modo siempre hay una caja abierta.
 app.post('/api/caja/modo', requireLogin, requireDueño, async (req, res) => {
+  if (!CIERRE_DE_CAJA_ACTIVO) {
+    return res.status(400).json({ error: 'El cierre de caja está desactivado por ahora: la caja queda siempre abierta.' });
+  }
   const { modo } = req.body || {};
   if (!['libre', 'cierre'].includes(modo)) {
     return res.status(400).json({ error: 'El modo de caja debe ser "libre" o "cierre"' });
@@ -258,6 +275,9 @@ app.post('/api/caja/abrir', requireLogin, requireAdmin, async (req, res) => {
 app.post('/api/caja/cerrar', requireLogin, requireAdmin, async (req, res) => {
   const { conteo, motivo, monto_queda, transferencias_confirmadas } = req.body || {};
 
+  if (!CIERRE_DE_CAJA_ACTIVO) {
+    return res.status(400).json({ error: 'El cierre de caja está desactivado por ahora: la caja queda siempre abierta.' });
+  }
   if ((await getModoCaja()) === 'libre') {
     return res.status(400).json({ error: 'La caja está en modo libre: el dueño debe pasarla a "Con cierre" para poder cerrarla.' });
   }
@@ -629,7 +649,7 @@ const FILTROS_PERIODO = {
 };
 
 app.get('/api/dashboard', requireLogin, requireAdmin, async (req, res) => {
-  const turno = await getTurnoAbierto();
+  const turno = await turnoAbiertoOLibre(req);
   const numVentasR = await pool.query('SELECT COUNT(*) AS c FROM ventas');
 
   // Lista blanca: solo estos valores llegan a la consulta

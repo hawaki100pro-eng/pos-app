@@ -150,7 +150,7 @@ async function cargarEstadoCaja() {
   const data = await res.json();
   const cerradaMsg = document.getElementById('caja-cerrada-msg');
   const formWrap = document.getElementById('venta-form-wrap');
-  aplicarModoCaja(data.modo_caja);
+  aplicarModoCaja(data.modo_caja, data.cierre_activo !== false);
   // En caja libre siempre se puede vender: si faltara el turno, la venta lo abre
   if (data.turno || data.modo_caja === 'libre') {
     cerradaMsg.classList.add('hidden');
@@ -1467,7 +1467,7 @@ async function cargarDashboard() {
     cerradaCard.classList.add('hidden');
     document.getElementById('caja-inicial').dataset.valor = data.turno.monto_inicial.toFixed(2);
     document.getElementById('caja-actual').dataset.valor = data.turno.monto_actual.toFixed(2);
-    document.getElementById('caja-transferencias').dataset.valor = data.totalTransferenciasHoy.toFixed(2);
+    document.getElementById('caja-transferencias').dataset.valor = Number(data.totalTransferenciasHoy || 0).toFixed(2);
     aplicarVisibilidadDinero();
     document.getElementById('vaciar-caja-btn').classList.toggle('hidden', rolActual !== 'dueno');
   } else {
@@ -1728,13 +1728,17 @@ document.getElementById('vaciar-caja-btn').addEventListener('click', async () =>
 // botón de cerrar para todos y se muestra el aviso.
 let modoCaja = 'cierre';
 
-function aplicarModoCaja(modo) {
+// Con el cierre de caja desactivado (por ahora, ver CIERRE_DE_CAJA_ACTIVO en
+// server.js) no se muestra nada de cerrar: ni el botón, ni el aviso, ni el
+// selector, ni el historial de cierres.
+function aplicarModoCaja(modo, cierreActivo = true) {
   modoCaja = modo === 'libre' ? 'libre' : 'cierre';
   const libre = modoCaja === 'libre';
   document.getElementById('cerrar-caja-btn').classList.toggle('hidden', libre);
-  document.getElementById('caja-libre-aviso').classList.toggle('hidden', !libre);
+  document.getElementById('caja-libre-aviso').classList.toggle('hidden', !libre || !cierreActivo);
+  document.getElementById('cierres-caja').classList.toggle('hidden', !cierreActivo);
   const selector = document.getElementById('modo-caja');
-  selector.classList.toggle('hidden', rolActual !== 'dueno');
+  selector.classList.toggle('hidden', rolActual !== 'dueno' || !cierreActivo);
   selector.querySelectorAll('.modo-caja-opcion').forEach((boton) => {
     const activo = boton.dataset.modo === modoCaja;
     boton.classList.toggle('activo', activo);
@@ -1764,7 +1768,7 @@ document.querySelectorAll('.modo-caja-opcion').forEach((boton) => {
     }
     msg.textContent = modo === 'libre' ? 'Caja libre activada: la caja queda siempre abierta.' : 'Modo con cierre activado.';
     msg.className = '';
-    aplicarModoCaja(data.modo);
+    aplicarModoCaja(data.modo, true);
     cargarDashboard();
     cargarEstadoCaja();
   });
