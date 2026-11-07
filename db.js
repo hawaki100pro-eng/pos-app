@@ -214,6 +214,10 @@ async function init() {
   // estaba en el flujo principal y cualquier tropiezo dejaba la tienda sin caja.
   await migrarSku();
 
+  // Se quitaron la bóveda y las compras a proveedores; sus datos eran pruebas y
+  // el dueño pidió borrarlos. Va aparte y a prueba de fallos, igual que el SKU.
+  await borrarTablasBoveda();
+
   const contador = await pool.query("SELECT clave FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
   if (contador.rowCount === 0) {
     await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('ultimo_numero_proforma', '7567')");
@@ -277,6 +281,23 @@ async function migrarSku() {
     console.log(`SKU de etiquetas generado para ${plan.asignados.length} producto(s)`);
   } catch (err) {
     console.error('No se pudo preparar el SKU de las etiquetas. El POS arranca igual. Detalle:', err.message);
+  } finally {
+    if (cliente) cliente.release();
+  }
+}
+
+// Borra las tablas de la bóveda y de las compras a proveedores (función quitada,
+// con datos de prueba). Con IF EXISTS, después de la primera vez no hace nada.
+// Se borran las cuatro en una sola orden porque dependen entre sí. Si falla, el
+// POS arranca igual: estas tablas ya no las usa nadie.
+async function borrarTablasBoveda() {
+  let cliente;
+  try {
+    cliente = await pool.connect();
+    await cliente.query("SET lock_timeout = '5s'");
+    await cliente.query('DROP TABLE IF EXISTS boveda_movimientos, compras_detalle, compras, proveedores');
+  } catch (err) {
+    console.error('No se pudieron borrar las tablas de la bóveda. El POS arranca igual. Detalle:', err.message);
   } finally {
     if (cliente) cliente.release();
   }
