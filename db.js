@@ -218,6 +218,9 @@ async function init() {
   // el dueño pidió borrarlos. Va aparte y a prueba de fallos, igual que el SKU.
   await borrarTablasBoveda();
 
+  // El dueño pidió borrar los cierres de caja que había (una sola vez).
+  await borrarCierresAnteriores();
+
   const contador = await pool.query("SELECT clave FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
   if (contador.rowCount === 0) {
     await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('ultimo_numero_proforma', '7567')");
@@ -298,6 +301,44 @@ async function borrarTablasBoveda() {
     await cliente.query('DROP TABLE IF EXISTS boveda_movimientos, compras_detalle, compras, proveedores');
   } catch (err) {
     console.error('No se pudieron borrar las tablas de la bóveda. El POS arranca igual. Detalle:', err.message);
+  } finally {
+    if (cliente) cliente.release();
+  }
+}
+
+// Borra los cierres de caja hechos hasta ahora, UNA sola vez (queda marcado en
+// configuracion): si algún día se reactiva el cierre, los nuevos no se tocan.
+// Los turnos cerrados sin ventas ni gastos se borran; los que tienen ventas o
+// gastos no se pueden borrar (cada venta apunta a su turno), así que se les
+// quitan todos los datos del cierre y el historial ya no los muestra.
+// No toca la caja abierta, las ventas ni el stock. Si falla, el POS arranca igual.
+async function borrarCierresAnteriores() {
+  let cliente;
+  try {
+    cliente = await pool.connect();
+    await cliente.query("SET lock_timeout = '5s'");
+    await cliente.query('BEGIN');
+    const hecho = await cliente.query("SELECT 1 FROM configuracion WHERE clave = 'cierres_borrados_v1'");
+    if (hecho.rowCount > 0) {
+      await cliente.query('ROLLBACK');
+      return;
+    }
+    const borrados = await cliente.query(`
+      DELETE FROM turnos_caja t
+      WHERE t.estado = 'cerrado'
+        AND NOT EXISTS (SELECT 1 FROM ventas v WHERE v.turno_id = t.id)
+        AND NOT EXISTS (SELECT 1 FROM gastos g WHERE g.turno_id = t.id)`);
+    const limpiados = await cliente.query(`
+      UPDATE turnos_caja SET monto_esperado = NULL, monto_contado = NULL, diferencia = NULL,
+        motivo_diferencia = NULL, conteo = NULL, monto_retirado = NULL, monto_queda = NULL,
+        cerrado_por = NULL, transferencias_confirmadas = NULL
+      WHERE estado = 'cerrado'`);
+    await cliente.query("INSERT INTO configuracion (clave, valor) VALUES ('cierres_borrados_v1', NOW()::text)");
+    await cliente.query('COMMIT');
+    console.log(`Cierres de caja borrados: ${borrados.rowCount} turno(s) eliminados, ${limpiados.rowCount} limpiados (tienen ventas o gastos)`);
+  } catch (err) {
+    if (cliente) await cliente.query('ROLLBACK').catch(() => {});
+    console.error('No se pudieron borrar los cierres de caja. El POS arranca igual. Detalle:', err.message);
   } finally {
     if (cliente) cliente.release();
   }

@@ -364,7 +364,8 @@ app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
     FROM turnos_caja t
     JOIN usuarios u ON u.id = t.abierto_por
     LEFT JOIN usuarios c ON c.id = t.cerrado_por
-    WHERE t.estado = 'cerrado'
+    -- Solo cierres con conteo: los de antes del cuadre y los borrados no se listan
+    WHERE t.estado = 'cerrado' AND t.monto_contado IS NOT NULL
     ORDER BY t.id DESC
     LIMIT 60
   `);
