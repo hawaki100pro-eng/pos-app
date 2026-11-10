@@ -1462,9 +1462,10 @@ function pintarDiasLibres() {
     return `<span class="dl-punto ${d.estado}" style="${estilo}" title="${escaparHtml(d.usuario)}: ${DL_ESTADOS[d.estado]}"></span>`;
   };
 
+  const antelacion = dlDatos.antelacion === 1 ? '1 día' : `${dlDatos.antelacion} días`;
   document.getElementById('dl-ayuda').textContent = encargado
     ? 'Los vendedores piden aquí su día de descanso. Acepta o rechaza cada pedido.'
-    : `Toca un día para pedirlo: de lunes a jueves, con al menos ${dlDatos.antelacion} días de antelación y uno por semana. El administrador lo acepta o no.`;
+    : `Toca un día para pedirlo: de lunes a jueves, con al menos ${antelacion} de antelación y uno por semana. El administrador lo acepta o no.`;
   document.getElementById('dl-aviso').classList.toggle('hidden', encargado);
 
   const pendientes = dlDatos.lista.filter((d) => d.estado === 'pendiente').length;
@@ -1543,7 +1544,8 @@ document.getElementById('dl-calendario').addEventListener('click', async (e) => 
   if (celda.dataset.motivo === 'finde') return dlMensaje('Viernes, sábado y domingo no se pueden pedir como día libre.', true);
   if (celda.dataset.motivo === 'pasado') return dlMensaje('Ese día ya pasó.', true);
   if (celda.dataset.motivo === 'antelacion') {
-    return dlMensaje(`El día libre se pide con al menos ${dlDatos.antelacion} días de antelación: lo más pronto es el ${dlFechaLarga(dlDatos.primera_fecha)}.`, true);
+    const antelacion = dlDatos.antelacion === 1 ? '1 día' : `${dlDatos.antelacion} días`;
+    return dlMensaje(`El día libre se pide con al menos ${antelacion} de antelación: lo más pronto es el ${dlFechaLarga(dlDatos.primera_fecha)}.`, true);
   }
   if (!confirm(`¿Pedir libre el ${dlFechaLarga(fecha)}?\n\nQueda pendiente hasta que el administrador lo acepte.`)) return;
   const res = await fetch('/api/dias-libres', {

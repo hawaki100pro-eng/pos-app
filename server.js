@@ -376,10 +376,11 @@ app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
 // Cada vendedor pide su día de descanso en un calendario; el admin o el dueño lo
 // acepta o lo rechaza. Reglas:
 //   - Viernes, sábado y domingo no se puede (son los días fuertes de venta).
-//   - Hay que pedirlo con antelación: al menos DIAS_ANTELACION días antes.
+//   - Hay que pedirlo con antelación: al menos DIAS_ANTELACION día(s) antes.
 //   - Un solo día libre por semana (de lunes a domingo) por vendedor.
 // Las fechas viajan como texto 'AAAA-MM-DD' y "hoy" es el día de Ecuador.
-const DIAS_ANTELACION = 2;
+const DIAS_ANTELACION = 1;
+const textoAntelacion = () => (DIAS_ANTELACION === 1 ? '1 día' : `${DIAS_ANTELACION} días`);
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 const hoyEcuador = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
@@ -455,7 +456,7 @@ app.post('/api/dias-libres', requireLogin, async (req, res) => {
   const primera = sumarDias(hoyEcuador(), DIAS_ANTELACION);
   if (fecha < primera) {
     return res.status(400).json({
-      error: `El día libre se pide con al menos ${DIAS_ANTELACION} días de antelación: lo más pronto es el ${fechaLarga(primera)}`,
+      error: `El día libre se pide con al menos ${textoAntelacion()} de antelación: lo más pronto es el ${fechaLarga(primera)}`,
     });
   }
 
