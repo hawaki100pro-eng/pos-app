@@ -1157,6 +1157,24 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireDueño, async (req, re
 // Cómo se nombra un producto en la línea de una venta. Una sandalia lleva talla
 // y color ("Cabuya Alta T38 Yute"); una categoría suelta no tiene ninguno de los
 // dos y se queda solo con su nombre ("Zapatilla de dama").
+// Los colores de una categoría suelta, limpios: llegan como lista o como texto
+// separado por comas; se quitan los vacíos y los repetidos (sin importar
+// mayúsculas o tildes) y se guardan como "Rosa, Menta, Lila". Vacío = null.
+const MAX_COLORES = 20;
+function limpiarColores(valor) {
+  const lista = Array.isArray(valor) ? valor : String(valor ?? '').split(',');
+  const vistos = new Set();
+  const limpios = [];
+  for (const c of lista) {
+    const color = String(c ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    const clave = color.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (!color || vistos.has(clave)) continue;
+    vistos.add(clave);
+    limpios.push(color);
+  }
+  return limpios.length ? limpios.slice(0, MAX_COLORES).join(', ') : null;
+}
+
 function nombreProducto(p) {
   const talla = String(p.talla || '').trim();
   const color = String(p.color || '').trim();
@@ -1276,6 +1294,8 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   const talla = controlaStock ? req.body.talla : '';
   const color = controlaStock ? req.body.color : '';
   const stock = controlaStock ? req.body.stock : 0;
+  // Solo una categoría suelta lleva lista de colores; una talla tiene su color
+  const colores = controlaStock ? null : limpiarColores(req.body.colores);
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -1293,16 +1313,18 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
     [modelo.trim(), talla.trim(), color.trim()]
   );
   if (existente.rows[0]) {
+    // Una categoría suelta que se vuelve a cargar con colores los actualiza; sin
+    // colores, se quedan los que tenía
     const r = await pool.query(
-      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1 WHERE id = $3 RETURNING *',
-      [Math.round(stock), precio, existente.rows[0].id]
+      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1, colores = COALESCE($3, colores) WHERE id = $4 RETURNING *',
+      [Math.round(stock), precio, colores, existente.rows[0].id]
     );
     return res.status(200).json({ ...r.rows[0], stock_sumado: Math.round(stock) });
   }
 
   const r = await pool.query(
-    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock]
+    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock, colores) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, colores]
   );
 
   // El código de la etiqueta se pone en un segundo paso, y aparte: si fallara,
@@ -1322,7 +1344,7 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
 app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const { modelo, precio } = req.body;
 
-  const actual = await pool.query('SELECT stock, controla_stock FROM productos WHERE id = $1', [req.params.id]);
+  const actual = await pool.query('SELECT stock, controla_stock, colores FROM productos WHERE id = $1', [req.params.id]);
   if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
   // Si no viene en el cuerpo se conserva lo que ya tenía: así una edición que no
@@ -1333,6 +1355,10 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const talla = controlaStock ? req.body.talla : '';
   const color = controlaStock ? req.body.color : '';
   const stock = controlaStock ? req.body.stock : 0;
+  // Colores de la categoría suelta; si no vienen en el cuerpo se conservan
+  const colores = controlaStock
+    ? null
+    : (req.body.colores === undefined ? actual.rows[0].colores : limpiarColores(req.body.colores));
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -1351,9 +1377,9 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const r = await pool.query(
     // Si el stock se corrige hacia abajo, las etiquetas impresas no pueden quedar por encima
     `UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5,
-       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6
-     WHERE id=$7 RETURNING *`,
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, req.params.id]
+       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6, colores=$7
+     WHERE id=$8 RETURNING *`,
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, colores, req.params.id]
   );
   res.json(r.rows[0]);
 });

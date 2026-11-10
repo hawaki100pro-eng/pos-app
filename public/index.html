@@ -432,6 +432,21 @@
         Tarjeta de precios
       </button>
     </label>
+
+    <!-- Colores de la categoría suelta (ej: 1002 Y en Rosa, Menta, Lila y Fucsia).
+         Aparece solo al marcar la casilla. Se escribe un color y Enter (o coma),
+         o se toca uno de los sugeridos. Sirven para verlos y para buscarlos. -->
+    <div id="colores-fila" class="colores-fila hidden">
+      <label for="prod-colores-input" class="colores-titulo">Colores</label>
+      <div id="colores-caja" class="colores-caja">
+        <input type="text" id="prod-colores-input" autocomplete="off"
+               placeholder="Escribe un color y Enter (ej: Lila)">
+      </div>
+      <div class="colores-sugeridos">
+        <span class="colores-sugeridos-titulo">Toca para agregar:</span>
+        <span id="colores-sugeridos"></span>
+      </div>
+    </div>
     <p id="producto-msg"></p>
 
     <!-- Va aparte del formulario de arriba a propósito: mezclarlo con los campos

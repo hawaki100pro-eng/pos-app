@@ -597,7 +597,7 @@ function pintarResultadosHawaki(abierto) {
   }
   hkCajaResultados.innerHTML = hkResultados.map((p, i) => `
     <button type="button" role="option" class="hk-resultado${i === hkActivo ? ' activo' : ''}" data-i="${i}" aria-selected="${i === hkActivo}">
-      <span class="hk-res-nombre">${escaparHtml(nombreProducto(p))}</span>
+      <span class="hk-res-nombre">${escaparHtml(nombreProducto(p))}${!p.controla_stock && p.colores ? `<span class="hk-res-colores">${escaparHtml(p.colores)}</span>` : ''}</span>
       <span class="hk-res-codigo">${escaparHtml(codigoDe(p))}</span>
       <span class="hk-res-stock">${p.controla_stock ? `${p.stock} en stock` : 'categoría'}</span>
       <span class="hk-res-precio">$${Number(p.precio).toFixed(2)}</span>
@@ -815,7 +815,7 @@ function pareceElPrecio(escrito, precio) {
 // producto —su nombre, talla, color o precio—, en cualquier orden.
 // Así "chunky negro", "colombiana 15" o "zapatila dama" encuentran lo esperado.
 function coincideEnCatalogo(p, palabras) {
-  const texto = normalizarTexto(`${p.modelo} ${p.talla} ${p.color}`);
+  const texto = normalizarTexto(`${p.modelo} ${p.talla} ${p.color} ${p.colores || ''}`);
   const campos = texto.split(/[^a-z0-9]+/).filter(Boolean);
   return palabras.every((escrito) =>
     // Sobre el texto entero, para lo que lleva guiones o almohadilla: "a-001",
@@ -861,6 +861,7 @@ function renderCatalogoModal(productos) {
       cuadro.className = 'catalogo-cuadro';
       cuadro.innerHTML = `
         <span class="cuadro-nombre">${p.modelo}</span>
+        ${p.colores ? `<span class="cuadro-colores">${pastillasColores(p.colores)}</span>` : ''}
         <span class="cuadro-precio">$${Number(p.precio).toFixed(2)}</span>
       `;
       // Cada categoría con su color propio (el mismo que en el inventario),
@@ -887,7 +888,7 @@ function renderCatalogoModal(productos) {
       <div class="catalogo-item-modelo">${p.modelo}</div>
       <div class="catalogo-item-detalle">${p.controla_stock
         ? `<strong>Talla ${p.talla}</strong> · ${p.color} · $${p.precio.toFixed(2)} · Stock: ${p.stock}`
-        : `$${p.precio.toFixed(2)} · sin control de stock`}</div>
+        : `$${p.precio.toFixed(2)} · sin control de stock${p.colores ? ` · ${escaparHtml(p.colores)}` : ''}`}</div>
     `;
     card.addEventListener('click', () => {
       const inputProducto = document.getElementById('item-producto');
@@ -2901,7 +2902,7 @@ function sinTildes(texto) {
 // así "chunky 38" llega directo a la talla 38 de ese modelo.
 function coincide(p, palabras) {
   const donde = sinTildes(
-    `${p.modelo} ${p.color} ${p.talla} t${p.talla} ${p.sku || ''} ${String(p.id).padStart(6, '0')}`
+    `${p.modelo} ${p.color} ${p.colores || ''} ${p.talla} t${p.talla} ${p.sku || ''} ${String(p.id).padStart(6, '0')}`
   );
   return palabras.every((w) => donde.includes(w));
 }
@@ -3027,8 +3028,109 @@ function renderInventario() {
 // que dejarlos escribibles y luego ignorarlos.
 const chkSinStock = document.getElementById('prod-sin-stock');
 
+// --- Colores de una categoría suelta ---
+// Muestra de color para los nombres conocidos; lo que no se conoce va en gris.
+// Las claves van sin tildes y en minúsculas, e incluyen cómo están escritos en
+// el catálogo ("Turqueza", "P.Rosa").
+const MUESTRAS_COLOR = {
+  negro: '#111111', blanco: '#ffffff', gris: '#9ca3af', beige: '#e8d6b5', nude: '#e3bc9a', cafe: '#7b4b2a',
+  rosa: '#f4a6c1', 'rosa pastel': '#f9cfe0', 'palo rosa': '#d8a1a4', 'p.rosa': '#d8a1a4', 'p. rosa': '#d8a1a4',
+  fucsia: '#e0218a', lila: '#c8a2e8', morado: '#7e3fb2', menta: '#98e2c6', verde: '#2e9e4f',
+  turquesa: '#30c5c5', turqueza: '#30c5c5', celeste: '#7cc7f0', azul: '#1e5bd8', 'azul marino': '#1b2a4a',
+  rojo: '#d32f2f', vino: '#7b1e3a', coral: '#ff7f6e', naranja: '#f28c28', amarillo: '#f8d33a',
+  dorado: '#d4a017', plateado: '#c0c4cc',
+  multicolor: 'conic-gradient(#e0218a, #f8d33a, #30c5c5, #7e3fb2, #e0218a)',
+};
+const COLORES_SUGERIDOS = ['Negro', 'Blanco', 'Rosa', 'Fucsia', 'Lila', 'Menta', 'Turquesa', 'Celeste', 'Azul', 'Rojo', 'Beige', 'Café'];
+
+function muestraColor(nombre) {
+  return MUESTRAS_COLOR[sinTildes(nombre).trim()] || 'var(--texto-tenue)';
+}
+
+// "Rosa, Menta" → ['Rosa', 'Menta']
+function listaColores(texto) {
+  return String(texto || '').split(',').map((c) => c.trim()).filter(Boolean);
+}
+
+// Pastillas con la muestra de cada color, para la tabla y los catálogos
+function pastillasColores(texto) {
+  return listaColores(texto).map((c) =>
+    `<span class="color-pastilla"><i style="background:${muestraColor(c)}"></i>${escaparHtml(c)}</span>`).join('');
+}
+
+// Colores que se van eligiendo en el formulario de alta
+let coloresNuevos = [];
+const inputColores = document.getElementById('prod-colores-input');
+const mismoColor = (a, b) => sinTildes(a) === sinTildes(b);
+
+function agregarColoresNuevos(texto) {
+  listaColores(texto).forEach((c) => {
+    if (!coloresNuevos.some((x) => mismoColor(x, c))) coloresNuevos.push(c);
+  });
+  pintarColoresNuevos();
+}
+
+function pintarColoresNuevos() {
+  const caja = document.getElementById('colores-caja');
+  caja.querySelectorAll('.color-chip').forEach((el) => el.remove());
+  coloresNuevos.forEach((c, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'color-chip';
+    chip.innerHTML = `<i style="background:${muestraColor(c)}"></i>${escaparHtml(c)}
+      <button type="button" aria-label="Quitar ${escaparHtml(c)}">×</button>`;
+    chip.querySelector('button').addEventListener('click', () => {
+      coloresNuevos.splice(i, 1);
+      pintarColoresNuevos();
+      inputColores.focus();
+    });
+    caja.insertBefore(chip, inputColores);
+  });
+  // Sugeridos: los que todavía no se eligieron
+  document.getElementById('colores-sugeridos').innerHTML = COLORES_SUGERIDOS
+    .filter((c) => !coloresNuevos.some((x) => mismoColor(x, c)))
+    .map((c) => `<button type="button" class="color-sugerido" data-color="${c}"><i style="background:${muestraColor(c)}"></i>${c}</button>`)
+    .join('');
+}
+
+// Enter o coma agregan lo escrito; Borrar con el campo vacío quita el último
+inputColores.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    agregarColoresNuevos(inputColores.value);
+    inputColores.value = '';
+  } else if (e.key === 'Backspace' && !inputColores.value && coloresNuevos.length) {
+    coloresNuevos.pop();
+    pintarColoresNuevos();
+  }
+});
+// Pegar una lista ("Fucsia, Lila" o una por renglón, como en el catálogo) las agrega todas
+inputColores.addEventListener('paste', (e) => {
+  const texto = e.clipboardData.getData('text');
+  if (!/[,\n]/.test(texto)) return;
+  e.preventDefault();
+  agregarColoresNuevos(texto.replace(/\s*[\n•·]\s*/g, ','));
+});
+// Lo escrito sin Enter también cuenta: al tocar "Agregar" el campo pierde el foco
+inputColores.addEventListener('blur', () => {
+  if (!inputColores.value.trim()) return;
+  agregarColoresNuevos(inputColores.value);
+  inputColores.value = '';
+});
+document.getElementById('colores-caja').addEventListener('click', (e) => {
+  if (e.target.id === 'colores-caja') inputColores.focus();
+});
+document.getElementById('colores-sugeridos').addEventListener('click', (e) => {
+  const boton = e.target.closest('.color-sugerido');
+  if (!boton) return;
+  agregarColoresNuevos(boton.dataset.color);
+  inputColores.focus();
+});
+pintarColoresNuevos();
+
 function aplicarModoCategoria() {
   const suelta = chkSinStock.checked;
+  // Los colores son solo de la categoría suelta
+  document.getElementById('colores-fila').classList.toggle('hidden', !suelta);
   for (const id of ['prod-talla', 'prod-color', 'prod-stock']) {
     const campo = document.getElementById(id);
     campo.disabled = suelta;
@@ -3252,7 +3354,8 @@ async function eliminarModeloCompleto(items, nombre) {
 
 function crearFilaProducto(p) {
     const tr = document.createElement('tr');
-    tr.className = 'fila-producto';
+    // fila-suelta: en el celular deja ver la columna de colores (ver style.css)
+    tr.className = p.controla_stock ? 'fila-producto' : 'fila-producto fila-suelta';
     if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
     // Una categoría suelta no lleva stock: no hay nada que avisar ni que agotar
     const suelta = !p.controla_stock;
@@ -3269,7 +3372,7 @@ function crearFilaProducto(p) {
     tr.innerHTML = `
       <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
       <td class="celda-talla">${suelta ? '—' : p.talla}</td>
-      <td class="celda-color">${suelta ? '—' : p.color}</td>
+      <td class="celda-color">${suelta ? (p.colores ? pastillasColores(p.colores) : '—') : p.color}</td>
       <td class="celda-precio">$${p.precio.toFixed(2)}</td>
       <td class="celda-stock${stockClase}">${suelta ? '—' : p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
       <td class="celda-acciones"></td>
@@ -3386,6 +3489,13 @@ async function editarProducto(p) {
     if (color === null) return;
   }
 
+  // La categoría suelta pregunta sus colores, separados por coma
+  let colores;
+  if (suelta) {
+    colores = window.prompt('Colores (separados por coma, ej: Rosa, Menta, Lila):', p.colores || '');
+    if (colores === null) return;
+  }
+
   const precioStr = window.prompt('Precio:', p.precio);
   if (precioStr === null) return;
 
@@ -3421,6 +3531,7 @@ async function editarProducto(p) {
       precio,
       stock,
       controla_stock: p.controla_stock ? true : false,
+      colores,
     }),
   });
   if (!res.ok) { const d = await res.json(); alert(d.error); return; }
@@ -3460,7 +3571,7 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const res = await fetch('/api/productos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modelo, talla, color, precio, stock, controla_stock }),
+    body: JSON.stringify({ modelo, talla, color, precio, stock, controla_stock, colores: controla_stock ? null : coloresNuevos }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -3487,6 +3598,8 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   } else {
     document.getElementById('prod-modelo').value = '';
     document.getElementById('prod-precio').value = '';
+    coloresNuevos = [];
+    pintarColoresNuevos();
     document.getElementById('prod-modelo').focus();
   }
   cargarProductos();

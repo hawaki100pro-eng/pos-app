@@ -124,6 +124,12 @@ async function init() {
   // Todo lo demás (precio, nombre, búsqueda, descuentos) funciona como siempre.
   await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS controla_stock INTEGER NOT NULL DEFAULT 1`);
 
+  // Migración: los colores en que viene una categoría suelta ("Rosa, Menta, Lila,
+  // Fucsia"). Van aparte de "color" a propósito: ese forma el nombre del producto
+  // y el código de la etiqueta, y una venta de un par no tiene que decir los
+  // cuatro colores. Estos solo se muestran y sirven para buscar.
+  await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS colores TEXT`);
+
   // Migración: cuántas etiquetas se imprimieron ya de cada talla. Lo que falta
   // etiquetar es la resta contra el stock, así al ingresar mercadería nueva solo
   // salen los pares nuevos y no hay que reimprimir todo el modelo.
