@@ -363,9 +363,257 @@ function productosParaCatalogo() {
 
 document.getElementById('buscar-catalogo-btn').addEventListener('click', () => abrirCatalogo('todos'));
 document.getElementById('general-btn').addEventListener('click', () => abrirCatalogo('generales'));
-// Nota de venta en blanco para llenar a mano: se abre directo en el cuadro de impresión
-document.getElementById('nota-blanco-btn').addEventListener('click', () => {
-  window.open('nota-blanco.html?imprimir=1', '_blank');
+// --- Nota de venta Hawaki ---
+// El formato del talonario, para llenar en pantalla. En cada fila se escribe el
+// código de la etiqueta (o el número del código de barras) y se llenan solos la
+// descripción y el precio; el precio se puede cambiar y la diferencia queda como
+// descuento. Si el código no existe, la fila se puede escribir a mano (como un
+// producto escrito a mano en la nota normal: no descuenta stock).
+// Al guardar se registra como una venta normal y se imprime.
+const HK_FILAS_INICIALES = 5;
+let hkFilas = [];
+
+const hkModal = document.getElementById('hk-modal');
+const hkFondo = document.getElementById('hk-fondo');
+
+const hkFilaVacia = () => ({
+  codigo: '', cantidad: 1, producto: '', precio_unitario: '', precio_lista: null,
+  producto_id: null, stock_max: null, aviso: '',
+});
+const hkFilaUsada = (f) => f.codigo.trim() !== '' || f.producto.trim() !== '' || f.precio_unitario !== '';
+
+function hkMensaje(texto, esError) {
+  const msg = document.getElementById('hk-msg');
+  msg.textContent = texto;
+  msg.className = esError ? 'error' : '';
+}
+
+function abrirNotaHawaki() {
+  hkFilas = Array.from({ length: HK_FILAS_INICIALES }, hkFilaVacia);
+  ['nombre', 'direccion', 'ruc', 'telefono', 'email'].forEach((c) => {
+    document.getElementById(`hk-cliente-${c}`).value = '';
+  });
+  limpiarAvisosCliente('hk-');
+  document.querySelector('input[name="hk-metodo"][value="efectivo"]').checked = true;
+  const banco = document.getElementById('hk-banco');
+  banco.innerHTML = '<option value="">Elige el banco</option>' + Object.entries(BANCOS)
+    .map(([clave, b]) => `<option value="${clave}">${b.nombre}</option>`).join('');
+  banco.classList.add('hidden');
+  // Fecha de hoy (Ecuador), solo para mostrar: la venta guarda la suya al registrarse
+  const [dia, mes, anio] = new Date().toLocaleDateString('es-EC', {
+    timeZone: 'America/Guayaquil', day: '2-digit', month: '2-digit', year: '2-digit',
+  }).split('/');
+  document.getElementById('hk-dia').textContent = dia;
+  document.getElementById('hk-mes').textContent = mes;
+  document.getElementById('hk-anio').textContent = anio;
+  hkMensaje('', false);
+  pintarFilasHawaki();
+  hkFondo.classList.remove('hidden');
+  hkModal.classList.remove('hidden');
+  hkModal.scrollTop = 0;
+  document.querySelector('#hk-items .hk-codigo').focus();
+}
+
+function cerrarNotaHawaki() {
+  hkModal.classList.add('hidden');
+  hkFondo.classList.add('hidden');
+}
+
+function pintarFilasHawaki() {
+  document.getElementById('hk-items').innerHTML = hkFilas.map((f, i) => {
+    const subtotal = (Number(f.cantidad) || 0) * (Number(f.precio_unitario) || 0);
+    return `<tr data-i="${i}" class="${f.producto_id ? 'hk-del-inventario' : ''}">
+      <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
+      <td><input type="number" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.cantidad)}" min="1" step="1"></td>
+      <td><input type="text" class="hk-descripcion" data-campo="producto" value="${escaparHtml(f.producto)}" placeholder="Descripción">
+        ${f.aviso ? `<small class="hk-aviso">${escaparHtml(f.aviso)}</small>` : ''}</td>
+      <td><input type="number" class="hk-precio" data-campo="precio_unitario" value="${escaparHtml(f.precio_unitario)}" min="0" step="0.01" placeholder="0.00"></td>
+      <td class="hk-subtotal">${subtotal ? `$${subtotal.toFixed(2)}` : ''}</td>
+      <td><button type="button" class="hk-quitar" aria-label="Quitar fila" title="Quitar fila">✕</button></td>
+    </tr>`;
+  }).join('');
+  calcularTotalesHawaki();
+}
+
+function calcularTotalesHawaki() {
+  let subtotal = 0;
+  let total = 0;
+  hkFilas.forEach((f, i) => {
+    const cantidad = Number(f.cantidad) || 0;
+    const precio = Number(f.precio_unitario) || 0;
+    const lista = f.precio_lista != null ? f.precio_lista : precio;
+    subtotal += cantidad * lista;
+    total += cantidad * precio;
+    const celda = document.querySelector(`#hk-items tr[data-i="${i}"] .hk-subtotal`);
+    if (celda) celda.textContent = cantidad * precio ? `$${(cantidad * precio).toFixed(2)}` : '';
+  });
+  const descuento = subtotal - total;
+  document.getElementById('hk-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById('hk-descuento').textContent = `-$${Math.max(descuento, 0).toFixed(2)}`;
+  document.getElementById('hk-fila-descuento').classList.toggle('hidden', descuento <= 0.004);
+  document.getElementById('hk-total').textContent = `$${total.toFixed(2)}`;
+}
+
+// Busca el código de una fila en el inventario y llena descripción y precio
+async function buscarCodigoHawaki(i) {
+  const fila = hkFilas[i];
+  const codigo = fila.codigo.trim();
+  if (!codigo) {
+    // Sin código la fila queda como escrita a mano
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, aviso: '' });
+    pintarFilasHawaki();
+    return;
+  }
+  const res = await fetch(`/api/productos/codigo/${encodeURIComponent(codigo)}`);
+  const data = await res.json().catch(() => ({}));
+  if (hkFilas[i] !== fila || fila.codigo.trim() !== codigo) return; // cambió mientras se buscaba
+  if (!res.ok) {
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, aviso: data.error || 'Código no encontrado' });
+  } else {
+    Object.assign(fila, {
+      producto: data.nombre,
+      precio_unitario: Number(data.precio),
+      precio_lista: Number(data.precio),
+      producto_id: data.id,
+      stock_max: data.controla_stock ? data.stock : null,
+      aviso: '',
+    });
+    // Con la última fila ocupada se agrega otra vacía, para seguir escribiendo
+    if (hkFilas.every(hkFilaUsada)) hkFilas.push(hkFilaVacia());
+  }
+  pintarFilasHawaki();
+  const siguiente = document.querySelector(`#hk-items tr[data-i="${res.ok ? i + 1 : i}"] .hk-codigo`);
+  if (siguiente && res.ok) siguiente.focus();
+}
+
+// Código leído con la pistola mientras el cursor estaba fuera de las filas de
+// código (por ejemplo en el nombre del cliente): va a la primera fila libre
+function escanearEnHawaki(codigo) {
+  let i = hkFilas.findIndex((f) => !hkFilaUsada(f));
+  if (i < 0) {
+    hkFilas.push(hkFilaVacia());
+    i = hkFilas.length - 1;
+  }
+  hkFilas[i].codigo = codigo;
+  buscarCodigoHawaki(i);
+}
+
+const hkTabla = document.getElementById('hk-items');
+
+hkTabla.addEventListener('input', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr || !e.target.dataset.campo) return;
+  const fila = hkFilas[tr.dataset.i];
+  const campo = e.target.dataset.campo;
+  fila[campo] = e.target.value;
+  // Si se borra el código, deja de ser un producto del inventario
+  if (campo === 'codigo' && fila.producto_id) {
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null });
+    tr.classList.remove('hk-del-inventario');
+  }
+  if (campo === 'cantidad' || campo === 'precio_unitario') calcularTotalesHawaki();
+});
+
+// El código se busca al salir del campo o con Enter (la pistola lectora da Enter)
+hkTabla.addEventListener('change', (e) => {
+  if (e.target.classList.contains('hk-codigo')) buscarCodigoHawaki(Number(e.target.closest('tr').dataset.i));
+});
+hkTabla.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.classList.contains('hk-codigo')) {
+    e.preventDefault();
+    e.target.blur();
+  }
+});
+
+hkTabla.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('hk-quitar')) return;
+  hkFilas.splice(Number(e.target.closest('tr').dataset.i), 1);
+  if (!hkFilas.length) hkFilas.push(hkFilaVacia());
+  pintarFilasHawaki();
+});
+
+document.getElementById('hk-agregar-fila').addEventListener('click', () => {
+  hkFilas.push(hkFilaVacia());
+  pintarFilasHawaki();
+  document.querySelector(`#hk-items tr[data-i="${hkFilas.length - 1}"] .hk-codigo`).focus();
+});
+
+document.querySelectorAll('input[name="hk-metodo"]').forEach((radio) => {
+  radio.addEventListener('change', () => {
+    const esTransferencia = document.querySelector('input[name="hk-metodo"]:checked').value === 'transferencia';
+    document.getElementById('hk-banco').classList.toggle('hidden', !esTransferencia);
+  });
+});
+
+['ruc', 'email'].forEach((c) => {
+  document.getElementById(`hk-cliente-${c}`).addEventListener('input', () => revisarDatosCliente('hk-'));
+});
+
+document.getElementById('nota-hawaki-btn').addEventListener('click', abrirNotaHawaki);
+document.getElementById('hk-cancelar').addEventListener('click', cerrarNotaHawaki);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !hkModal.classList.contains('hidden')) cerrarNotaHawaki();
+});
+
+document.getElementById('hk-guardar').addEventListener('click', async () => {
+  const usadas = hkFilas.filter(hkFilaUsada);
+  if (!usadas.length) return hkMensaje('Agrega al menos un producto', true);
+  for (const f of usadas) {
+    const cantidad = Number(f.cantidad);
+    const precio = Number(f.precio_unitario);
+    if (!f.producto.trim()) return hkMensaje(`Falta la descripción${f.codigo ? ` del código ${f.codigo}` : ''}`, true);
+    if (!Number.isFinite(cantidad) || cantidad <= 0) return hkMensaje(`La cantidad de "${f.producto}" debe ser mayor a 0`, true);
+    if (f.precio_unitario === '' || !Number.isFinite(precio) || precio < 0) return hkMensaje(`Falta el precio de "${f.producto}"`, true);
+    if (f.stock_max != null && cantidad > f.stock_max) return hkMensaje(`Solo quedan ${f.stock_max} de ${f.producto} en el sistema`, true);
+  }
+  const problema = revisarDatosCliente('hk-');
+  if (problema) return hkMensaje(problema, true);
+  const metodo_pago = document.querySelector('input[name="hk-metodo"]:checked').value;
+  const banco = document.getElementById('hk-banco').value || null;
+  if (metodo_pago === 'transferencia' && !banco) return hkMensaje('Elige a qué banco se hizo la transferencia', true);
+
+  // La pestaña de impresión se abre ya, dentro del clic: si se abriera al
+  // terminar de guardar, el navegador la bloquearía como ventana emergente
+  const ventana = window.open('', '_blank');
+  const boton = document.getElementById('hk-guardar');
+  boton.disabled = true;
+  hkMensaje('Guardando…', false);
+  const valor = (c) => document.getElementById(`hk-cliente-${c}`).value.trim();
+  const res = await fetch('/api/ventas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      cliente: valor('nombre') || 'Consumidor final',
+      cliente_direccion: valor('direccion'),
+      cliente_ruc: valor('ruc'),
+      cliente_telefono: valor('telefono'),
+      cliente_email: valor('email'),
+      metodo_pago,
+      banco,
+      items: usadas.map((f) => ({
+        producto: f.producto.trim(),
+        cantidad: Number(f.cantidad),
+        precio_unitario: Number(f.precio_unitario),
+        precio_lista: f.precio_lista != null ? f.precio_lista : Number(f.precio_unitario),
+        producto_id: f.producto_id,
+      })),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  boton.disabled = false;
+  if (!res.ok) {
+    if (ventana) ventana.close();
+    return hkMensaje(data.error || 'No se pudo guardar la nota', true);
+  }
+  if (ventana) ventana.location.href = `print.html?id=${data.ventaId}&imprimir=1`;
+  cerrarNotaHawaki();
+  mostrarVentaRegistrada({ ...data, banco: data.banco || banco });
+  cargarMisVentas();
+  cargarEstadoCaja();
+  if (rolActual === 'admin' || rolActual === 'dueno') {
+    cargarDashboard();
+    cargarProductos();
+  }
 });
 
 function cerrarCatalogo() {
@@ -690,13 +938,22 @@ document.addEventListener('keydown', (e) => {
     const codigo = seguidas ? bufferLector.trim() : '';
     bufferLector = '';
     if (codigo.length >= 4) {
+      const hawakiAbierta = !hkModal.classList.contains('hidden');
+      // Con la nota Hawaki abierta y el cursor en un código, esa fila lo busca
+      // sola con su Enter: aquí no se hace nada para no meterlo dos veces
+      if (hawakiAbierta && campoAlEmpezar && campoAlEmpezar.classList.contains('hk-codigo')) {
+        campoAlEmpezar = null;
+        return;
+      }
       e.preventDefault();
       // El código alcanzó a escribirse en un campo: se borra y queda como estaba
       if (campoAlEmpezar) {
         campoAlEmpezar.value = valorAlEmpezar;
         campoAlEmpezar = null;
       }
-      escanear(codigo);
+      // Con la nota Hawaki abierta el producto va a ella, no a la nota de atrás
+      if (hawakiAbierta) escanearEnHawaki(codigo);
+      else escanear(codigo);
     }
     return;
   }
@@ -1262,6 +1519,7 @@ function puedeRefrescar() {
   if (!document.getElementById('catalogo-modal').classList.contains('hidden')) return false;
   if (!document.getElementById('editar-venta-modal').classList.contains('hidden')) return false;
   if (!document.getElementById('cierre-caja-modal').classList.contains('hidden')) return false;
+  if (!document.getElementById('hk-modal').classList.contains('hidden')) return false;
   if (document.hidden) return false;
   return true;
 }

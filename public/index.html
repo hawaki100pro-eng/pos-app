@@ -121,9 +121,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M3 12h18"/></svg>
           Escanear
         </button>
-        <!-- Imprime una nota de venta en blanco, como la del talonario, para
-             llenarla a mano (nota-blanco.html) -->
-        <button id="nota-blanco-btn" type="button" class="btn-secundario" title="Imprimir una nota de venta en blanco para llenar a mano">
+        <!-- Abre la nota de venta Hawaki: el formato del talonario, para llenar
+             en pantalla con códigos y precios. Se registra como una venta. -->
+        <button id="nota-hawaki-btn" type="button" class="btn-secundario" title="Llenar una nota de venta con el formato del talonario">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
           Hawaki
         </button>
@@ -553,6 +553,75 @@
       <span id="tema-texto">Modo noche</span>
     </button>
   </footer>
+
+  <!-- Nota de venta Hawaki: el formato del talonario, para llenar en pantalla.
+       En cada fila se pone el código del producto y se llenan solos la
+       descripción y el precio (que se puede cambiar). Al guardar se registra como
+       una venta normal (stock, caja, historial, número de nota) y se imprime. -->
+  <div id="hk-fondo" class="catalogo-fondo hidden"></div>
+  <div id="hk-modal" class="hk-modal hidden" role="dialog" aria-labelledby="hk-titulo">
+    <div class="hk-encabezado">
+      <div class="hk-empresa">
+        <p class="hk-marca">HAWAKI</p>
+        <p class="hk-titular">CARLOS ALBERTO BARAHONA IZA</p>
+        <p><strong>Venta de Calzado</strong></p>
+        <p>Eloy Alfaro #319 y General Franco Local 5</p>
+        <p>Cel.: 0997750706 · Guayaquil – Ecuador</p>
+        <p><strong>R.U.C.: 0919343814001</strong></p>
+      </div>
+      <div class="hk-caja">
+        <div class="hk-caja-titulo" id="hk-titulo">NOTA DE VENTA</div>
+        <p class="hk-serie">Serie 001-001</p>
+        <p class="hk-numero">N.º <span>se asigna al guardar</span></p>
+        <table class="hk-fecha">
+          <tr><td>DÍA</td><td>MES</td><td>AÑO</td></tr>
+          <tr><td id="hk-dia"></td><td id="hk-mes"></td><td id="hk-anio"></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="hk-cliente">
+      <label class="hk-campo"><span>Sr.(es)</span><input type="text" id="hk-cliente-nombre" placeholder="Consumidor final"></label>
+      <label class="hk-campo"><span>Dirección</span><input type="text" id="hk-cliente-direccion"></label>
+      <label class="hk-campo"><span>RUC / C.I.</span><input type="text" id="hk-cliente-ruc" inputmode="numeric"></label>
+      <p id="hk-cliente-ruc-aviso" class="aviso-campo"></p>
+      <label class="hk-campo"><span>Telf.</span><input type="text" id="hk-cliente-telefono" inputmode="tel"></label>
+      <label class="hk-campo"><span>Correo</span><input type="text" id="hk-cliente-email" inputmode="email"></label>
+      <p id="hk-cliente-email-aviso" class="aviso-campo"></p>
+    </div>
+
+    <div class="hk-tabla-wrap">
+      <table class="hk-items">
+        <thead>
+          <tr><th>CÓDIGO</th><th>CANT.</th><th>DESCRIPCIÓN</th><th>P. UNIT.</th><th>V. TOTAL</th><th></th></tr>
+        </thead>
+        <tbody id="hk-items"></tbody>
+      </table>
+    </div>
+    <button type="button" id="hk-agregar-fila" class="btn-secundario hk-agregar-fila">+ Agregar fila</button>
+
+    <div class="hk-pie">
+      <div class="hk-pago">
+        <p class="hk-pago-titulo">FORMA DE PAGO</p>
+        <label><input type="radio" name="hk-metodo" value="efectivo" checked> Efectivo</label>
+        <label><input type="radio" name="hk-metodo" value="transferencia"> Transferencia</label>
+        <select id="hk-banco" class="hidden">
+          <option value="">Elige el banco</option>
+        </select>
+      </div>
+      <div class="hk-totales">
+        <div class="hk-fila-total"><span>SUBTOTAL</span><span id="hk-subtotal">$0.00</span></div>
+        <div class="hk-fila-total hidden" id="hk-fila-descuento"><span>DESCUENTO</span><span id="hk-descuento">$0.00</span></div>
+        <div class="hk-fila-total hk-total"><span>TOTAL</span><span id="hk-total">$0.00</span></div>
+      </div>
+    </div>
+
+    <p id="hk-msg"></p>
+    <div class="hk-botones">
+      <button type="button" id="hk-cancelar" class="btn-secundario">Cancelar</button>
+      <button type="button" id="hk-guardar">Guardar e imprimir</button>
+    </div>
+  </div>
 
   <!-- Cierre de caja con cuadre: el sistema dice cuánto debería haber, se cuenta
        billete por billete y se ve la diferencia. app.js lo llena y lo envía. -->

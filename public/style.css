@@ -2230,3 +2230,131 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 @media (max-width: 480px) {
   .catalogo-botones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* --- Nota de venta Hawaki: el formato del talonario, para llenar en pantalla ---
+   Es una hoja de papel: siempre blanca (también en modo noche), con el mismo
+   encabezado, líneas y bloque de totales que la nota impresa (print.css). */
+.hk-modal {
+  position: fixed;
+  top: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(820px, calc(100vw - 16px));
+  max-height: 94vh;
+  overflow-y: auto;
+  border: 2px solid #1e293b;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.hk-encabezado { display: flex; border-bottom: 2px solid #1e293b; }
+.hk-empresa { flex: 1.6; padding: 12px; border-right: 2px solid #1e293b; }
+.hk-empresa p { margin: 2px 0; font-size: 0.78rem; }
+.hk-empresa .hk-marca { font-size: 1.6rem; font-weight: bold; color: #1d4ed8; letter-spacing: 1px; }
+.hk-titular { color: #1d4ed8; font-weight: bold; }
+
+.hk-caja { flex: 1; padding: 12px; text-align: center; }
+.hk-caja-titulo { padding: 6px; border: 2px solid #1e293b; font-size: 0.9rem; font-weight: bold; }
+.hk-serie { margin: 6px 0 2px; color: #555; font-size: 0.75rem; }
+.hk-numero { margin: 2px 0 8px; color: #dc2626; font-weight: bold; }
+.hk-numero span { color: #888; font-size: 0.8rem; font-weight: normal; }
+
+/* min-width 0: la regla general de las tablas (600 px) la sacaría de la hoja */
+.hk-fecha { width: 100%; min-width: 0; border-collapse: collapse; }
+.hk-fecha td {
+  height: 18px;
+  padding: 2px;
+  border: 1px solid #1e293b;
+  font-size: 0.72rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.hk-cliente { padding: 8px 12px; border-bottom: 2px solid #1e293b; }
+.hk-campo { display: flex; align-items: center; gap: 8px; margin: 2px 0; font-weight: normal; }
+.hk-campo span { flex: 0 0 90px; font-size: 0.85rem; font-weight: bold; }
+.hk-campo input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 2px;
+  border: none;
+  border-bottom: 1px solid #999;
+  border-radius: 0;
+  background: transparent;
+  color: #111;
+  font-size: 0.95rem;
+}
+.hk-campo input:focus { outline: none; border-bottom: 2px solid #4f46e5; }
+.hk-cliente .aviso-campo { margin: 0 0 4px 98px; }
+
+.hk-tabla-wrap { overflow-x: auto; }
+.hk-items { width: 100%; min-width: 560px; border-collapse: collapse; }
+.hk-items th {
+  padding: 7px 8px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.78rem;
+  text-align: left;
+}
+.hk-items th:nth-child(1) { width: 17%; }
+.hk-items th:nth-child(2) { width: 9%; }
+.hk-items th:nth-child(4) { width: 14%; }
+.hk-items th:nth-child(5) { width: 13%; text-align: right; }
+.hk-items th:nth-child(6) { width: 5%; }
+.hk-items td { padding: 3px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
+
+.hk-items input {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #111;
+  font-size: 0.92rem;
+}
+.hk-items input:focus { outline: none; border-color: #4f46e5; background: #eef2ff; }
+.hk-items .hk-cantidad,
+.hk-items .hk-precio { text-align: right; }
+/* Fila encontrada en el inventario: el código en verde */
+.hk-items tr.hk-del-inventario .hk-codigo { color: #166534; font-weight: bold; }
+
+.hk-subtotal { padding-top: 9px !important; font-weight: bold; text-align: right; white-space: nowrap; }
+.hk-aviso { display: block; padding: 0 6px; color: #dc2626; font-size: 0.72rem; }
+
+.hk-quitar,
+.hk-quitar:hover { padding: 6px; background: transparent; color: #9ca3af; font-size: 0.9rem; }
+.hk-quitar:hover { color: #dc2626; }
+
+.hk-agregar-fila { margin: 8px 12px; padding: 6px 14px; font-size: 0.85rem; }
+
+.hk-pie { display: flex; flex-wrap: wrap; border-top: 2px solid #1e293b; }
+.hk-pago {
+  display: flex;
+  flex: 1.5;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border-right: 2px solid #1e293b;
+}
+.hk-pago-titulo { width: 100%; margin: 0; font-size: 0.8rem; font-weight: bold; }
+.hk-pago label { display: flex; align-items: center; gap: 5px; color: #111; font-weight: normal; }
+#hk-banco { padding: 6px 8px; border: 1px solid #ccc; background: #fff; color: #111; }
+
+.hk-totales { flex: 1; min-width: 210px; background: #1e293b; color: #fff; font-weight: bold; }
+.hk-fila-total { display: flex; justify-content: space-between; gap: 10px; padding: 7px 12px; }
+.hk-fila-total.hk-total { border-top: 1px solid rgba(255, 255, 255, 0.25); font-size: 1.15rem; }
+
+#hk-msg { margin: 10px 12px 0; }
+.hk-botones { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 12px 14px; }
+
+@media (max-width: 600px) {
+  .hk-encabezado { flex-direction: column; }
+  .hk-empresa { border-right: none; border-bottom: 2px solid #1e293b; }
+  .hk-pago { border-right: none; border-bottom: 2px solid #1e293b; }
+  .hk-campo span { flex-basis: 72px; }
+  .hk-cliente .aviso-campo { margin-left: 80px; }
+}
