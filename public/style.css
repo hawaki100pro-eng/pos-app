@@ -2197,3 +2197,14 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
   .dl-punto { width: 10px; height: 10px; }
   .dl-leyenda-clave { margin-left: 0; width: 100%; }
 }
+
+/* Recordatorio para el vendedor: pedir el día libre con tiempo */
+.dl-aviso {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--cuadre-aviso-fondo);
+  color: var(--cuadre-aviso-texto);
+  font-size: 0.92rem;
+  font-weight: 700;
+}

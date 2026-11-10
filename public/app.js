@@ -1465,6 +1465,7 @@ function pintarDiasLibres() {
   document.getElementById('dl-ayuda').textContent = encargado
     ? 'Los vendedores piden aquí su día de descanso. Acepta o rechaza cada pedido.'
     : `Toca un día para pedirlo: de lunes a jueves, con al menos ${dlDatos.antelacion} días de antelación y uno por semana. El administrador lo acepta o no.`;
+  document.getElementById('dl-aviso').classList.toggle('hidden', encargado);
 
   const pendientes = dlDatos.lista.filter((d) => d.estado === 'pendiente').length;
   const badge = document.getElementById('dl-badge');
