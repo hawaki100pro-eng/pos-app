@@ -2063,3 +2063,137 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   .caja-cuadro .card-value { font-size: 1.2rem; }
   .caja-cuadro-efectivo .card-value { font-size: 1.7rem; }
 }
+
+/* --- Días libres: calendario para pedir el día de descanso ---
+   Cada vendedor tiene su color. Punto relleno = aceptado, solo contorno =
+   pendiente. Viernes, sábado y domingo van apagados: no se pueden pedir. */
+.dias-libres { margin: 18px 0 8px; }
+.dl-ayuda { margin: 0 0 10px; color: var(--texto-suave); font-size: 0.9rem; }
+
+.dl-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dl-lista { margin-bottom: 12px; }
+.dl-vacio { margin: 0; color: var(--texto-tenue); font-size: 0.9rem; }
+
+.dl-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.dl-fila-texto { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.dl-fila-botones { display: flex; gap: 6px; }
+.dl-fila-botones .accion-btn { width: auto; }
+.dl-aceptar { background: #16a34a; color: #fff; }
+.dl-aceptar:hover { background: #15803d; }
+.dl-tambien { color: var(--cuadre-aviso-texto); }
+
+.dl-estado { padding: 1px 8px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
+.dl-estado.pendiente { background: var(--cuadre-aviso-fondo); color: var(--cuadre-aviso-texto); }
+.dl-estado.aprobado { background: var(--pago-efectivo-fondo); color: var(--pago-efectivo-texto); }
+.dl-estado.rechazado { background: var(--cuadre-mal-fondo); color: var(--cuadre-mal-texto); }
+
+.dl-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.dl-nav strong { font-size: 1.05rem; text-transform: capitalize; }
+.dl-nav button { padding: 4px 16px; font-size: 1.2rem; line-height: 1.2; }
+
+.dl-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.dl-leyenda-item { display: inline-flex; align-items: center; gap: 5px; }
+.dl-leyenda-clave { margin-left: auto; color: var(--texto-suave); }
+
+.dl-punto {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--texto-tenue);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.dl-punto.aprobado:not([style]) { background: var(--texto-tenue); }
+/* Rechazado (solo lo ve su dueño y el encargado): tachado en gris */
+.dl-punto.rechazado {
+  border-color: var(--texto-tenue);
+  background: linear-gradient(45deg, transparent 42%, var(--texto-tenue) 42%, var(--texto-tenue) 58%, transparent 58%);
+}
+
+.dl-calendario {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.dl-cabecera {
+  padding: 4px 0;
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dl-dia,
+.dl-dia:hover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  min-height: 52px;
+  padding: 6px 2px;
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+button.dl-dia.dl-libre { cursor: pointer; }
+button.dl-dia.dl-libre:hover { background: var(--acento-suave); border-color: var(--acento); }
+
+/* No se puede pedir: fin de semana, ya pasó o falta antelación */
+.dl-dia.dl-bloqueado,
+.dl-dia.dl-bloqueado:hover {
+  background: var(--superficie-2);
+  color: var(--texto-tenue);
+  font-weight: 400;
+}
+
+button.dl-dia.dl-bloqueado { cursor: not-allowed; }
+.dl-cabecera.dl-finde { color: var(--texto-tenue); }
+.dl-dia.dl-hoy { border: 2px solid var(--acento); }
+.dl-dia.dl-mio,
+.dl-dia.dl-mio:hover { background: var(--acento-suave); border-color: var(--acento); cursor: pointer; }
+
+.dl-puntos { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+
+@media (max-width: 560px) {
+  .dl-dia, .dl-dia:hover { min-height: 46px; font-size: 0.88rem; }
+  .dl-punto { width: 10px; height: 10px; }
+  .dl-leyenda-clave { margin-left: 0; width: 100%; }
+}

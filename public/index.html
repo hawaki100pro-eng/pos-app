@@ -204,6 +204,28 @@
       </table>
     </div>
 
+    <!-- Días libres: la sección es una sola y se muda a la pantalla del rol que
+         entró (ver mostrarPantalla). El vendedor pide su día tocando el calendario;
+         el admin y el dueño aceptan o rechazan en la lista. app.js lo llena. -->
+    <div id="dias-libres-slot-vendedor">
+      <section id="dias-libres" class="dias-libres">
+        <h2 class="titulo-con-boton">
+          Días libres
+          <span id="dl-badge" class="dl-badge hidden"></span>
+        </h2>
+        <p id="dl-ayuda" class="dl-ayuda"></p>
+        <div id="dl-lista" class="dl-lista"></div>
+        <div class="dl-nav">
+          <button type="button" id="dl-anterior" class="btn-secundario" aria-label="Mes anterior">‹</button>
+          <strong id="dl-mes"></strong>
+          <button type="button" id="dl-siguiente" class="btn-secundario" aria-label="Mes siguiente">›</button>
+        </div>
+        <div id="dl-leyenda" class="dl-leyenda"></div>
+        <div id="dl-calendario" class="dl-calendario"></div>
+        <p id="dl-msg"></p>
+      </section>
+    </div>
+
     <!-- Salir va al pie: el vendedor casi nunca lo necesita durante el turno -->
     <button id="logout-btn-v" class="logout-pie">Salir</button>
   </div>
@@ -298,6 +320,9 @@
 
     <!-- Aquí se inserta el formulario de Nota de venta cuando entra un admin o el dueño -->
     <div id="venta-slot-admin"></div>
+
+    <!-- Aquí se inserta la sección de Días libres cuando entra un admin o el dueño -->
+    <div id="dias-libres-slot-admin"></div>
 
     <h2>Gastos</h2>
     <div class="item-row-nueva">

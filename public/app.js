@@ -78,6 +78,15 @@ function mostrarPantalla(user) {
   // El formulario de Nota de venta es uno solo: se coloca en la pantalla del rol que entró
   const ventaForm = document.getElementById('venta-form-wrap');
 
+  // Lo mismo la sección de Días libres; arranca en el mes de hoy
+  const encargado = rol === 'admin' || rol === 'dueno';
+  document.getElementById(encargado ? 'dias-libres-slot-admin' : 'dias-libres-slot-vendedor')
+    .appendChild(document.getElementById('dias-libres'));
+  dlMes = null;
+  dlDatos = null;
+  dlMensaje('', false);
+  cargarDiasLibres();
+
   if (rol === 'admin' || rol === 'dueno') {
     adminScreen.classList.remove('hidden');
     adminScreen.prepend(logoHawaki);
@@ -1402,7 +1411,193 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// --- Días libres ---
+// Calendario donde cada vendedor pide su día de descanso tocando el día. Las
+// reglas (lunes a jueves, con antelación, uno por semana) las pone el servidor;
+// aquí solo se dibujan. El admin y el dueño aceptan o rechazan en la lista.
+// Cada vendedor tiene su color: punto relleno = aceptado, solo contorno = pendiente.
+const DL_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+  'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DL_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const DL_ESTADOS = { pendiente: 'Pendiente', aprobado: 'Aceptado', rechazado: 'Rechazado' };
+
+let dlMes = null;   // 'AAAA-MM' que se está viendo (null = el mes de hoy)
+let dlDatos = null; // última respuesta de /api/dias-libres
+
+const dlEsEncargado = () => rolActual === 'admin' || rolActual === 'dueno';
+
+function dlFechaLarga(iso) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return `${DL_DIAS[d.getUTCDay()]} ${d.getUTCDate()} de ${DL_MESES[d.getUTCMonth()]}`;
+}
+
+function dlMensaje(texto, esError) {
+  const msg = document.getElementById('dl-msg');
+  msg.textContent = texto;
+  msg.className = esError ? 'error' : '';
+}
+
+async function cargarDiasLibres() {
+  const pedido = dlMes;
+  const res = await fetch('/api/dias-libres' + (pedido ? `?mes=${pedido}` : ''));
+  if (!res.ok) return;
+  const datos = await res.json();
+  // Si mientras tanto se cambió de mes, esta respuesta ya no sirve
+  if (pedido !== dlMes) return;
+  dlDatos = datos;
+  dlMes = datos.mes;
+  pintarDiasLibres();
+}
+
+function pintarDiasLibres() {
+  if (!dlDatos) return;
+  const encargado = dlEsEncargado();
+  const nombres = [...dlDatos.vendedores, ...dlDatos.dias.map((d) => d.usuario), ...dlDatos.lista.map((d) => d.usuario)];
+  const paleta = paletaCategorias(nombres);
+  const color = (usuario) => (paleta.get(usuario) || { borde: '#888' }).borde;
+  const punto = (d) => {
+    const c = color(d.usuario);
+    const estilo = d.estado === 'aprobado' ? `background:${c};border-color:${c}`
+      : d.estado === 'pendiente' ? `border-color:${c}` : '';
+    return `<span class="dl-punto ${d.estado}" style="${estilo}" title="${escaparHtml(d.usuario)}: ${DL_ESTADOS[d.estado]}"></span>`;
+  };
+
+  document.getElementById('dl-ayuda').textContent = encargado
+    ? 'Los vendedores piden aquí su día de descanso. Acepta o rechaza cada pedido.'
+    : `Toca un día para pedirlo: de lunes a jueves, con al menos ${dlDatos.antelacion} días de antelación y uno por semana. El administrador lo acepta o no.`;
+
+  const pendientes = dlDatos.lista.filter((d) => d.estado === 'pendiente').length;
+  const badge = document.getElementById('dl-badge');
+  badge.textContent = pendientes === 1 ? '1 por revisar' : `${pendientes} por revisar`;
+  badge.classList.toggle('hidden', !encargado || pendientes === 0);
+
+  // --- Lista: pedidos por resolver (encargado) o mis pedidos (vendedor) ---
+  const lista = document.getElementById('dl-lista');
+  if (!dlDatos.lista.length) {
+    lista.innerHTML = `<p class="dl-vacio">${encargado ? 'No hay pedidos de días libres.' : 'Todavía no has pedido ningún día.'}</p>`;
+  } else {
+    lista.innerHTML = dlDatos.lista.map((d) => {
+      // Al encargado le sirve saber si otro vendedor quiere ese mismo día
+      const tambien = encargado
+        ? dlDatos.lista.filter((o) => o.fecha === d.fecha && o.id !== d.id).map((o) => o.usuario)
+        : [];
+      const botones = encargado
+        ? (d.estado === 'pendiente'
+          ? `<button type="button" class="accion-btn dl-aceptar" data-id="${d.id}" data-estado="aprobado">✓ Aceptar</button>
+             <button type="button" class="accion-btn anular-btn" data-id="${d.id}" data-estado="rechazado">✕ Rechazar</button>`
+          : `<button type="button" class="accion-btn anular-btn" data-id="${d.id}" data-estado="rechazado">Quitar</button>`)
+        : (d.estado !== 'rechazado' && d.fecha > dlDatos.hoy
+          ? `<button type="button" class="accion-btn anular-btn" data-cancelar="${d.id}" data-fecha="${d.fecha}">Cancelar</button>`
+          : '');
+      return `<div class="dl-fila">
+        <span class="dl-fila-texto">${punto(d)}
+          ${encargado ? `<strong>${escaparHtml(d.usuario)}</strong> · ` : ''}${dlFechaLarga(d.fecha)}
+          <span class="dl-estado ${d.estado}">${DL_ESTADOS[d.estado]}</span>
+          ${tambien.length ? `<small class="dl-tambien">también lo pidió ${escaparHtml(tambien.join(', '))}</small>` : ''}
+        </span>
+        <span class="dl-fila-botones">${botones}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // --- Leyenda: el color de cada vendedor ---
+  document.getElementById('dl-leyenda').innerHTML = dlDatos.vendedores.map((v) =>
+    `<span class="dl-leyenda-item"><span class="dl-punto aprobado" style="background:${color(v)};border-color:${color(v)}"></span>${escaparHtml(v)}</span>`
+  ).join('') + '<span class="dl-leyenda-item dl-leyenda-clave"><span class="dl-punto aprobado"></span>aceptado <span class="dl-punto pendiente"></span>pendiente</span>';
+
+  // --- Calendario del mes, de lunes a domingo ---
+  const [anio, mesNum] = dlDatos.mes.split('-').map(Number);
+  document.getElementById('dl-mes').textContent = `${DL_MESES[mesNum - 1]} ${anio}`;
+  const diasDelMes = new Date(Date.UTC(anio, mesNum, 0)).getUTCDate();
+  const huecos = (new Date(Date.UTC(anio, mesNum - 1, 1)).getUTCDay() + 6) % 7;
+  let html = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((l, i) =>
+    `<div class="dl-cabecera${i >= 4 ? ' dl-finde' : ''}">${l}</div>`).join('');
+  html += '<div class="dl-hueco"></div>'.repeat(huecos);
+  for (let dia = 1; dia <= diasDelMes; dia++) {
+    const iso = `${dlDatos.mes}-${String(dia).padStart(2, '0')}`;
+    const semana = new Date(`${iso}T00:00:00Z`).getUTCDay();
+    const pedidos = dlDatos.dias.filter((d) => d.fecha === iso);
+    const mio = pedidos.find((d) => d.usuario === usuarioActual);
+    const motivo = [5, 6, 0].includes(semana) ? 'finde'
+      : iso < dlDatos.hoy ? 'pasado'
+      : iso < dlDatos.primera_fecha ? 'antelacion' : '';
+    const clases = ['dl-dia', motivo ? 'dl-bloqueado' : 'dl-libre', motivo === 'finde' ? 'dl-finde' : '',
+      iso === dlDatos.hoy ? 'dl-hoy' : '', mio && mio.estado !== 'rechazado' ? 'dl-mio' : ''].filter(Boolean).join(' ');
+    const contenido = `<span class="dl-numero">${dia}</span><span class="dl-puntos">${pedidos.map(punto).join('')}</span>`;
+    html += encargado
+      ? `<div class="${clases}">${contenido}</div>`
+      : `<button type="button" class="${clases}" data-fecha="${iso}" data-motivo="${motivo}">${contenido}</button>`;
+  }
+  document.getElementById('dl-calendario').innerHTML = html;
+}
+
+// Toque en un día del calendario (solo el vendedor: el del encargado no se toca)
+document.getElementById('dl-calendario').addEventListener('click', async (e) => {
+  const celda = e.target.closest('button.dl-dia');
+  if (!celda || !dlDatos) return;
+  const fecha = celda.dataset.fecha;
+  const mio = dlDatos.dias.find((d) => d.fecha === fecha && d.usuario === usuarioActual);
+  if (mio && mio.estado === 'rechazado') return dlMensaje('Ese día te lo rechazaron: elige otro.', true);
+  if (mio) return cancelarDiaLibre(mio.id, fecha);
+  if (celda.dataset.motivo === 'finde') return dlMensaje('Viernes, sábado y domingo no se pueden pedir como día libre.', true);
+  if (celda.dataset.motivo === 'pasado') return dlMensaje('Ese día ya pasó.', true);
+  if (celda.dataset.motivo === 'antelacion') {
+    return dlMensaje(`El día libre se pide con al menos ${dlDatos.antelacion} días de antelación: lo más pronto es el ${dlFechaLarga(dlDatos.primera_fecha)}.`, true);
+  }
+  if (!confirm(`¿Pedir libre el ${dlFechaLarga(fecha)}?\n\nQueda pendiente hasta que el administrador lo acepte.`)) return;
+  const res = await fetch('/api/dias-libres', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fecha }),
+  });
+  const data = await res.json();
+  if (!res.ok) return dlMensaje(data.error, true);
+  dlMensaje(`Pediste libre el ${dlFechaLarga(fecha)}. Falta que el administrador lo acepte.`, false);
+  cargarDiasLibres();
+});
+
+async function cancelarDiaLibre(id, fecha) {
+  if (!confirm(`¿Cancelar tu día libre del ${dlFechaLarga(fecha)}?`)) return;
+  const res = await fetch(`/api/dias-libres/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    return dlMensaje(data.error || 'No se pudo cancelar', true);
+  }
+  dlMensaje(`Cancelaste tu día libre del ${dlFechaLarga(fecha)}.`, false);
+  cargarDiasLibres();
+}
+
+// Botones de la lista: Aceptar / Rechazar / Quitar (encargado) y Cancelar (vendedor)
+document.getElementById('dl-lista').addEventListener('click', async (e) => {
+  const boton = e.target.closest('button');
+  if (!boton) return;
+  if (boton.dataset.cancelar) return cancelarDiaLibre(boton.dataset.cancelar, boton.dataset.fecha);
+  if (!boton.dataset.id) return;
+  const res = await fetch(`/api/dias-libres/${boton.dataset.id}/resolver`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ estado: boton.dataset.estado }),
+  });
+  const data = await res.json();
+  if (!res.ok) return dlMensaje(data.error, true);
+  dlMensaje(boton.dataset.estado === 'aprobado' ? 'Día libre aceptado.' : 'Día libre rechazado.', false);
+  cargarDiasLibres();
+});
+
+function dlCambiarMes(salto) {
+  if (!dlDatos) return;
+  const [anio, mesNum] = dlDatos.mes.split('-').map(Number);
+  const d = new Date(Date.UTC(anio, mesNum - 1 + salto, 1));
+  dlMes = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  dlMensaje('', false);
+  cargarDiasLibres();
+}
+
+document.getElementById('dl-anterior').addEventListener('click', () => dlCambiarMes(-1));
+document.getElementById('dl-siguiente').addEventListener('click', () => dlCambiarMes(1));
+
 function refrescarDatos() {
+  cargarDiasLibres();
   if (rolActual === 'admin' || rolActual === 'dueno') {
     cargarDashboard();
     cargarGastos();
@@ -1449,6 +1644,8 @@ function conectarAvisos() {
     let area = null;
     try { area = JSON.parse(e.data).area; } catch { /* aviso sin área */ }
     if (area === 'ventas') cargarCampana();
+    // El calendario de días libres tampoco toca campos: se pone al día al momento
+    if (area === 'dias-libres') cargarDiasLibres();
     refrescarPorAviso();
   });
   // Al reconectar tras un corte pudo perderse algún aviso: se pone al día

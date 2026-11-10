@@ -194,6 +194,21 @@ async function init() {
   // El dueño pidió borrar los cierres de caja que había (una sola vez).
   await borrarCierresAnteriores();
 
+  // Días libres: cada vendedor pide su día de descanso en el calendario y el
+  // admin lo acepta o lo rechaza. Un vendedor no puede pedir dos veces el mismo día.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dias_libres (
+      id SERIAL PRIMARY KEY,
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      fecha DATE NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'aprobado', 'rechazado')),
+      creado TIMESTAMP NOT NULL DEFAULT NOW(),
+      resuelto_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      resuelto_en TIMESTAMP,
+      UNIQUE (usuario_id, fecha)
+    );
+  `);
+
   const contador = await pool.query("SELECT clave FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
   if (contador.rowCount === 0) {
     await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('ultimo_numero_proforma', '7567')");

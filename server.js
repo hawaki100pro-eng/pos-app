@@ -372,6 +372,165 @@ app.get('/api/caja/historial', requireLogin, requireAdmin, async (req, res) => {
   res.json(r.rows);
 });
 
+// --- Días libres ---
+// Cada vendedor pide su día de descanso en un calendario; el admin o el dueño lo
+// acepta o lo rechaza. Reglas:
+//   - Viernes, sábado y domingo no se puede (son los días fuertes de venta).
+//   - Hay que pedirlo con antelación: al menos DIAS_ANTELACION días antes.
+//   - Un solo día libre por semana (de lunes a domingo) por vendedor.
+// Las fechas viajan como texto 'AAAA-MM-DD' y "hoy" es el día de Ecuador.
+const DIAS_ANTELACION = 2;
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+const hoyEcuador = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+
+function sumarDias(fechaIso, dias) {
+  const d = new Date(`${fechaIso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+// 0 = domingo ... 6 = sábado; null si el texto no es una fecha real (2026-02-31)
+function diaDeSemana(fechaIso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fechaIso))) return null;
+  const d = new Date(`${fechaIso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== fechaIso) return null;
+  return d.getUTCDay();
+}
+
+const lunesDeLaSemana = (fechaIso) => sumarDias(fechaIso, -((diaDeSemana(fechaIso) + 6) % 7));
+
+const fechaLarga = (fechaIso) => `${DIAS_SEMANA[diaDeSemana(fechaIso)]} ${fechaIso.slice(8)}/${fechaIso.slice(5, 7)}`;
+
+const DIA_LIBRE_COLUMNAS = `d.id, d.usuario_id, u.usuario, to_char(d.fecha, 'YYYY-MM-DD') AS fecha, d.estado`;
+
+// El calendario de un mes. Todos ven los días pedidos y aprobados de todos (para
+// no chocar); los rechazados solo los ve su dueño y el admin.
+app.get('/api/dias-libres', requireLogin, async (req, res) => {
+  const hoy = hoyEcuador();
+  const mes = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.mes)) ? req.query.mes : hoy.slice(0, 7);
+  const desde = `${mes}-01`;
+  const hasta = sumarDias(desde, 32).slice(0, 7) + '-01';
+  const esVendedor = req.session.user.rol === 'vendedor';
+
+  const dias = await pool.query(
+    `SELECT ${DIA_LIBRE_COLUMNAS} FROM dias_libres d JOIN usuarios u ON u.id = d.usuario_id
+     WHERE d.fecha >= $1 AND d.fecha < $2 ${esVendedor ? "AND (d.estado <> 'rechazado' OR d.usuario_id = $3)" : ''}
+     ORDER BY d.fecha, u.usuario`,
+    esVendedor ? [desde, hasta, req.session.user.id] : [desde, hasta]
+  );
+  // La lista de vendedores fija el color de cada uno en el calendario
+  const vendedores = await pool.query(`SELECT usuario FROM usuarios WHERE rol = 'vendedor' AND activo = 1 ORDER BY usuario`);
+  // Lista de abajo: al vendedor, sus pedidos de hoy en adelante; al admin, todo
+  // lo pendiente y lo aprobado que viene (ahí acepta, rechaza o quita)
+  const lista = await pool.query(
+    `SELECT ${DIA_LIBRE_COLUMNAS} FROM dias_libres d JOIN usuarios u ON u.id = d.usuario_id
+     WHERE d.fecha >= $1 AND ${esVendedor ? 'd.usuario_id = $2' : "d.estado IN ('pendiente', 'aprobado')"}
+     ORDER BY d.fecha, u.usuario`,
+    esVendedor ? [hoy, req.session.user.id] : [hoy]
+  );
+
+  res.json({
+    mes,
+    hoy,
+    primera_fecha: sumarDias(hoy, DIAS_ANTELACION),
+    antelacion: DIAS_ANTELACION,
+    vendedores: vendedores.rows.map((v) => v.usuario),
+    dias: dias.rows,
+    lista: lista.rows,
+  });
+});
+
+// El vendedor pide un día libre: queda pendiente hasta que el admin lo resuelva
+app.post('/api/dias-libres', requireLogin, async (req, res) => {
+  if (req.session.user.rol !== 'vendedor') {
+    return res.status(403).json({ error: 'El día libre lo pide cada vendedor desde su usuario' });
+  }
+  const fecha = String((req.body || {}).fecha || '');
+  const dia = diaDeSemana(fecha);
+  if (dia === null) return res.status(400).json({ error: 'Fecha inválida' });
+  if ([5, 6, 0].includes(dia)) {
+    return res.status(400).json({ error: 'Viernes, sábado y domingo no se pueden pedir como día libre' });
+  }
+  const primera = sumarDias(hoyEcuador(), DIAS_ANTELACION);
+  if (fecha < primera) {
+    return res.status(400).json({
+      error: `El día libre se pide con al menos ${DIAS_ANTELACION} días de antelación: lo más pronto es el ${fechaLarga(primera)}`,
+    });
+  }
+
+  // Lo que ese vendedor ya pidió en esa semana (de lunes a domingo)
+  const lunes = lunesDeLaSemana(fecha);
+  const semana = await pool.query(
+    `SELECT to_char(fecha, 'YYYY-MM-DD') AS fecha, estado FROM dias_libres
+     WHERE usuario_id = $1 AND fecha >= $2 AND fecha < $3`,
+    [req.session.user.id, lunes, sumarDias(lunes, 7)]
+  );
+  const mismoDia = semana.rows.find((d) => d.fecha === fecha);
+  if (mismoDia) {
+    return res.status(400).json({
+      error: mismoDia.estado === 'rechazado' ? 'Ese día ya te lo rechazaron: elige otro' : 'Ya pediste ese día',
+    });
+  }
+  const otro = semana.rows.find((d) => d.estado !== 'rechazado');
+  if (otro) {
+    return res.status(400).json({
+      error: `Ya tienes un día libre esa semana (${fechaLarga(otro.fecha)}). Cancélalo primero si quieres cambiarlo.`,
+    });
+  }
+
+  try {
+    const r = await pool.query(
+      `INSERT INTO dias_libres (usuario_id, fecha) VALUES ($1, $2)
+       RETURNING id, to_char(fecha, 'YYYY-MM-DD') AS fecha, estado`,
+      [req.session.user.id, fecha]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    // Dos toques seguidos al mismo día: el segundo choca con la regla de la tabla
+    res.status(400).json({ error: 'Ya pediste ese día' });
+  }
+});
+
+// El admin o el dueño acepta o rechaza (también puede quitar uno ya aceptado)
+app.post('/api/dias-libres/:id/resolver', requireLogin, requireAdmin, async (req, res) => {
+  const estado = (req.body || {}).estado;
+  if (!['aprobado', 'rechazado'].includes(estado)) {
+    return res.status(400).json({ error: 'El estado debe ser "aprobado" o "rechazado"' });
+  }
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Pedido inválido' });
+  const r = await pool.query(
+    `UPDATE dias_libres SET estado = $1, resuelto_por = $2, resuelto_en = NOW() WHERE id = $3
+     RETURNING id, to_char(fecha, 'YYYY-MM-DD') AS fecha, estado`,
+    [estado, req.session.user.id, id]
+  );
+  if (!r.rows[0]) return res.status(404).json({ error: 'Ese pedido ya no existe' });
+  res.json(r.rows[0]);
+});
+
+// El vendedor cancela un pedido suyo (pendiente o aprobado) mientras no haya pasado
+app.delete('/api/dias-libres/:id', requireLogin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Pedido inválido' });
+  const r = await pool.query(
+    `SELECT usuario_id, to_char(fecha, 'YYYY-MM-DD') AS fecha, estado FROM dias_libres WHERE id = $1`,
+    [id]
+  );
+  const pedido = r.rows[0];
+  if (!pedido) return res.status(404).json({ error: 'Ese pedido ya no existe' });
+  if (req.session.user.rol === 'vendedor') {
+    if (pedido.usuario_id !== req.session.user.id) {
+      return res.status(403).json({ error: 'Ese día libre es de otro vendedor' });
+    }
+    if (pedido.estado === 'rechazado' || pedido.fecha <= hoyEcuador()) {
+      return res.status(400).json({ error: 'Ese día ya no se puede cancelar' });
+    }
+  }
+  await pool.query('DELETE FROM dias_libres WHERE id = $1', [id]);
+  res.status(204).send();
+});
+
 // --- Gastos: descuentan directamente de la caja del turno abierto (solo admin/dueño) ---
 
 app.post('/api/gastos', requireLogin, requireAdmin, async (req, res) => {
