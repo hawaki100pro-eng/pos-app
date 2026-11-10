@@ -2208,3 +2208,20 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
   font-size: 0.92rem;
   font-weight: 700;
 }
+
+/* Botones del catálogo (MAGICA, General, Escanear): fila propia debajo de
+   Agregar, los tres del mismo ancho */
+.catalogo-etiqueta {
+  margin: 4px 0 6px;
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+
+.catalogo-botones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.catalogo-botones button { width: 100%; padding-left: 8px; padding-right: 8px; }
