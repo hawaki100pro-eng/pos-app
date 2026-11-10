@@ -220,6 +220,8 @@ function revisarCampo(id, revisor) {
 function revisarDatosCliente(prefijo) {
   let primero = '';
   for (const [id, revisor] of CAMPOS_REVISADOS) {
+    // Un formulario puede no tener todos los campos (la nota Hawaki no pide correo)
+    if (!document.getElementById(prefijo + id)) continue;
     const texto = revisarCampo(prefijo + id, revisor);
     if (texto && !primero) primero = texto;
   }
@@ -228,6 +230,7 @@ function revisarDatosCliente(prefijo) {
 
 function limpiarAvisosCliente(prefijo) {
   for (const [id] of CAMPOS_REVISADOS) {
+    if (!document.getElementById(prefijo + id)) continue;
     document.getElementById(`${prefijo}${id}-aviso`).textContent = '';
     document.getElementById(prefijo + id).classList.remove('campo-invalido');
   }
@@ -390,7 +393,7 @@ function hkMensaje(texto, esError) {
 
 function abrirNotaHawaki() {
   hkFilas = Array.from({ length: HK_FILAS_INICIALES }, hkFilaVacia);
-  ['nombre', 'direccion', 'ruc', 'telefono', 'email'].forEach((c) => {
+  ['nombre', 'direccion', 'ruc', 'telefono'].forEach((c) => {
     document.getElementById(`hk-cliente-${c}`).value = '';
   });
   limpiarAvisosCliente('hk-');
@@ -411,7 +414,12 @@ function abrirNotaHawaki() {
   hkFondo.classList.remove('hidden');
   hkModal.classList.remove('hidden');
   hkModal.scrollTop = 0;
-  document.querySelector('#hk-items .hk-codigo').focus();
+  // Se abre con el cursor en el buscador. La lista de productos se pide de nuevo
+  // cada vez, para que el stock sea el de este momento.
+  hkBuscar.value = '';
+  actualizarBusquedaHawaki();
+  hkBuscar.focus();
+  cargarCatalogoHawaki().then(() => { if (hkBuscar.value.trim()) actualizarBusquedaHawaki(); });
 }
 
 function cerrarNotaHawaki() {
@@ -423,7 +431,7 @@ function pintarFilasHawaki() {
   document.getElementById('hk-items').innerHTML = hkFilas.map((f, i) => {
     const subtotal = (Number(f.cantidad) || 0) * (Number(f.precio_unitario) || 0);
     return `<tr data-i="${i}" class="${f.producto_id ? 'hk-del-inventario' : ''}">
-      <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
+      <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" title="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
       <td><input type="number" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.cantidad)}" min="1" step="1"></td>
       <td><input type="text" class="hk-descripcion" data-campo="producto" value="${escaparHtml(f.producto)}" placeholder="Descripción">
         ${f.aviso ? `<small class="hk-aviso">${escaparHtml(f.aviso)}</small>` : ''}</td>
@@ -489,6 +497,7 @@ async function buscarCodigoHawaki(i) {
 // Código leído con la pistola mientras el cursor estaba fuera de las filas de
 // código (por ejemplo en el nombre del cliente): va a la primera fila libre
 function escanearEnHawaki(codigo) {
+  hkMensaje('', false); // que no quede a la vista el aviso de un producto anterior
   let i = hkFilas.findIndex((f) => !hkFilaUsada(f));
   if (i < 0) {
     hkFilas.push(hkFilaVacia());
@@ -545,9 +554,131 @@ document.querySelectorAll('input[name="hk-metodo"]').forEach((radio) => {
   });
 });
 
-['ruc', 'email'].forEach((c) => {
-  document.getElementById(`hk-cliente-${c}`).addEventListener('input', () => revisarDatosCliente('hk-'));
+document.getElementById('hk-cliente-ruc').addEventListener('input', () => revisarDatosCliente('hk-'));
+
+// --- Buscador de productos de la nota Hawaki ---
+// Se escribe el nombre, el código, la talla, el color o el precio (con la misma
+// búsqueda tolerante a errores de MAGICA) y al tocar un resultado, o con Enter,
+// el producto va a la siguiente fila libre con su código, descripción y precio.
+const HK_MAX_RESULTADOS = 8;
+let hkCatalogo = [];
+let hkResultados = [];
+let hkActivo = 0;
+const hkBuscar = document.getElementById('hk-buscar');
+const hkCajaResultados = document.getElementById('hk-resultados');
+
+// El código que se escribe en la fila: el de la etiqueta (SKU) o, si no tiene,
+// el número del código de barras (el id en 6 dígitos), que también se acepta
+const codigoDe = (p) => p.sku || String(p.id).padStart(6, '0');
+
+async function cargarCatalogoHawaki() {
+  const res = await fetch('/api/productos/disponibles');
+  hkCatalogo = res.ok ? await res.json() : [];
+}
+
+function actualizarBusquedaHawaki() {
+  const texto = normalizarTexto(hkBuscar.value.trim());
+  const palabras = texto.split(/\s+/).filter(Boolean);
+  hkResultados = !palabras.length ? [] : hkCatalogo.filter((p) =>
+    coincideEnCatalogo(p, palabras) || normalizarTexto(codigoDe(p)).includes(texto)
+  ).slice(0, HK_MAX_RESULTADOS);
+  hkActivo = 0;
+  pintarResultadosHawaki(palabras.length > 0);
+}
+
+// La lista se muestra mientras haya algo escrito
+function pintarResultadosHawaki(abierto) {
+  hkCajaResultados.classList.toggle('hidden', !abierto);
+  hkBuscar.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  if (!abierto) return;
+  if (!hkResultados.length) {
+    hkCajaResultados.innerHTML = '<p class="hk-sin-resultados">No hay productos con eso. Prueba con otra palabra o escríbelo a mano en una fila.</p>';
+    return;
+  }
+  hkCajaResultados.innerHTML = hkResultados.map((p, i) => `
+    <button type="button" role="option" class="hk-resultado${i === hkActivo ? ' activo' : ''}" data-i="${i}" aria-selected="${i === hkActivo}">
+      <span class="hk-res-nombre">${escaparHtml(nombreProducto(p))}</span>
+      <span class="hk-res-codigo">${escaparHtml(codigoDe(p))}</span>
+      <span class="hk-res-stock">${p.controla_stock ? `${p.stock} en stock` : 'categoría'}</span>
+      <span class="hk-res-precio">$${Number(p.precio).toFixed(2)}</span>
+    </button>`).join('');
+}
+
+function agregarDesdeBuscadorHawaki(p) {
+  const stockMax = p.controla_stock ? p.stock : null;
+  // Si ya está en la nota, se suma uno a esa fila en vez de repetirla
+  const yaEsta = hkFilas.find((f) => f.producto_id === p.id);
+  if (yaEsta) {
+    const nueva = (Number(yaEsta.cantidad) || 0) + 1;
+    if (stockMax != null && nueva > stockMax) {
+      hkMensaje(`Solo quedan ${stockMax} de ${nombreProducto(p)} en el sistema`, true);
+      return;
+    }
+    yaEsta.cantidad = nueva;
+  } else {
+    let i = hkFilas.findIndex((f) => !hkFilaUsada(f));
+    if (i < 0) {
+      hkFilas.push(hkFilaVacia());
+      i = hkFilas.length - 1;
+    }
+    Object.assign(hkFilas[i], {
+      codigo: codigoDe(p),
+      cantidad: 1,
+      producto: nombreProducto(p),
+      precio_unitario: Number(p.precio),
+      precio_lista: Number(p.precio),
+      producto_id: p.id,
+      stock_max: stockMax,
+      aviso: '',
+    });
+  }
+  // Siempre queda una fila libre al final, para seguir escribiendo a mano
+  if (hkFilas.every(hkFilaUsada)) hkFilas.push(hkFilaVacia());
+  pintarFilasHawaki();
+  hkMensaje(`Agregado: ${nombreProducto(p)}`, false);
+  hkBuscar.value = '';
+  actualizarBusquedaHawaki();
+  hkBuscar.focus();
+}
+
+hkBuscar.addEventListener('input', actualizarBusquedaHawaki);
+
+hkBuscar.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (!hkResultados.length) return;
+    e.preventDefault();
+    const paso = e.key === 'ArrowDown' ? 1 : -1;
+    hkActivo = (hkActivo + paso + hkResultados.length) % hkResultados.length;
+    pintarResultadosHawaki(true);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    // Un Enter de la pistola (teclas muy seguidas) lo maneja el lector, que lo
+    // busca como código: si también se agregara aquí, quedaría dos veces. Al
+    // terminar, el lector deja el buscador como estaba y se refresca la lista.
+    const esPistola = Date.now() - ultimaTecla <= MS_ENTRE_TECLAS && bufferLector.trim().length >= 4;
+    if (esPistola) {
+      setTimeout(actualizarBusquedaHawaki, 0);
+      return;
+    }
+    if (hkResultados[hkActivo]) agregarDesdeBuscadorHawaki(hkResultados[hkActivo]);
+  } else if (e.key === 'Escape' && hkBuscar.value) {
+    // Escape primero borra la búsqueda; recién el siguiente cierra la nota
+    e.stopPropagation();
+    hkBuscar.value = '';
+    actualizarBusquedaHawaki();
+  }
 });
+
+hkCajaResultados.addEventListener('click', (e) => {
+  const boton = e.target.closest('.hk-resultado');
+  if (boton) agregarDesdeBuscadorHawaki(hkResultados[Number(boton.dataset.i)]);
+});
+
+// Tocar fuera del buscador esconde la lista (sin borrar lo escrito)
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.hk-buscador')) hkCajaResultados.classList.add('hidden');
+});
+hkBuscar.addEventListener('focus', () => { if (hkBuscar.value.trim()) actualizarBusquedaHawaki(); });
 
 document.getElementById('nota-hawaki-btn').addEventListener('click', abrirNotaHawaki);
 document.getElementById('hk-cancelar').addEventListener('click', cerrarNotaHawaki);
@@ -587,7 +718,6 @@ document.getElementById('hk-guardar').addEventListener('click', async () => {
       cliente_direccion: valor('direccion'),
       cliente_ruc: valor('ruc'),
       cliente_telefono: valor('telefono'),
-      cliente_email: valor('email'),
       metodo_pago,
       banco,
       items: usadas.map((f) => ({

@@ -586,8 +586,16 @@
       <label class="hk-campo"><span>RUC / C.I.</span><input type="text" id="hk-cliente-ruc" inputmode="numeric"></label>
       <p id="hk-cliente-ruc-aviso" class="aviso-campo"></p>
       <label class="hk-campo"><span>Telf.</span><input type="text" id="hk-cliente-telefono" inputmode="tel"></label>
-      <label class="hk-campo"><span>Correo</span><input type="text" id="hk-cliente-email" inputmode="email"></label>
-      <p id="hk-cliente-email-aviso" class="aviso-campo"></p>
+    </div>
+
+    <!-- Buscador de productos: se escribe el nombre, el código, la talla, el
+         color o el precio, y al tocar un resultado se agrega a la siguiente fila
+         libre con su código, descripción y precio. -->
+    <div class="hk-buscador">
+      <input type="search" id="hk-buscar" autocomplete="off" role="combobox"
+             aria-controls="hk-resultados" aria-autocomplete="list" aria-expanded="false"
+             placeholder="Buscar producto: nombre, código, talla, color o precio">
+      <div id="hk-resultados" class="hk-resultados hidden" role="listbox"></div>
     </div>
 
     <div class="hk-tabla-wrap">

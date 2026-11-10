@@ -2299,7 +2299,7 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
   font-size: 0.78rem;
   text-align: left;
 }
-.hk-items th:nth-child(1) { width: 17%; }
+.hk-items th:nth-child(1) { width: 24%; }  /* cabe el código de la etiqueta entero */
 .hk-items th:nth-child(2) { width: 9%; }
 .hk-items th:nth-child(4) { width: 14%; }
 .hk-items th:nth-child(5) { width: 13%; text-align: right; }
@@ -2320,6 +2320,7 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 .hk-items .hk-precio { text-align: right; }
 /* Fila encontrada en el inventario: el código en verde */
 .hk-items tr.hk-del-inventario .hk-codigo { color: #166534; font-weight: bold; }
+.hk-items .hk-codigo { font-size: 0.8rem; letter-spacing: -0.01em; }
 
 .hk-subtotal { padding-top: 9px !important; font-weight: bold; text-align: right; white-space: nowrap; }
 .hk-aviso { display: block; padding: 0 6px; color: #dc2626; font-size: 0.72rem; }
@@ -2329,6 +2330,59 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 .hk-quitar:hover { color: #dc2626; }
 
 .hk-agregar-fila { margin: 8px 12px; padding: 6px 14px; font-size: 0.85rem; }
+
+/* Buscador de productos de la nota Hawaki: una barra sobre la tabla y, al
+   escribir, una lista de resultados encima de las filas */
+.hk-buscador { position: relative; margin: 10px 12px 8px; }
+.hk-buscador input {
+  width: 100%;
+  padding: 10px 12px 10px 38px;
+  border: 2px solid #1e293b;
+  border-radius: 8px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 11px center / 18px;
+  color: #111;
+  font-size: 0.95rem;
+}
+.hk-buscador input:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18); }
+
+.hk-resultados {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 2;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+}
+.hk-resultado {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "nombre codigo precio" "nombre stock precio";
+  align-items: center;
+  column-gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid #eef2f6;
+  border-radius: 0;
+  background: #fff;
+  color: #111;
+  text-align: left;
+  font-weight: normal;
+  cursor: pointer;
+}
+.hk-resultado:last-child { border-bottom: 0; }
+.hk-resultado:hover,
+.hk-resultado.activo { background: #eef2ff; }
+.hk-res-nombre { grid-area: nombre; font-weight: bold; }
+.hk-res-codigo { grid-area: codigo; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem; color: #166534; text-align: right; }
+.hk-res-stock { grid-area: stock; font-size: 0.75rem; color: #64748b; text-align: right; }
+.hk-res-precio { grid-area: precio; font-weight: bold; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.hk-sin-resultados { margin: 0; padding: 12px; color: #64748b; font-size: 0.9rem; }
 
 .hk-pie { display: flex; flex-wrap: wrap; border-top: 2px solid #1e293b; }
 .hk-pago {
