@@ -2219,9 +2219,14 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 
 .catalogo-botones {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
 
 .catalogo-botones button { width: 100%; padding-left: 8px; padding-right: 8px; }
+
+/* Celular: los cuatro botones del catálogo en dos filas de dos */
+@media (max-width: 480px) {
+  .catalogo-botones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

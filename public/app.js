@@ -363,6 +363,10 @@ function productosParaCatalogo() {
 
 document.getElementById('buscar-catalogo-btn').addEventListener('click', () => abrirCatalogo('todos'));
 document.getElementById('general-btn').addEventListener('click', () => abrirCatalogo('generales'));
+// Nota de venta en blanco para llenar a mano: se abre directo en el cuadro de impresión
+document.getElementById('nota-blanco-btn').addEventListener('click', () => {
+  window.open('nota-blanco.html?imprimir=1', '_blank');
+});
 
 function cerrarCatalogo() {
   document.getElementById('catalogo-modal').classList.add('hidden');
