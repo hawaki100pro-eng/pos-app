@@ -1464,7 +1464,7 @@ function pintarDiasLibres() {
 
   const antelacion = dlDatos.antelacion === 1 ? '1 día' : `${dlDatos.antelacion} días`;
   document.getElementById('dl-ayuda').textContent = encargado
-    ? 'Los vendedores piden aquí su día de descanso. Acepta o rechaza cada pedido.'
+    ? 'Los ayudantes piden aquí su día de descanso. Acepta o rechaza cada pedido.'
     : `Toca un día para pedirlo: de lunes a jueves, con al menos ${antelacion} de antelación y uno por semana. El administrador lo acepta o no.`;
   document.getElementById('dl-aviso').classList.toggle('hidden', encargado);
 
@@ -1476,7 +1476,7 @@ function pintarDiasLibres() {
   // --- Lista: pedidos por resolver (encargado) o mis pedidos (vendedor) ---
   const lista = document.getElementById('dl-lista');
   if (!dlDatos.lista.length) {
-    lista.innerHTML = `<p class="dl-vacio">${encargado ? 'No hay pedidos de días libres.' : 'Todavía no has pedido ningún día.'}</p>`;
+    lista.innerHTML = `<p class="dl-vacio">${encargado ? 'Ningún ayudante ha pedido día libre.' : 'Todavía no has pedido ningún día.'}</p>`;
   } else {
     lista.innerHTML = dlDatos.lista.map((d) => {
       // Al encargado le sirve saber si otro vendedor quiere ese mismo día

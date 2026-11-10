@@ -445,7 +445,7 @@ app.get('/api/dias-libres', requireLogin, async (req, res) => {
 // El vendedor pide un día libre: queda pendiente hasta que el admin lo resuelva
 app.post('/api/dias-libres', requireLogin, async (req, res) => {
   if (req.session.user.rol !== 'vendedor') {
-    return res.status(403).json({ error: 'El día libre lo pide cada vendedor desde su usuario' });
+    return res.status(403).json({ error: 'El día libre lo pide cada ayudante desde su usuario' });
   }
   const fecha = String((req.body || {}).fecha || '');
   const dia = diaDeSemana(fecha);
@@ -522,7 +522,7 @@ app.delete('/api/dias-libres/:id', requireLogin, async (req, res) => {
   if (!pedido) return res.status(404).json({ error: 'Ese pedido ya no existe' });
   if (req.session.user.rol === 'vendedor') {
     if (pedido.usuario_id !== req.session.user.id) {
-      return res.status(403).json({ error: 'Ese día libre es de otro vendedor' });
+      return res.status(403).json({ error: 'Ese día libre es de otro ayudante' });
     }
     if (pedido.estado === 'rechazado' || pedido.fecha <= hoyEcuador()) {
       return res.status(400).json({ error: 'Ese día ya no se puede cancelar' });
