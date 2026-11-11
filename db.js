@@ -130,6 +130,12 @@ async function init() {
   // cuatro colores. Estos solo se muestran y sirven para buscar.
   await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS colores TEXT`);
 
+  // Migración: categorías sueltas que se venden por docena (los códigos del
+  // catálogo al por mayor). Su precio es el de la docena: en la nota, cantidad 1
+  // es una docena y se puede vender media (0.5), nada menos. No salen en el
+  // panel General ni en la tarjeta de precios: se buscan por código o color.
+  await pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS por_docena INTEGER NOT NULL DEFAULT 0`);
+
   // Migración: cuántas etiquetas se imprimieron ya de cada talla. Lo que falta
   // etiquetar es la resta contra el stock, así al ingresar mercadería nueva solo
   // salen los pares nuevos y no hay que reimprimir todo el modelo.
@@ -191,6 +197,11 @@ async function init() {
   // Va aparte y a prueba de fallos a propósito: las etiquetas son un extra, y si
   // algo sale mal aquí el punto de venta TIENE que arrancar igual. Antes esto
   // estaba en el flujo principal y cualquier tropiezo dejaba la tienda sin caja.
+  // Los códigos del catálogo por docena que pasó el dueño, una sola vez. Va antes
+  // del SKU para que esos códigos salgan con su código de etiqueta en este mismo
+  // arranque. A prueba de fallos, como el SKU.
+  await cargarCatalogoDocena();
+
   await migrarSku();
 
   // Se quitaron la bóveda y las compras a proveedores; sus datos eran pruebas y
@@ -333,6 +344,50 @@ async function borrarCierresAnteriores() {
   } catch (err) {
     if (cliente) await cliente.query('ROLLBACK').catch(() => {});
     console.error('No se pudieron borrar los cierres de caja. El POS arranca igual. Detalle:', err.message);
+  } finally {
+    if (cliente) cliente.release();
+  }
+}
+
+// Carga, UNA sola vez (queda marcado en configuracion), los códigos del
+// catálogo por docena que pasó el dueño: catalogo-docena.json, sacado de su
+// documento "Código, colores y precios". Cada uno entra como categoría suelta
+// por docena, con sus colores y el precio de la docena; los que el documento
+// marca AGOTADO entran desactivados (se activan con un botón al reponer).
+// Si ya hay una categoría suelta con el mismo nombre, se actualiza en vez de
+// repetirse. Va en dos sentencias dentro de una transacción (no una por código:
+// la base está en internet y el arranque no puede alargarse). Si falla, el POS
+// arranca igual y lo reintenta en el siguiente arranque.
+async function cargarCatalogoDocena() {
+  let cliente;
+  try {
+    const lista = JSON.stringify(require('./catalogo-docena.json'));
+    cliente = await pool.connect();
+    await cliente.query("SET lock_timeout = '5s'");
+    await cliente.query('BEGIN');
+    const hecho = await cliente.query("SELECT 1 FROM configuracion WHERE clave = 'catalogo_docena_v1'");
+    if (hecho.rowCount > 0) {
+      await cliente.query('ROLLBACK');
+      return;
+    }
+    const filas = `json_to_recordset($1::json) AS d(codigo text, colores text, precio real, activo int)`;
+    const actualizados = await cliente.query(`
+      UPDATE productos p SET colores = d.colores, precio = d.precio, por_docena = 1, activo = d.activo
+      FROM ${filas}
+      WHERE LOWER(p.modelo) = LOWER(d.codigo) AND p.controla_stock = 0 AND p.eliminado = 0`, [lista]);
+    const nuevos = await cliente.query(`
+      INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock, colores, por_docena, activo)
+      SELECT d.codigo, '', '', d.precio, 0, 0, d.colores, 1, d.activo
+      FROM ${filas}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM productos p
+        WHERE LOWER(p.modelo) = LOWER(d.codigo) AND p.controla_stock = 0 AND p.eliminado = 0)`, [lista]);
+    await cliente.query("INSERT INTO configuracion (clave, valor) VALUES ('catalogo_docena_v1', NOW()::text)");
+    await cliente.query('COMMIT');
+    console.log(`Catálogo por docena: ${nuevos.rowCount} código(s) nuevos, ${actualizados.rowCount} actualizado(s)`);
+  } catch (err) {
+    if (cliente) await cliente.query('ROLLBACK').catch(() => {});
+    console.error('No se pudo cargar el catálogo por docena. El POS arranca igual. Detalle:', err.message);
   } finally {
     if (cliente) cliente.release();
   }

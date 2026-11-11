@@ -35,7 +35,7 @@ async function cargar() {
 
   const todos = await res.json();
   const categorias = todos
-    .filter((p) => !p.controla_stock && !p.eliminado && p.activo)
+    .filter((p) => !p.controla_stock && !p.por_docena && !p.eliminado && p.activo)
     .sort((a, b) => Number(a.precio) - Number(b.precio) || String(a.modelo).localeCompare(b.modelo, 'es'));
 
   if (categorias.length === 0) {

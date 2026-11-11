@@ -1,3 +1,11 @@
+// Media docena se imprime "½" y una y media "1½", como se dice en el mostrador
+function cantidadImpresa(cantidad) {
+  const n = Number(cantidad);
+  if (Number.isInteger(n)) return String(n);
+  const enteras = Math.floor(n);
+  return n - enteras === 0.5 ? `${enteras || ''}½` : String(n);
+}
+
 (async function () {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
@@ -45,7 +53,7 @@
     const tr = document.createElement('tr');
     const subtotal = item.cantidad * item.precio_unitario;
     tr.innerHTML = `
-      <td>${item.cantidad}</td>
+      <td>${cantidadImpresa(item.cantidad)}</td>
       <td>${item.producto}</td>
       <td>$${item.precio_unitario.toFixed(2)}</td>
       <td>$${subtotal.toFixed(2)}</td>

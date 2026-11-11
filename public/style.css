@@ -1106,6 +1106,11 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
 .color-pastilla i { width: 11px; height: 11px; }
 .cuadro-colores { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 0; }
 .cuadro-colores .color-pastilla { font-size: 0.72rem; color: var(--texto-suave); }
+.opcion-docena { display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; cursor: pointer; }
+.opcion-docena input { flex: none; margin-top: 3px; }
+.precio-docena { display: block; font-size: 0.72rem; font-weight: 600; color: var(--texto-suave); }
+.grupo-docena td { border-left: 6px solid var(--acento); background: var(--acento-suave); }
+
 .hk-res-colores { display: block; font-weight: normal; font-size: 0.78rem; color: #64748b; }
 
 /* Los campos que no aplican a una categoría se apagan en vez de desaparecer:
@@ -1277,6 +1282,8 @@ label { font-size: 0.85rem; color: var(--texto-suave-2); font-weight: 600; }
   #productos-tabla .fila-producto .celda-color { display: none; }
   /* La categoría suelta sí muestra la columna: ahí están sus colores */
   #productos-tabla .fila-producto.fila-suelta .celda-color { display: block; padding: 4px 0 2px; }
+  /* Los códigos por docena no tienen cabecera de modelo arriba: su código se ve en la fila */
+  #productos-tabla .fila-producto.fila-docena .celda-modelo-texto { display: inline; font-weight: 700; }
 
   /* Queda vacía salvo que el producto esté eliminado; entonces muestra solo el motivo */
   #productos-tabla .fila-producto .celda-modelo {

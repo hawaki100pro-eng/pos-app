@@ -308,12 +308,20 @@ document.getElementById('agregar-item-btn').addEventListener('click', () => {
   const stock_max = inputProducto.dataset.stockMax
     ? parseInt(inputProducto.dataset.stockMax, 10)
     : null;
-  items.push({ producto, cantidad, precio_unitario, precio_lista, producto_id, stock_max });
+  const por_docena = inputProducto.dataset.porDocena === '1';
+  if (por_docena && !cantidadValida(cantidad, true)) {
+    document.getElementById('venta-msg').textContent = `${producto}: se vende de media docena (0.5) hasta ${MAX_DOCENAS} docenas`;
+    document.getElementById('venta-msg').className = 'error';
+    return;
+  }
+  items.push({ producto, cantidad, precio_unitario, precio_lista, producto_id, stock_max, por_docena });
   inputProducto.value = '';
   inputProducto.dataset.productoId = '';
   inputProducto.dataset.precioLista = '';
   inputProducto.dataset.stockMax = '';
+  inputProducto.dataset.porDocena = '';
   document.getElementById('item-cantidad').value = '1';
+  document.getElementById('item-cantidad').step = '1';
   document.getElementById('item-precio').value = '';
   document.getElementById('venta-msg').textContent = '';
   renderItems();
@@ -360,7 +368,7 @@ async function abrirCatalogo(modo) {
 
 function productosParaCatalogo() {
   return modoCatalogo === 'generales'
-    ? productosDisponibles.filter((p) => !p.controla_stock)
+    ? productosDisponibles.filter((p) => !p.controla_stock && !p.por_docena)
     : productosDisponibles;
 }
 
@@ -381,7 +389,7 @@ const hkFondo = document.getElementById('hk-fondo');
 
 const hkFilaVacia = () => ({
   codigo: '', cantidad: 1, producto: '', precio_unitario: '', precio_lista: null,
-  producto_id: null, stock_max: null, aviso: '',
+  producto_id: null, stock_max: null, por_docena: false, aviso: '',
 });
 const hkFilaUsada = (f) => f.codigo.trim() !== '' || f.producto.trim() !== '' || f.precio_unitario !== '';
 
@@ -432,7 +440,7 @@ function pintarFilasHawaki() {
     const subtotal = (Number(f.cantidad) || 0) * (Number(f.precio_unitario) || 0);
     return `<tr data-i="${i}" class="${f.producto_id ? 'hk-del-inventario' : ''}">
       <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" title="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
-      <td><input type="number" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.cantidad)}" min="1" step="1"></td>
+      <td><input type="number" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.cantidad)}" min="${f.por_docena ? 0.5 : 1}" step="${f.por_docena ? 0.5 : 1}"></td>
       <td><input type="text" class="hk-descripcion" data-campo="producto" value="${escaparHtml(f.producto)}" placeholder="Descripción">
         ${f.aviso ? `<small class="hk-aviso">${escaparHtml(f.aviso)}</small>` : ''}</td>
       <td><input type="number" class="hk-precio" data-campo="precio_unitario" value="${escaparHtml(f.precio_unitario)}" min="0" step="0.01" placeholder="0.00"></td>
@@ -468,7 +476,7 @@ async function buscarCodigoHawaki(i) {
   const codigo = fila.codigo.trim();
   if (!codigo) {
     // Sin código la fila queda como escrita a mano
-    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, aviso: '' });
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, aviso: '' });
     pintarFilasHawaki();
     return;
   }
@@ -476,14 +484,15 @@ async function buscarCodigoHawaki(i) {
   const data = await res.json().catch(() => ({}));
   if (hkFilas[i] !== fila || fila.codigo.trim() !== codigo) return; // cambió mientras se buscaba
   if (!res.ok) {
-    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, aviso: data.error || 'Código no encontrado' });
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, aviso: data.error || 'Código no encontrado' });
   } else {
     Object.assign(fila, {
-      producto: data.nombre,
+      producto: nombreVenta(data, data.nombre),
       precio_unitario: Number(data.precio),
       precio_lista: Number(data.precio),
       producto_id: data.id,
       stock_max: data.controla_stock ? data.stock : null,
+      por_docena: !!data.por_docena,
       aviso: '',
     });
     // Con la última fila ocupada se agrega otra vacía, para seguir escribiendo
@@ -517,7 +526,7 @@ hkTabla.addEventListener('input', (e) => {
   fila[campo] = e.target.value;
   // Si se borra el código, deja de ser un producto del inventario
   if (campo === 'codigo' && fila.producto_id) {
-    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null });
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false });
     tr.classList.remove('hk-del-inventario');
   }
   if (campo === 'cantidad' || campo === 'precio_unitario') calcularTotalesHawaki();
@@ -599,7 +608,7 @@ function pintarResultadosHawaki(abierto) {
     <button type="button" role="option" class="hk-resultado${i === hkActivo ? ' activo' : ''}" data-i="${i}" aria-selected="${i === hkActivo}">
       <span class="hk-res-nombre">${escaparHtml(nombreProducto(p))}${!p.controla_stock && p.colores ? `<span class="hk-res-colores">${escaparHtml(p.colores)}</span>` : ''}</span>
       <span class="hk-res-codigo">${escaparHtml(codigoDe(p))}</span>
-      <span class="hk-res-stock">${p.controla_stock ? `${p.stock} en stock` : 'categoría'}</span>
+      <span class="hk-res-stock">${p.controla_stock ? `${p.stock} en stock` : p.por_docena ? 'la docena' : 'categoría'}</span>
       <span class="hk-res-precio">$${Number(p.precio).toFixed(2)}</span>
     </button>`).join('');
 }
@@ -610,6 +619,10 @@ function agregarDesdeBuscadorHawaki(p) {
   const yaEsta = hkFilas.find((f) => f.producto_id === p.id);
   if (yaEsta) {
     const nueva = (Number(yaEsta.cantidad) || 0) + 1;
+    if (p.por_docena && nueva > MAX_DOCENAS) {
+      hkMensaje(`De ${nombreProducto(p)} se venden hasta ${MAX_DOCENAS} docenas por nota`, true);
+      return;
+    }
     if (stockMax != null && nueva > stockMax) {
       hkMensaje(`Solo quedan ${stockMax} de ${nombreProducto(p)} en el sistema`, true);
       return;
@@ -624,11 +637,12 @@ function agregarDesdeBuscadorHawaki(p) {
     Object.assign(hkFilas[i], {
       codigo: codigoDe(p),
       cantidad: 1,
-      producto: nombreProducto(p),
+      producto: nombreVenta(p),
       precio_unitario: Number(p.precio),
       precio_lista: Number(p.precio),
       producto_id: p.id,
       stock_max: stockMax,
+      por_docena: !!p.por_docena,
       aviso: '',
     });
   }
@@ -694,6 +708,9 @@ document.getElementById('hk-guardar').addEventListener('click', async () => {
     const precio = Number(f.precio_unitario);
     if (!f.producto.trim()) return hkMensaje(`Falta la descripción${f.codigo ? ` del código ${f.codigo}` : ''}`, true);
     if (!Number.isFinite(cantidad) || cantidad <= 0) return hkMensaje(`La cantidad de "${f.producto}" debe ser mayor a 0`, true);
+    if (f.por_docena && !cantidadValida(cantidad, true)) {
+      return hkMensaje(`"${f.producto}" se vende de media docena (0.5) hasta ${MAX_DOCENAS} docenas`, true);
+    }
     if (f.precio_unitario === '' || !Number.isFinite(precio) || precio < 0) return hkMensaje(`Falta el precio de "${f.producto}"`, true);
     if (f.stock_max != null && cantidad > f.stock_max) return hkMensaje(`Solo quedan ${f.stock_max} de ${f.producto} en el sistema`, true);
   }
@@ -892,8 +909,11 @@ function renderCatalogoModal(productos) {
     `;
     card.addEventListener('click', () => {
       const inputProducto = document.getElementById('item-producto');
-      inputProducto.value = nombreProducto(p);
+      inputProducto.value = nombreVenta(p);
       inputProducto.dataset.productoId = p.id;
+      // Lo que se vende por docena deja escribir media docena (0.5) en la cantidad
+      inputProducto.dataset.porDocena = p.por_docena ? '1' : '';
+      document.getElementById('item-cantidad').step = p.por_docena ? '0.5' : '1';
       // Se guarda el precio del catálogo aparte: si la vendedora lo baja antes de
       // agregar, la diferencia se cuenta como descuento
       inputProducto.dataset.precioLista = p.precio;
@@ -962,6 +982,22 @@ function nombreProducto(p) {
   return [p.modelo, talla && `T${talla}`, color].filter(Boolean).join(' ');
 }
 
+// Lo que se vende por docena (los códigos del catálogo al por mayor): su precio
+// es el de la docena, la línea de la nota lo dice ("1002 Y (docena)") y la
+// cantidad va de media en media docena, de 0.5 hasta 6. El servidor revisa lo
+// mismo al registrar la venta.
+const MAX_DOCENAS = 6;
+
+function nombreVenta(p, nombre = nombreProducto(p)) {
+  return p.por_docena ? `${nombre} (docena)` : nombre;
+}
+
+function cantidadValida(cantidad, porDocena) {
+  return porDocena
+    ? Number.isInteger(cantidad * 2) && cantidad >= 0.5 && cantidad <= MAX_DOCENAS
+    : Number.isInteger(cantidad) && cantidad >= 1;
+}
+
 let escaneando = false;
 let resaltado = null;            // id del producto recién escaneado
 let temporizadorResaltado = null;
@@ -974,13 +1010,18 @@ let temporizadorResaltado = null;
    y no la pantalla. Al tocar en pantalla ya ve lo que pasó, y un pitido por cada
    toque sería ruido en la tienda. */
 function agregarProductoALaVenta(p, { conPitido = false } = {}) {
-  const nombre = p.nombre || nombreProducto(p);
+  const nombre = nombreVenta(p, p.nombre || nombreProducto(p));
   // Una categoría suelta no tiene tope: queda en null y el recuadro de cantidad
   // la deja subir libremente.
   const tope = p.controla_stock ? p.stock : null;
   const yaEsta = items.find((i) => i.producto_id === p.id);
 
   if (yaEsta) {
+    if (p.por_docena && yaEsta.cantidad + 1 > MAX_DOCENAS) {
+      if (conPitido) pitido(false);
+      mensajeVenta(`De ${nombre} se venden hasta ${MAX_DOCENAS} docenas por nota.`, true);
+      return false;
+    }
     if (tope != null && yaEsta.cantidad + 1 > tope) {
       if (conPitido) pitido(false);
       mensajeVenta(`Solo quedan ${tope} de ${nombre} en el sistema.`, true);
@@ -996,6 +1037,7 @@ function agregarProductoALaVenta(p, { conPitido = false } = {}) {
       precio_lista: Number(p.precio),   // el del catálogo, para calcular el descuento
       producto_id: p.id,
       stock_max: tope,
+      por_docena: !!p.por_docena,
     });
   }
 
@@ -1275,6 +1317,10 @@ function renderItems() {
     total += subtotal;
     const dcto = descuentoDe(item);
 
+    // Lo que se vende por docena sube y baja de a media docena
+    const paso = item.por_docena ? 0.5 : 1;
+    const minimo = item.por_docena ? 0.5 : 1;
+
     const row = document.createElement('div');
     row.className = 'item-row' + (item.producto_id && item.producto_id === resaltado ? ' item-escaneado' : '');
     row.innerHTML = `
@@ -1284,10 +1330,10 @@ function renderItems() {
       </div>
       <div class="item-controles">
         <div class="paso-cantidad">
-          <button type="button" class="paso" data-paso="-1" aria-label="Quitar uno" ${item.cantidad <= 1 ? 'disabled' : ''}>−</button>
-          <input type="number" min="1" step="1" inputmode="numeric" value="${item.cantidad}"
-                 aria-label="Cantidad de ${item.producto}">
-          <button type="button" class="paso" data-paso="1" aria-label="Agregar uno">+</button>
+          <button type="button" class="paso" data-paso="-1" aria-label="${item.por_docena ? 'Media docena menos' : 'Quitar uno'}" ${item.cantidad <= minimo ? 'disabled' : ''}>−</button>
+          <input type="number" min="${minimo}" step="${paso}" inputmode="${item.por_docena ? 'decimal' : 'numeric'}" value="${item.cantidad}"
+                 aria-label="${item.por_docena ? 'Docenas' : 'Cantidad'} de ${item.producto}">
+          <button type="button" class="paso" data-paso="1" aria-label="${item.por_docena ? 'Media docena más' : 'Agregar uno'}" ${item.por_docena && item.cantidad >= MAX_DOCENAS ? 'disabled' : ''}>+</button>
         </div>
         <div class="paso-precio">
           <button type="button" class="paso" data-paso-precio="-1" aria-label="Bajar precio" ${item.precio_unitario <= 0 ? 'disabled' : ''}>−</button>
@@ -1305,7 +1351,12 @@ function renderItems() {
     // Un solo camino para cambiar la cantidad, lo toque quien lo toque: los
     // botones de − y +, o el número escrito a mano.
     function fijarCantidad(nueva) {
-      if (!Number.isInteger(nueva) || nueva < 1) {
+      if (item.por_docena && nueva > MAX_DOCENAS) {
+        mensajeVenta(`De ${item.producto} se venden hasta ${MAX_DOCENAS} docenas por nota.`, true);
+        campoCantidad.value = item.cantidad;
+        return;
+      }
+      if (!cantidadValida(nueva, item.por_docena)) {
         campoCantidad.value = item.cantidad;
         return;
       }
@@ -1324,12 +1375,13 @@ function renderItems() {
     // Los botones evitan el teclado, que en el celular tapa media pantalla:
     // para dos o tres pares es más rápido tocar + que escribir.
     row.querySelectorAll('.paso-cantidad .paso').forEach((btn) => {
-      btn.addEventListener('click', () => fijarCantidad(item.cantidad + Number(btn.dataset.paso)));
+      btn.addEventListener('click', () => fijarCantidad(item.cantidad + Number(btn.dataset.paso) * paso));
     });
 
     // Se aplica al salir del campo, no en cada tecla: si no, al escribir "12"
     // la línea se recalcularía primero con 1.
-    campoCantidad.addEventListener('change', () => fijarCantidad(parseInt(campoCantidad.value, 10)));
+    campoCantidad.addEventListener('change', () => fijarCantidad(
+      item.por_docena ? parseFloat(campoCantidad.value) : parseInt(campoCantidad.value, 10)));
 
     const campoPrecio = row.querySelector('.paso-precio input');
 
@@ -1376,7 +1428,7 @@ function renderItems() {
   }
 
   document.getElementById('carrito-total').textContent = total.toFixed(2);
-  const pares = items.reduce((acc, item) => acc + Number(item.cantidad), 0);
+  const pares = items.reduce((acc, item) => acc + Number(item.cantidad) * (item.por_docena ? 12 : 1), 0);
   document.getElementById('total-pares').textContent = `${pares} ${pares === 1 ? 'par' : 'pares'}`;
   actualizarMetodoPago();
   // Empezó la siguiente venta: el aviso de la anterior ya no hace falta
@@ -2933,7 +2985,15 @@ function renderInventario() {
   // de ella los modelos se muestran solo por su código (#00-04).
   // (En celular el CSS convierte cada talla en una tarjeta para que nada quede cortado.)
   const familias = new Map();
+  // Los códigos por docena van todos juntos en un solo grupo, al final, cada uno
+  // en su fila: son muchos y sueltos, y anidarlos como familia > modelo > color
+  // obligaría a tocar tres veces para llegar a cada uno.
+  const porDocena = [];
   productosVisibles.forEach((p) => {
+    if (p.por_docena) {
+      porDocena.push(p);
+      return;
+    }
     const { familia } = partirModelo(p.modelo);
     if (!familias.has(familia)) familias.set(familia, new Map());
     const porModelo = familias.get(familia);
@@ -3022,7 +3082,31 @@ function renderInventario() {
     });
   });
   });
+
+  if (porDocena.length) {
+    const abierto = filtrando || familiasAbiertas.has(GRUPO_DOCENA);
+    const activos = porDocena.filter((p) => p.activo).length;
+    const trDocena = document.createElement('tr');
+    trDocena.className = 'grupo-familia grupo-docena';
+    trDocena.innerHTML = `<td colspan="6">${abierto ? '▾' : '▸'} Por docena <span class="grupo-info">${porDocena.length} código(s) · ${activos} a la venta · ${porDocena.length - activos} desactivado(s)</span></td>`;
+    trDocena.addEventListener('click', () => {
+      if (abierto) familiasAbiertas.delete(GRUPO_DOCENA);
+      else familiasAbiertas.add(GRUPO_DOCENA);
+      renderInventario();
+    });
+    tbody.appendChild(trDocena);
+    if (abierto) {
+      porDocena
+        .slice()
+        .sort((a, b) => String(a.modelo).localeCompare(String(b.modelo), 'es', { numeric: true }))
+        .forEach((p) => tbody.appendChild(crearFilaProducto(p)));
+    }
+  }
 }
+
+// Clave del grupo "Por docena" entre las familias abiertas. No puede chocar con
+// una familia de verdad porque ningún modelo empieza con dos guiones bajos.
+const GRUPO_DOCENA = '__por_docena__';
 
 // Al marcar "categoría suelta" se apagan los campos que no aplican: es más claro
 // que dejarlos escribibles y luego ignorarlos.
@@ -3039,12 +3123,17 @@ const MUESTRAS_COLOR = {
   turquesa: '#30c5c5', turqueza: '#30c5c5', celeste: '#7cc7f0', azul: '#1e5bd8', 'azul marino': '#1b2a4a',
   rojo: '#d32f2f', vino: '#7b1e3a', coral: '#ff7f6e', naranja: '#f28c28', amarillo: '#f8d33a',
   dorado: '#d4a017', plateado: '#c0c4cc',
+  kaki: '#b5a36a', plomo: '#8a8f98', rosado: '#f4a6c1', 'azul electrico': '#1a3cff', 'azul oscuro': '#16307a',
+  'beige claro': '#f1e6cf', 'beige oscuro': '#c9b089', 'cafe claro': '#a9744a', 'cafe oscuro': '#4e2f1b',
+  'verde limon': '#a6d82b', neon: '#c6ff1a', 'negro todo': '#111111',
   multicolor: 'conic-gradient(#e0218a, #f8d33a, #30c5c5, #7e3fb2, #e0218a)',
 };
 const COLORES_SUGERIDOS = ['Negro', 'Blanco', 'Rosa', 'Fucsia', 'Lila', 'Menta', 'Turquesa', 'Celeste', 'Azul', 'Rojo', 'Beige', 'Café'];
 
+// Un par de dos colores ("Negro/Blanco") lleva media muestra de cada uno
 function muestraColor(nombre) {
-  return MUESTRAS_COLOR[sinTildes(nombre).trim()] || 'var(--texto-tenue)';
+  const partes = String(nombre).split('/').map((c) => MUESTRAS_COLOR[sinTildes(c).trim()] || 'var(--texto-tenue)');
+  return partes.length === 2 ? `linear-gradient(90deg, ${partes[0]} 50%, ${partes[1]} 50%)` : partes[0];
 }
 
 // "Rosa, Menta" → ['Rosa', 'Menta']
@@ -3355,7 +3444,7 @@ async function eliminarModeloCompleto(items, nombre) {
 function crearFilaProducto(p) {
     const tr = document.createElement('tr');
     // fila-suelta: en el celular deja ver la columna de colores (ver style.css)
-    tr.className = p.controla_stock ? 'fila-producto' : 'fila-producto fila-suelta';
+    tr.className = p.controla_stock ? 'fila-producto' : `fila-producto fila-suelta${p.por_docena ? ' fila-docena' : ''}`;
     if (!p.activo || p.eliminado) tr.style.opacity = '0.5';
     // Una categoría suelta no lleva stock: no hay nada que avisar ni que agotar
     const suelta = !p.controla_stock;
@@ -3373,7 +3462,7 @@ function crearFilaProducto(p) {
       <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
       <td class="celda-talla">${suelta ? '—' : p.talla}</td>
       <td class="celda-color">${suelta ? (p.colores ? pastillasColores(p.colores) : '—') : p.color}</td>
-      <td class="celda-precio">$${p.precio.toFixed(2)}</td>
+      <td class="celda-precio">$${p.precio.toFixed(2)}${p.por_docena ? '<small class="precio-docena">la docena</small>' : ''}</td>
       <td class="celda-stock${stockClase}">${suelta ? '—' : p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
       <td class="celda-acciones"></td>
     `;
@@ -3489,11 +3578,15 @@ async function editarProducto(p) {
     if (color === null) return;
   }
 
-  // La categoría suelta pregunta sus colores, separados por coma
+  // La categoría suelta pregunta sus colores, separados por coma, y si se vende por docena
   let colores;
+  let por_docena;
   if (suelta) {
     colores = window.prompt('Colores (separados por coma, ej: Rosa, Menta, Lila):', p.colores || '');
     if (colores === null) return;
+    const docena = window.prompt('¿Se vende por docena? Escribe sí o no:', p.por_docena ? 'sí' : 'no');
+    if (docena === null) return;
+    por_docena = /^s/i.test(docena.trim());
   }
 
   const precioStr = window.prompt('Precio:', p.precio);
@@ -3532,6 +3625,7 @@ async function editarProducto(p) {
       stock,
       controla_stock: p.controla_stock ? true : false,
       colores,
+      por_docena,
     }),
   });
   if (!res.ok) { const d = await res.json(); alert(d.error); return; }
@@ -3571,7 +3665,11 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   const res = await fetch('/api/productos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modelo, talla, color, precio, stock, controla_stock, colores: controla_stock ? null : coloresNuevos }),
+    body: JSON.stringify({
+      modelo, talla, color, precio, stock, controla_stock,
+      colores: controla_stock ? null : coloresNuevos,
+      por_docena: !controla_stock && document.getElementById('prod-por-docena').checked,
+    }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -3582,7 +3680,9 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
 
   const nombre = nombreProducto(data);
   if (!controla_stock) {
-    msg.textContent = `Categoría "${nombre}" lista a $${Number(data.precio).toFixed(2)}. Imprime la tarjeta para poder escanearla.`;
+    msg.textContent = data.por_docena
+      ? `"${nombre}" lista a $${Number(data.precio).toFixed(2)} la docena. Se encuentra buscándolo por código o color.`
+      : `Categoría "${nombre}" lista a $${Number(data.precio).toFixed(2)}. Imprime la tarjeta para poder escanearla.`;
   } else {
     msg.textContent = data.stock_sumado
       ? `Ya existía "${nombre}": se sumaron ${data.stock_sumado} al stock (ahora tiene ${data.stock})`

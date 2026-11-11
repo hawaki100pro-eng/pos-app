@@ -748,9 +748,17 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
       );
       if (item.producto_id) {
         const stockR = await client.query(
-          'SELECT stock, controla_stock FROM productos WHERE id = $1 FOR UPDATE',
+          'SELECT stock, controla_stock, por_docena FROM productos WHERE id = $1 FOR UPDATE',
           [item.producto_id]
         );
+        // Lo que se vende por docena va de media docena (0.5) hasta 6 docenas, de
+        // media en media: 0.5, 1, 1.5... 6
+        if (stockR.rows[0] && stockR.rows[0].por_docena) {
+          const docenas = Number(item.cantidad);
+          if (!Number.isInteger(docenas * 2) || docenas < 0.5 || docenas > MAX_DOCENAS) {
+            throw new Error(`"${item.producto}" se vende de media docena hasta ${MAX_DOCENAS} docenas (0.5, 1, 1.5... ${MAX_DOCENAS})`);
+          }
+        }
         // Las categorías sueltas (zapatillas, ofertas) no llevan stock: se venden
         // siempre y no descuentan nada. Solo aportan su nombre y su precio.
         if (stockR.rows[0] && !stockR.rows[0].controla_stock) continue;
@@ -1161,6 +1169,8 @@ app.post('/api/usuarios/:id/activo', requireLogin, requireDueño, async (req, re
 // separado por comas; se quitan los vacíos y los repetidos (sin importar
 // mayúsculas o tildes) y se guardan como "Rosa, Menta, Lila". Vacío = null.
 const MAX_COLORES = 20;
+// Lo máximo que se vende de un código por docena en una sola línea de la nota
+const MAX_DOCENAS = 6;
 function limpiarColores(valor) {
   const lista = Array.isArray(valor) ? valor : String(valor ?? '').split(',');
   const vistos = new Set();
@@ -1239,11 +1249,16 @@ app.get('/api/productos/codigo/:codigo', requireLogin, async (req, res) => {
   const codigo = String(req.params.codigo || '').trim().toUpperCase();
   if (!codigo) return res.status(400).json({ error: 'Código vacío' });
 
-  // El código de barras son solo dígitos con ceros a la izquierda (000207)
+  // El código de barras son solo dígitos con ceros a la izquierda (000207). Pero
+  // hay códigos de etiqueta que también son solo números (los del catálogo por
+  // docena: "1016", "915"), así que primero gana el código de la etiqueta y, si
+  // ninguno coincide, se toma como código de barras.
   const esId = /^[0-9]{1,9}$/.test(codigo);
-  const r = esId
-    ? await pool.query('SELECT * FROM productos WHERE id = $1 AND eliminado = 0', [parseInt(codigo, 10)])
-    : await pool.query('SELECT * FROM productos WHERE UPPER(sku) = $1 AND eliminado = 0', [codigo]);
+  const r = await pool.query(
+    `SELECT * FROM productos WHERE eliminado = 0 AND (UPPER(sku) = $1 OR id = $2)
+     ORDER BY (UPPER(sku) = $1) DESC LIMIT 1`,
+    [codigo, esId ? parseInt(codigo, 10) : -1]
+  );
 
   const p = r.rows[0];
   if (!p) {
@@ -1296,6 +1311,8 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   const stock = controlaStock ? req.body.stock : 0;
   // Solo una categoría suelta lleva lista de colores; una talla tiene su color
   const colores = controlaStock ? null : limpiarColores(req.body.colores);
+  // Y solo una categoría suelta puede venderse por docena (ver db.js)
+  const porDocena = !controlaStock && req.body.por_docena ? 1 : 0;
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -1316,15 +1333,15 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
     // Una categoría suelta que se vuelve a cargar con colores los actualiza; sin
     // colores, se quedan los que tenía
     const r = await pool.query(
-      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1, colores = COALESCE($3, colores) WHERE id = $4 RETURNING *',
-      [Math.round(stock), precio, colores, existente.rows[0].id]
+      'UPDATE productos SET stock = stock + $1, precio = $2, activo = 1, colores = COALESCE($3, colores), por_docena = $4 WHERE id = $5 RETURNING *',
+      [Math.round(stock), precio, colores, porDocena, existente.rows[0].id]
     );
     return res.status(200).json({ ...r.rows[0], stock_sumado: Math.round(stock) });
   }
 
   const r = await pool.query(
-    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock, colores) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, colores]
+    'INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock, colores, por_docena) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, colores, porDocena]
   );
 
   // El código de la etiqueta se pone en un segundo paso, y aparte: si fallara,
@@ -1344,7 +1361,7 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
 app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const { modelo, precio } = req.body;
 
-  const actual = await pool.query('SELECT stock, controla_stock, colores FROM productos WHERE id = $1', [req.params.id]);
+  const actual = await pool.query('SELECT stock, controla_stock, colores, por_docena FROM productos WHERE id = $1', [req.params.id]);
   if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
   // Si no viene en el cuerpo se conserva lo que ya tenía: así una edición que no
@@ -1359,6 +1376,10 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const colores = controlaStock
     ? null
     : (req.body.colores === undefined ? actual.rows[0].colores : limpiarColores(req.body.colores));
+  // Lo mismo con la venta por docena: sin dato en el cuerpo, queda como estaba
+  const porDocena = controlaStock
+    ? 0
+    : (req.body.por_docena === undefined ? actual.rows[0].por_docena : (req.body.por_docena ? 1 : 0));
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -1377,9 +1398,9 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const r = await pool.query(
     // Si el stock se corrige hacia abajo, las etiquetas impresas no pueden quedar por encima
     `UPDATE productos SET modelo=$1, talla=$2, color=$3, precio=$4, stock=$5,
-       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6, colores=$7
-     WHERE id=$8 RETURNING *`,
-    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, colores, req.params.id]
+       etiquetas_impresas=LEAST(etiquetas_impresas, $5), controla_stock=$6, colores=$7, por_docena=$8
+     WHERE id=$9 RETURNING *`,
+    [modelo.trim(), talla.trim(), color.trim(), precio, Math.round(stock), controlaStock, colores, porDocena, req.params.id]
   );
   res.json(r.rows[0]);
 });
