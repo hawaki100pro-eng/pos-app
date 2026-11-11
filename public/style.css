@@ -2448,8 +2448,8 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
   font-size: 0.78rem;
   text-align: left;
 }
-.hk-items th:nth-child(1) { width: 24%; }  /* cabe el código de la etiqueta entero */
-.hk-items th:nth-child(2) { width: 9%; }
+.hk-items th:nth-child(1) { width: 21%; }  /* cabe el código de la etiqueta entero */
+.hk-items th:nth-child(2) { width: 12%; }  /* cabe la lista de docenas ("½ doc") */
 .hk-items th:nth-child(4) { width: 14%; }
 .hk-items th:nth-child(5) { width: 13%; text-align: right; }
 .hk-items th:nth-child(6) { width: 5%; }
@@ -2473,6 +2473,20 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 
 .hk-subtotal { padding-top: 9px !important; font-weight: bold; text-align: right; white-space: nowrap; }
 .hk-aviso { display: block; padding: 0 6px; color: #dc2626; font-size: 0.72rem; }
+/* Docenas: lista de ½ a 5, del ancho de la columna */
+.hk-docenas {
+  width: 100%;
+  margin-top: 2px;
+  padding: 5px 2px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: bold;
+}
+.hk-docenas:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 1px; }
 /* El color de la fila: una lista chica debajo de la descripción */
 .hk-color {
   display: block;

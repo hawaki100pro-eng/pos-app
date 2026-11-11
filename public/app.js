@@ -419,6 +419,7 @@ function datosFilaHawaki(p) {
     colores: p.controla_stock ? [] : listaColores(p.colores),
     color: '',
     nombre_base: p.nombre || nombreProducto(p),
+    cantidad_libre: false, // por docena: lista de ½ a 5 hasta que se pide escribir otra
     aviso: '',
   };
 }
@@ -467,12 +468,25 @@ function cerrarNotaHawaki() {
   hkFondo.classList.add('hidden');
 }
 
+// Las cantidades más pedidas de un código por docena, para elegirlas de una
+// lista; "Otra…" cambia la lista por la casilla para escribir (1½, 6...)
+const DOCENAS_RAPIDAS = [0.5, 1, 2, 3, 4, 5];
+function listaDocenas(f) {
+  const actual = leerCantidad(f.cantidad);
+  const opciones = DOCENAS_RAPIDAS.includes(actual) || !Number.isFinite(actual)
+    ? DOCENAS_RAPIDAS : [...DOCENAS_RAPIDAS, actual].sort((a, b) => a - b);
+  return `<select class="hk-docenas" aria-label="Docenas de ${escaparHtml(f.nombre_base || 'este código')}">
+    ${opciones.map((n) => `<option value="${n}"${n === actual ? ' selected' : ''}>${textoCantidad(n)}</option>`).join('')}
+    <option value="otra">Otra…</option>
+  </select>`;
+}
+
 function pintarFilasHawaki() {
   document.getElementById('hk-items').innerHTML = hkFilas.map((f, i) => {
     const subtotal = (leerCantidad(f.cantidad) || 0) * (Number(f.precio_unitario) || 0);
     return `<tr data-i="${i}" class="${f.producto_id ? 'hk-del-inventario' : ''}">
       <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" title="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
-      <td><input type="${f.por_docena ? 'text' : 'number'}" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.por_docena ? textoCantidad(f.cantidad) : f.cantidad)}" min="${f.por_docena ? 0.5 : 1}" step="${f.por_docena ? 0.5 : 1}"${f.por_docena ? ' inputmode="decimal"' : ''}></td>
+      <td>${f.por_docena && !f.cantidad_libre ? listaDocenas(f) : `<input type="${f.por_docena ? 'text' : 'number'}" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.por_docena ? textoCantidad(f.cantidad) : f.cantidad)}" min="${f.por_docena ? 0.5 : 1}" step="${f.por_docena ? 0.5 : 1}"${f.por_docena ? ' inputmode="decimal"' : ''}>`}</td>
       <td><input type="text" class="hk-descripcion" data-campo="producto" value="${escaparHtml(f.producto)}" placeholder="Descripción">
         ${f.colores && f.colores.length ? `<select class="hk-color" aria-label="Color de ${escaparHtml(f.nombre_base)}">
           <option value="">Elige el color…</option>
@@ -578,6 +592,21 @@ hkTabla.addEventListener('input', (e) => {
 // El código se busca al salir del campo o con Enter (la pistola lectora da Enter)
 hkTabla.addEventListener('change', (e) => {
   if (e.target.classList.contains('hk-codigo')) buscarCodigoHawaki(Number(e.target.closest('tr').dataset.i));
+  if (e.target.classList.contains('hk-docenas')) {
+    const tr = e.target.closest('tr');
+    const i = Number(tr.dataset.i);
+    if (e.target.value === 'otra') {
+      // Pasa a la casilla, con el cursor listo para escribir
+      hkFilas[i].cantidad_libre = true;
+      pintarFilasHawaki();
+      const campo = document.querySelector(`#hk-items tr[data-i="${i}"] .hk-cantidad`);
+      campo.focus();
+      campo.select();
+    } else {
+      hkFilas[i].cantidad = Number(e.target.value);
+      calcularTotalesHawaki();
+    }
+  }
   if (e.target.classList.contains('hk-color')) {
     const tr = e.target.closest('tr');
     const fila = hkFilas[tr.dataset.i];
