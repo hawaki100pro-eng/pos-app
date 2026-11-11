@@ -437,10 +437,10 @@ function cerrarNotaHawaki() {
 
 function pintarFilasHawaki() {
   document.getElementById('hk-items').innerHTML = hkFilas.map((f, i) => {
-    const subtotal = (Number(f.cantidad) || 0) * (Number(f.precio_unitario) || 0);
+    const subtotal = (leerCantidad(f.cantidad) || 0) * (Number(f.precio_unitario) || 0);
     return `<tr data-i="${i}" class="${f.producto_id ? 'hk-del-inventario' : ''}">
       <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" title="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
-      <td><input type="number" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.cantidad)}" min="${f.por_docena ? 0.5 : 1}" step="${f.por_docena ? 0.5 : 1}"></td>
+      <td><input type="${f.por_docena ? 'text' : 'number'}" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.por_docena ? textoCantidad(f.cantidad) : f.cantidad)}" min="${f.por_docena ? 0.5 : 1}" step="${f.por_docena ? 0.5 : 1}"${f.por_docena ? ' inputmode="decimal"' : ''}></td>
       <td><input type="text" class="hk-descripcion" data-campo="producto" value="${escaparHtml(f.producto)}" placeholder="Descripción">
         ${f.aviso ? `<small class="hk-aviso">${escaparHtml(f.aviso)}</small>` : ''}</td>
       <td><input type="number" class="hk-precio" data-campo="precio_unitario" value="${escaparHtml(f.precio_unitario)}" min="0" step="0.01" placeholder="0.00"></td>
@@ -455,7 +455,7 @@ function calcularTotalesHawaki() {
   let subtotal = 0;
   let total = 0;
   hkFilas.forEach((f, i) => {
-    const cantidad = Number(f.cantidad) || 0;
+    const cantidad = leerCantidad(f.cantidad) || 0;
     const precio = Number(f.precio_unitario) || 0;
     const lista = f.precio_lista != null ? f.precio_lista : precio;
     subtotal += cantidad * lista;
@@ -535,6 +535,14 @@ hkTabla.addEventListener('input', (e) => {
 // El código se busca al salir del campo o con Enter (la pistola lectora da Enter)
 hkTabla.addEventListener('change', (e) => {
   if (e.target.classList.contains('hk-codigo')) buscarCodigoHawaki(Number(e.target.closest('tr').dataset.i));
+  if (e.target.classList.contains('hk-cantidad')) {
+    const fila = hkFilas[e.target.closest('tr').dataset.i];
+    const n = leerCantidad(fila.cantidad);
+    if (fila.por_docena && Number.isFinite(n)) {
+      fila.cantidad = n;
+      e.target.value = textoCantidad(n);
+    }
+  }
 });
 hkTabla.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.classList.contains('hk-codigo')) {
@@ -618,7 +626,7 @@ function agregarDesdeBuscadorHawaki(p) {
   // Si ya está en la nota, se suma uno a esa fila en vez de repetirla
   const yaEsta = hkFilas.find((f) => f.producto_id === p.id);
   if (yaEsta) {
-    const nueva = (Number(yaEsta.cantidad) || 0) + 1;
+    const nueva = (leerCantidad(yaEsta.cantidad) || 0) + 1;
     if (p.por_docena && nueva > MAX_DOCENAS) {
       hkMensaje(`De ${nombreProducto(p)} se venden hasta ${MAX_DOCENAS} docenas por nota`, true);
       return;
@@ -704,12 +712,12 @@ document.getElementById('hk-guardar').addEventListener('click', async () => {
   const usadas = hkFilas.filter(hkFilaUsada);
   if (!usadas.length) return hkMensaje('Agrega al menos un producto', true);
   for (const f of usadas) {
-    const cantidad = Number(f.cantidad);
+    const cantidad = leerCantidad(f.cantidad);
     const precio = Number(f.precio_unitario);
     if (!f.producto.trim()) return hkMensaje(`Falta la descripción${f.codigo ? ` del código ${f.codigo}` : ''}`, true);
     if (!Number.isFinite(cantidad) || cantidad <= 0) return hkMensaje(`La cantidad de "${f.producto}" debe ser mayor a 0`, true);
     if (f.por_docena && !cantidadValida(cantidad, true)) {
-      return hkMensaje(`"${f.producto}" se vende de media docena (0.5) hasta ${MAX_DOCENAS} docenas`, true);
+      return hkMensaje(`"${f.producto}" se vende de media docena (½) hasta ${MAX_DOCENAS} docenas`, true);
     }
     if (f.precio_unitario === '' || !Number.isFinite(precio) || precio < 0) return hkMensaje(`Falta el precio de "${f.producto}"`, true);
     if (f.stock_max != null && cantidad > f.stock_max) return hkMensaje(`Solo quedan ${f.stock_max} de ${f.producto} en el sistema`, true);
@@ -739,7 +747,7 @@ document.getElementById('hk-guardar').addEventListener('click', async () => {
       banco,
       items: usadas.map((f) => ({
         producto: f.producto.trim(),
-        cantidad: Number(f.cantidad),
+        cantidad: leerCantidad(f.cantidad),
         precio_unitario: Number(f.precio_unitario),
         precio_lista: f.precio_lista != null ? f.precio_lista : Number(f.precio_unitario),
         producto_id: f.producto_id,
@@ -992,6 +1000,25 @@ function nombreVenta(p, nombre = nombreProducto(p)) {
   return p.por_docena ? `${nombre} (docena)` : nombre;
 }
 
+// La cantidad como se dice en el mostrador: media docena es "½" y una y media
+// "1½" (en pantalla y en la nota impresa, ver print.js)
+function textoCantidad(cantidad) {
+  const n = Number(cantidad);
+  if (!Number.isFinite(n) || Number.isInteger(n)) return String(cantidad);
+  const enteras = Math.floor(n);
+  return n - enteras === 0.5 ? `${enteras || ''}½` : String(n);
+}
+
+// Y al revés: lo escrito en la casilla. Vale "½", "1½", "1/2", "1 1/2", "0.5" o "0,5"
+function leerCantidad(texto) {
+  if (typeof texto === 'number') return texto;
+  const t = String(texto ?? '').trim().replace(',', '.').replace(/\s+/g, ' ');
+  if (!t) return NaN;
+  const m = t.match(/^(\d*)\s?(½|1\/2)$/);
+  if (m) return (m[1] ? parseInt(m[1], 10) : 0) + 0.5;
+  return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN;
+}
+
 function cantidadValida(cantidad, porDocena) {
   return porDocena
     ? Number.isInteger(cantidad * 2) && cantidad >= 0.5 && cantidad <= MAX_DOCENAS
@@ -1049,7 +1076,7 @@ function agregarProductoALaVenta(p, { conPitido = false } = {}) {
 
   renderItems();
   if (conPitido) pitido(true);
-  const cuantos = yaEsta ? ` (x${yaEsta.cantidad})` : '';
+  const cuantos = yaEsta ? ` (x${textoCantidad(yaEsta.cantidad)})` : '';
   mensajeVenta(`${nombre} · $${Number(p.precio).toFixed(2)}${cuantos}`, false);
   return true;
 }
@@ -1331,7 +1358,7 @@ function renderItems() {
       <div class="item-controles">
         <div class="paso-cantidad">
           <button type="button" class="paso" data-paso="-1" aria-label="${item.por_docena ? 'Media docena menos' : 'Quitar uno'}" ${item.cantidad <= minimo ? 'disabled' : ''}>−</button>
-          <input type="number" min="${minimo}" step="${paso}" inputmode="${item.por_docena ? 'decimal' : 'numeric'}" value="${item.cantidad}"
+          <input type="${item.por_docena ? 'text' : 'number'}" min="${minimo}" step="${paso}" inputmode="${item.por_docena ? 'decimal' : 'numeric'}" value="${textoCantidad(item.cantidad)}"
                  aria-label="${item.por_docena ? 'Docenas' : 'Cantidad'} de ${item.producto}">
           <button type="button" class="paso" data-paso="1" aria-label="${item.por_docena ? 'Media docena más' : 'Agregar uno'}" ${item.por_docena && item.cantidad >= MAX_DOCENAS ? 'disabled' : ''}>+</button>
         </div>
@@ -1353,11 +1380,11 @@ function renderItems() {
     function fijarCantidad(nueva) {
       if (item.por_docena && nueva > MAX_DOCENAS) {
         mensajeVenta(`De ${item.producto} se venden hasta ${MAX_DOCENAS} docenas por nota.`, true);
-        campoCantidad.value = item.cantidad;
+        campoCantidad.value = textoCantidad(item.cantidad);
         return;
       }
       if (!cantidadValida(nueva, item.por_docena)) {
-        campoCantidad.value = item.cantidad;
+        campoCantidad.value = textoCantidad(item.cantidad);
         return;
       }
       // El tope se avisa aquí y no al confirmar, igual que al escanear. Una
@@ -1381,7 +1408,7 @@ function renderItems() {
     // Se aplica al salir del campo, no en cada tecla: si no, al escribir "12"
     // la línea se recalcularía primero con 1.
     campoCantidad.addEventListener('change', () => fijarCantidad(
-      item.por_docena ? parseFloat(campoCantidad.value) : parseInt(campoCantidad.value, 10)));
+      item.por_docena ? leerCantidad(campoCantidad.value) : parseInt(campoCantidad.value, 10)));
 
     const campoPrecio = row.querySelector('.paso-precio input');
 
@@ -1822,7 +1849,7 @@ function pintarListaCampana() {
     // Con muchas líneas se muestran 3 y se dice cuántas más hay.
     const lineas = v.detalle || [];
     const resumen = lineas.slice(0, 3).map((d) => `<div class="campana-producto">
-        <span>${d.cantidad} × ${escaparHtml(d.producto)}</span>
+        <span>${textoCantidad(d.cantidad)} × ${escaparHtml(d.producto)}</span>
         <span>$${(d.cantidad * d.precio_unitario).toFixed(2)}</span>
       </div>`).join('') + (lineas.length > 3 ? `<div class="campana-producto-mas">y ${lineas.length - 3} producto(s) más</div>` : '');
     return `<div class="campana-item">
@@ -2176,7 +2203,7 @@ async function cargarDashboard() {
 
   data.ventas.forEach((v) => {
     const detalleTexto = v.detalle
-      .map((d) => `${d.producto} x${d.cantidad}`)
+      .map((d) => `${d.producto} x${textoCantidad(d.cantidad)}`)
       .join(', ');
     const tr = document.createElement('tr');
     tr.className = v.anulada ? 'fila-venta venta-anulada' : 'fila-venta';
@@ -2305,7 +2332,7 @@ function renderEditarItems() {
     row.className = 'item-row';
     row.innerHTML = `
       <div class="item-datos">
-        <span class="item-nombre">${item.producto} x${item.cantidad} — $${subtotal.toFixed(2)}</span>
+        <span class="item-nombre">${item.producto} x${textoCantidad(item.cantidad)} — $${subtotal.toFixed(2)}</span>
         ${dcto ? `<span class="item-descuento">antes $${dcto.lista.toFixed(2)} · rebaja $${dcto.dolares.toFixed(2)} (${dcto.porcentaje.toFixed(1)}%)</span>` : ''}
       </div>
       <button data-idx="${idx}" class="quitar-item-btn">Quitar</button>
