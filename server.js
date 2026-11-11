@@ -1253,14 +1253,35 @@ app.get('/api/productos/codigo/:codigo', requireLogin, async (req, res) => {
   // hay códigos de etiqueta que también son solo números (los del catálogo por
   // docena: "1016", "915"), así que primero gana el código de la etiqueta y, si
   // ninguno coincide, se toma como código de barras.
+  // Después de la etiqueta va el código del catálogo tal como se escribe ("1021",
+  // "1002 Y", sin importar espacios): la etiqueta de un código por docena lleva
+  // además su rango ("1021-1823"), pero en el mostrador se dice "la 1021".
   const esId = /^[0-9]{1,9}$/.test(codigo);
+  const sinEspacios = codigo.replace(/\s+/g, '');
   const r = await pool.query(
-    `SELECT * FROM productos WHERE eliminado = 0 AND (UPPER(sku) = $1 OR id = $2)
-     ORDER BY (UPPER(sku) = $1) DESC LIMIT 1`,
-    [codigo, esId ? parseInt(codigo, 10) : -1]
+    `SELECT *, CASE WHEN UPPER(sku) = $1 THEN 0
+                    WHEN controla_stock = 0 AND REPLACE(UPPER(modelo), ' ', '') = $3 THEN 1
+                    ELSE 2 END AS prioridad
+     FROM productos
+     WHERE eliminado = 0
+       AND (UPPER(sku) = $1 OR id = $2 OR (controla_stock = 0 AND REPLACE(UPPER(modelo), ' ', '') = $3))
+     ORDER BY prioridad, activo DESC, id`,
+    [codigo, esId ? parseInt(codigo, 10) : -1, sinEspacios]
   );
 
+  // Un código del catálogo que viene en dos rangos (1017 S en 24-29 y 30-35):
+  // si solo uno está a la venta se toma ese; si no, hay que decir cuál
+  const delCatalogo = r.rows.filter((x) => x.prioridad === 1);
+  if (r.rows[0] && r.rows[0].prioridad === 1 && delCatalogo.length > 1
+      && delCatalogo.filter((x) => x.activo).length !== 1) {
+    const rangos = delCatalogo.map((x) => x.talla || 'sin rango').join(', ');
+    return res.status(409).json({
+      error: `${delCatalogo[0].modelo} viene en varias tallas (${rangos}). Elígelo con el buscador.`,
+    });
+  }
+
   const p = r.rows[0];
+  if (p) delete p.prioridad;
   if (!p) {
     return res.status(404).json({ error: `Ningún producto tiene el código ${codigo}. ¿Es una etiqueta de otra tienda?` });
   }
@@ -1306,13 +1327,15 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
   // Una categoría suelta no tiene talla, ni color, ni stock: es un solo producto
   // con su precio. Por eso esos campos solo se exigen cuando sí lleva control.
   const controlaStock = req.body.controla_stock === false || req.body.controla_stock === 0 ? 0 : 1;
-  const talla = controlaStock ? req.body.talla : '';
+  // Solo una categoría suelta puede venderse por docena (ver db.js)
+  const porDocena = !controlaStock && req.body.por_docena ? 1 : 0;
+  // Una categoría suelta no tiene talla; la que se vende por docena sí lleva su
+  // rango ("24-29"): el mismo código viene en varios rangos con distinto precio
+  const talla = controlaStock ? req.body.talla : (porDocena ? String(req.body.talla ?? '').trim() : '');
   const color = controlaStock ? req.body.color : '';
   const stock = controlaStock ? req.body.stock : 0;
   // Solo una categoría suelta lleva lista de colores; una talla tiene su color
   const colores = controlaStock ? null : limpiarColores(req.body.colores);
-  // Y solo una categoría suelta puede venderse por docena (ver db.js)
-  const porDocena = !controlaStock && req.body.por_docena ? 1 : 0;
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });
@@ -1361,7 +1384,7 @@ app.post('/api/productos', requireLogin, requireAdmin, async (req, res) => {
 app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const { modelo, precio } = req.body;
 
-  const actual = await pool.query('SELECT stock, controla_stock, colores, por_docena FROM productos WHERE id = $1', [req.params.id]);
+  const actual = await pool.query('SELECT stock, controla_stock, colores, por_docena, talla FROM productos WHERE id = $1', [req.params.id]);
   if (actual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
   // Si no viene en el cuerpo se conserva lo que ya tenía: así una edición que no
@@ -1369,17 +1392,20 @@ app.put('/api/productos/:id', requireLogin, requireAdmin, async (req, res) => {
   const controlaStock = req.body.controla_stock == null
     ? actual.rows[0].controla_stock
     : (req.body.controla_stock === false || req.body.controla_stock === 0 ? 0 : 1);
-  const talla = controlaStock ? req.body.talla : '';
+  // La venta por docena: sin dato en el cuerpo, queda como estaba
+  const porDocena = controlaStock
+    ? 0
+    : (req.body.por_docena === undefined ? actual.rows[0].por_docena : (req.body.por_docena ? 1 : 0));
+  // La talla: la del par; en un código por docena, su rango (se conserva si no viene)
+  const talla = controlaStock
+    ? req.body.talla
+    : (porDocena ? String(req.body.talla ?? actual.rows[0].talla ?? '').trim() : '');
   const color = controlaStock ? req.body.color : '';
   const stock = controlaStock ? req.body.stock : 0;
   // Colores de la categoría suelta; si no vienen en el cuerpo se conservan
   const colores = controlaStock
     ? null
     : (req.body.colores === undefined ? actual.rows[0].colores : limpiarColores(req.body.colores));
-  // Lo mismo con la venta por docena: sin dato en el cuerpo, queda como estaba
-  const porDocena = controlaStock
-    ? 0
-    : (req.body.por_docena === undefined ? actual.rows[0].por_docena : (req.body.por_docena ? 1 : 0));
 
   if (!modelo?.trim() || precio == null || precio < 0) {
     return res.status(400).json({ error: 'El nombre y el precio son obligatorios' });

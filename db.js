@@ -351,17 +351,22 @@ async function borrarCierresAnteriores() {
 
 // Carga, UNA sola vez (queda marcado en configuracion), los códigos del
 // catálogo por docena que pasó el dueño: catalogo-docena.json, sacado de su
-// documento "Código, colores y precios". Cada uno entra como categoría suelta
-// por docena, con sus colores y el precio de la docena; los que el documento
-// marca AGOTADO entran desactivados (se activan con un botón al reponer).
-// Si ya hay una categoría suelta con el mismo nombre, se actualiza en vez de
+// "Catálogo Hawaki 2025-2026". Cada código, con su rango de tallas, entra como
+// categoría suelta por docena, con sus colores y el precio de la docena; los
+// que el catálogo marca AGOTADO entran desactivados (se activan con un botón al
+// reponer). Si ya hay uno con el mismo código y rango, se actualiza en vez de
 // repetirse. Va en dos sentencias dentro de una transacción (no una por código:
 // la base está en internet y el arranque no puede alargarse). Si falla, el POS
 // arranca igual y lo reintenta en el siguiente arranque.
 async function cargarCatalogoDocena() {
   let cliente;
   try {
-    const lista = JSON.stringify(require('./catalogo-docena.json'));
+    // Una categoría suelta que ya se había creado a mano sin rango ("1002 Y") se
+    // toma como ese código si el catálogo lo trae en un solo rango
+    const catalogo = require('./catalogo-docena.json');
+    const veces = {};
+    for (const d of catalogo) veces[d.codigo.toLowerCase()] = (veces[d.codigo.toLowerCase()] || 0) + 1;
+    const lista = JSON.stringify(catalogo.map((d) => ({ ...d, unico: veces[d.codigo.toLowerCase()] === 1 })));
     cliente = await pool.connect();
     await cliente.query("SET lock_timeout = '5s'");
     await cliente.query('BEGIN');
@@ -370,18 +375,20 @@ async function cargarCatalogoDocena() {
       await cliente.query('ROLLBACK');
       return;
     }
-    const filas = `json_to_recordset($1::json) AS d(codigo text, colores text, precio real, activo int)`;
+    // Un mismo código puede venir en varios rangos de tallas, cada uno con su
+    // precio: lo que identifica a cada producto es el código más su rango
+    const filas = `json_to_recordset($1::json) AS d(codigo text, tallas text, colores text, precio real, activo int, unico boolean)`;
+    const mismo = `LOWER(p.modelo) = LOWER(d.codigo) AND p.controla_stock = 0 AND p.eliminado = 0
+      AND (p.talla = d.tallas OR (d.unico AND p.talla = ''))`;
     const actualizados = await cliente.query(`
-      UPDATE productos p SET colores = d.colores, precio = d.precio, por_docena = 1, activo = d.activo
+      UPDATE productos p SET talla = d.tallas, colores = NULLIF(d.colores, ''), precio = d.precio, por_docena = 1, activo = d.activo
       FROM ${filas}
-      WHERE LOWER(p.modelo) = LOWER(d.codigo) AND p.controla_stock = 0 AND p.eliminado = 0`, [lista]);
+      WHERE ${mismo}`, [lista]);
     const nuevos = await cliente.query(`
       INSERT INTO productos (modelo, talla, color, precio, stock, controla_stock, colores, por_docena, activo)
-      SELECT d.codigo, '', '', d.precio, 0, 0, d.colores, 1, d.activo
+      SELECT d.codigo, d.tallas, '', d.precio, 0, 0, NULLIF(d.colores, ''), 1, d.activo
       FROM ${filas}
-      WHERE NOT EXISTS (
-        SELECT 1 FROM productos p
-        WHERE LOWER(p.modelo) = LOWER(d.codigo) AND p.controla_stock = 0 AND p.eliminado = 0)`, [lista]);
+      WHERE NOT EXISTS (SELECT 1 FROM productos p WHERE ${mismo})`, [lista]);
     await cliente.query("INSERT INTO configuracion (clave, valor) VALUES ('catalogo_docena_v1', NOW()::text)");
     await cliente.query('COMMIT');
     console.log(`Catálogo por docena: ${nuevos.rowCount} código(s) nuevos, ${actualizados.rowCount} actualizado(s)`);

@@ -1,134 +1,1038 @@
 [
-  {"codigo": "1021", "colores": "P. Rosa, Lila, Negro, Verde", "precio": 39, "activo": 1},
-  {"codigo": "1025 M", "colores": "Menta, Lila, Rosa, Fucsia", "precio": 38, "activo": 1},
-  {"codigo": "856Y2", "colores": "Rosa, Lila, Negro, Fucsia", "precio": 33, "activo": 1},
-  {"codigo": "885 M9", "colores": "Lila, Rosa, Turquesa, Fucsia", "precio": 42, "activo": 0},
-  {"codigo": "885 M7", "colores": "Lila, Rosa, Turquesa, Fucsia", "precio": 42, "activo": 0},
-  {"codigo": "1003", "colores": "Morado, P. Rosa, Fucsia, Rosa, Turquesa", "precio": 42, "activo": 1},
-  {"codigo": "1016", "colores": "Lila, Rosa, Negro, Kaki, Azul eléctrico, Azul oscuro, Beige", "precio": 40, "activo": 1},
-  {"codigo": "1002 Y", "colores": "Fucsia, Lila, Turquesa, Rosa, P. Rosa", "precio": 39, "activo": 1},
-  {"codigo": "916 M", "colores": "Rosa, Lila, Fucsia, Turquesa", "precio": 38, "activo": 1},
-  {"codigo": "1022", "colores": "Rosa, Lila", "precio": 42, "activo": 0},
-  {"codigo": "1022 2", "colores": "Lila, Kaki", "precio": 42, "activo": 0},
-  {"codigo": "1022 6", "colores": "Negro, Plomo, Azul oscuro, Azul eléctrico, Azul", "precio": 39, "activo": 1},
-  {"codigo": "1025", "colores": "Azul oscuro, Negro, Beige, Azul eléctrico", "precio": 38, "activo": 1},
-  {"codigo": "916 H", "colores": "Negro, Rojo, Azul, Azul eléctrico", "precio": 38, "activo": 1},
-  {"codigo": "885C3", "colores": "Azul eléctrico, Negro/Plomo, Rojo/Negro", "precio": 42, "activo": 0},
-  {"codigo": "890 B5", "colores": "Negro, Azul, Azul eléctrico, Plomo, Rojo", "precio": 38, "activo": 1},
-  {"codigo": "1002 B", "colores": "Rojo, Negro, Azul eléctrico, Azul oscuro", "precio": 39, "activo": 1},
-  {"codigo": "1003 B", "colores": "Rojo, Negro, Azul eléctrico, Azul oscuro", "precio": 42, "activo": 1},
-  {"codigo": "856 W6", "colores": "Rojo, Negro, Azul eléctrico, Azul oscuro", "precio": 38, "activo": 1},
-  {"codigo": "1022 1", "colores": "Celeste, Rosa", "precio": 42, "activo": 0},
-  {"codigo": "1030 Y", "colores": "Fucsia, Rosado, Menta, Celeste", "precio": 38, "activo": 1},
-  {"codigo": "1022 3", "colores": "Kaki, Rosa", "precio": 42, "activo": 0},
-  {"codigo": "915 B6", "colores": "Lila, Beige, Menta, Turquesa, Rosa", "precio": 40, "activo": 1},
-  {"codigo": "1003 S", "colores": "Coral, Menta, Lila, Rosa", "precio": 43, "activo": 1},
-  {"codigo": "915 B", "colores": "Lila, Beige, Amarillo, Rosa, Menta, Verde", "precio": 40, "activo": 1},
-  {"codigo": "915 B1", "colores": "Lila, Beige, Menta, Verde, Rosa", "precio": 40, "activo": 1},
-  {"codigo": "919S1", "colores": "Lila, Rosa, Turquesa, Fucsia", "precio": 59, "activo": 0},
-  {"codigo": "912-1", "colores": "Rosa, Lila, Turquesa, P. Rosa, Fucsia, Morado", "precio": 42, "activo": 1},
-  {"codigo": "915 B2", "colores": "Lila, Rosa, Beige, Turquesa", "precio": 40, "activo": 1},
-  {"codigo": "1017 S", "colores": "Lila/Morado, Blanco/Fucsia, Turquesa, Fucsia, Negro, Blanco, Rosa, Lila", "precio": 40, "activo": 1},
-  {"codigo": "1002 S", "colores": "Lila, Rosa, P. Rosa, Fucsia, Turquesa", "precio": 42, "activo": 1},
-  {"codigo": "1010 Y", "colores": "Lila, Rosa, Fucsia, Verde limón, Menta", "precio": 37, "activo": 0},
-  {"codigo": "1010Y1", "colores": "Lila, Rosa, Fucsia, Celeste", "precio": 40, "activo": 0},
-  {"codigo": "1018", "colores": "Blanco, Rosa, Azul, Lila", "precio": 36, "activo": 1},
-  {"codigo": "890 S", "colores": "Rosa, Fucsia, Lila, Menta", "precio": 40, "activo": 1},
-  {"codigo": "1005", "colores": "Rosa, Lila, Turquesa, Fucsia", "precio": 40, "activo": 1},
-  {"codigo": "915 B3", "colores": "Lila, Fucsia, Rosa, Verde", "precio": 39, "activo": 1},
-  {"codigo": "1002 C", "colores": "Negro, Rojo, Azul eléctrico, Azul oscuro", "precio": 42, "activo": 1},
-  {"codigo": "919-1", "colores": "Azul, Negro, Verde, Plomo", "precio": 58, "activo": 0},
-  {"codigo": "1010B1", "colores": "Negro, Verde, Plomo, Azul, Azul eléctrico", "precio": 40, "activo": 0},
-  {"codigo": "856 D7", "colores": "Negro, Azul oscuro, Azul eléctrico, Rojo", "precio": 42, "activo": 1},
-  {"codigo": "912 B", "colores": "Rojo, Verde, Azul oscuro, Azul eléctrico, Negro", "precio": 42, "activo": 1},
-  {"codigo": "915 B5", "colores": "Negro, Azul, Azul oscuro, Blanco", "precio": 40, "activo": 1},
-  {"codigo": "890 C", "colores": "Negro, Azul oscuro, Azul eléctrico, Rojo", "precio": 40, "activo": 1},
-  {"codigo": "885 P2", "colores": "Negro, Negro/Rojo, Plomo, Azul, Azul eléctrico", "precio": 43, "activo": 1},
-  {"codigo": "1017 B", "colores": "Azul oscuro, Azul eléctrico, Negro, Negro/Blanco", "precio": 39, "activo": 1},
-  {"codigo": "1030 B", "colores": "Plomo, Azul eléctrico, Azul oscuro, Negro", "precio": 38, "activo": 1},
-  {"codigo": "1027 S", "colores": "Negro, Café, Lila, Rosa", "precio": 40, "activo": 1},
-  {"codigo": "1030 S", "colores": "Fucsia, Rosa, Lila, Menta", "precio": 40, "activo": 1},
-  {"codigo": "915 D2", "colores": "Turquesa, Rosa, Beige, Blanco, Lila", "precio": 42, "activo": 1},
-  {"codigo": "1023 2", "colores": "Morado, Kaki, Rosa", "precio": 43, "activo": 0},
-  {"codigo": "915 D6", "colores": "Lila, Beige, Menta, Turquesa, Rosa", "precio": 42, "activo": 1},
-  {"codigo": "1023 3", "colores": "Celeste, Rosa", "precio": 43, "activo": 0},
-  {"codigo": "1023 1", "colores": "Lila, Rosa", "precio": 43, "activo": 0},
-  {"codigo": "1023", "colores": "Lila, Rosa", "precio": 43, "activo": 0},
-  {"codigo": "1002", "colores": "Lila, Rosa, Fucsia, P. Rosa", "precio": 43, "activo": 1},
-  {"codigo": "856 K", "colores": "Fucsia, Negro, Rosa, Lila", "precio": 35, "activo": 1},
-  {"codigo": "915 D", "colores": "Amarillo, Verde, Lila, Rosa, Beige", "precio": 42, "activo": 1},
-  {"codigo": "915 D1", "colores": "Rosa, Lila, Turquesa, Beige, Verde", "precio": 42, "activo": 1},
-  {"codigo": "1007", "colores": "Negro, Fucsia, Rosa, Turquesa, Verde, Lila", "precio": 40, "activo": 0},
-  {"codigo": "1018S", "colores": "Azul, Rosa, Blanco, Lila", "precio": 38, "activo": 1},
-  {"codigo": "919 H1", "colores": "Azul, Plomo, Azul eléctrico, Negro, Azul marino", "precio": 59, "activo": 0},
-  {"codigo": "1027 C", "colores": "Negro, Kaki, Azul oscuro, Azul eléctrico", "precio": 40, "activo": 1},
-  {"codigo": "912 C", "colores": "Negro, Azul eléctrico, Azul marino, Rojo", "precio": 42, "activo": 1},
-  {"codigo": "1017 C", "colores": "Negro, Negro/Blanco, Azul eléctrico, Azul marino", "precio": 40, "activo": 1},
-  {"codigo": "915 D5", "colores": "Negro, Beige, Azul, Azul oscuro", "precio": 42, "activo": 1},
-  {"codigo": "1023 6", "colores": "Negro, Plomo, Azul oscuro, Azul eléctrico", "precio": 43, "activo": 1},
-  {"codigo": "1010C1", "colores": "Negro, Verde, Plomo, Azul marino, Azul eléctrico", "precio": 42, "activo": 0},
-  {"codigo": "1010C", "colores": "Negro, Azul, Azul eléctrico, Plomo", "precio": 38, "activo": 0},
-  {"codigo": "1030 C", "colores": "Plomo, Negro, Azul eléctrico, Azul oscuro", "precio": 40, "activo": 1},
-  {"codigo": "1028 M", "colores": "Rosa, Fucsia, Lila, Negro", "precio": 47, "activo": 1},
-  {"codigo": "V 132", "colores": "Negro, Beige, Rosa, Kaki", "precio": 48, "activo": 1},
-  {"codigo": "E 136", "colores": "Negro, Beige, Kaki", "precio": 46, "activo": 1},
-  {"codigo": "E 888", "colores": "Negro, Beige, Rosa, Rosa/Lila", "precio": 48, "activo": 0},
-  {"codigo": "V 131 M", "colores": "Fucsia, Negro, Rosa, Lila, Celeste", "precio": 46, "activo": 1},
-  {"codigo": "V 139", "colores": "Negro, Beige, Rosa, Lila, Blanco", "precio": 47, "activo": 1},
-  {"codigo": "1027 M", "colores": "Lila, Rosa, Café, Negro", "precio": 42, "activo": 1},
-  {"codigo": "V 138", "colores": "Negro, Beige, Rosa, Lila", "precio": 46, "activo": 1},
-  {"codigo": "V 137", "colores": "Café oscuro, Café claro, Beige oscuro, Beige claro", "precio": 40, "activo": 1},
-  {"codigo": "V 137 M", "colores": "Negro, Rosa, Beige, Celeste", "precio": 40, "activo": 1},
-  {"codigo": "915 M9", "colores": "Blanco, Fucsia, P. Rosa, Beige, Rosa", "precio": 46, "activo": 1},
-  {"codigo": "1019", "colores": "Negro, Beige, Rosa, Rosa/Lila, Plomo, Azul", "precio": 50, "activo": 1},
-  {"codigo": "852 M", "colores": "Negro, Blanco", "precio": 38, "activo": 1},
-  {"codigo": "612 M1", "colores": "Fucsia, Rosa, Menta, Lila, Negro/Blanco", "precio": 46, "activo": 1},
-  {"codigo": "1002 M", "colores": "Turquesa, Lila, Negro, P. Rosa, Rosa", "precio": 45, "activo": 1},
-  {"codigo": "V 129", "colores": "Negro, P. Rosa, Lila, Beige", "precio": 45, "activo": 1},
-  {"codigo": "851 M", "colores": "Blanco, Negro", "precio": 40, "activo": 1},
-  {"codigo": "V 127", "colores": "Beige, P. Rosa, Negro", "precio": 32, "activo": 1},
-  {"codigo": "V 130", "colores": "Rosa, Beige, Lila, Negro", "precio": 42, "activo": 0},
-  {"codigo": "1008", "colores": "Rosa, Menta, Lila, Negro", "precio": 45, "activo": 0},
-  {"codigo": "918 M1", "colores": "Negro, P. Rosa, Beige, Plomo", "precio": 69, "activo": 0},
-  {"codigo": "V 128", "colores": "Beige, Verde, Lila, Negro", "precio": 42, "activo": 0},
-  {"codigo": "V 126", "colores": "P. Rosa, Verde, Negro, Lila", "precio": 46, "activo": 0},
-  {"codigo": "1013", "colores": "Beige, Lila, Negro, Rosa, P. Rosa", "precio": 45, "activo": 1},
-  {"codigo": "915", "colores": "Negro, Beige, Verde, Kaki", "precio": 40, "activo": 1},
-  {"codigo": "890 M3", "colores": "Lila, Morado, Negro, Beige", "precio": 42, "activo": 0},
-  {"codigo": "915 M6", "colores": "Turquesa, Rosa, Negro, Blanco, Lila", "precio": 46, "activo": 1},
-  {"codigo": "915 M2", "colores": "Beige, Lila, Turquesa, Rosa, Verde", "precio": 46, "activo": 1},
-  {"codigo": "915 M3", "colores": "Amarillo, Rosa, Lila, Beige, Verde", "precio": 46, "activo": 1},
-  {"codigo": "612 M", "colores": "Negro, P. Rosa, Rosa, Lila", "precio": 40, "activo": 0},
-  {"codigo": "912 M", "colores": "Negro, Fucsia, P. Rosa, Turquesa, Rosa, Verde", "precio": 43, "activo": 0},
-  {"codigo": "915 M7", "colores": "Negro, Lila, Blanco, Rosa", "precio": 46, "activo": 0},
-  {"codigo": "915 M1", "colores": "Café, Rosa, Verde, Neón, Lila", "precio": 46, "activo": 0},
-  {"codigo": "1015 M", "colores": "Negro, P. Rosa, Beige", "precio": 40, "activo": 0},
-  {"codigo": "612 H1", "colores": "Plomo, Blanco, Negro, Azul, Negro/Blanco", "precio": 46, "activo": 0},
-  {"codigo": "1028", "colores": "Verde, Azul, Negro", "precio": 48, "activo": 1},
-  {"codigo": "1012", "colores": "Verde, Blanco, Azul, Plomo, Negro", "precio": 43, "activo": 0},
-  {"codigo": "915 C2", "colores": "Negro, Plomo, Azul", "precio": 46, "activo": 1},
-  {"codigo": "915 C3", "colores": "Negro, Plomo, Azul", "precio": 46, "activo": 1},
-  {"codigo": "905", "colores": "Verde, Plomo, Azul, Negro", "precio": 46, "activo": 0},
-  {"codigo": "890 H", "colores": "Azul, Plomo, Negro", "precio": 46, "activo": 1},
-  {"codigo": "131 H", "colores": "Beige, Azul, Negro, Plomo", "precio": 46, "activo": 1},
-  {"codigo": "1027 H", "colores": "Kaki, Negro, Plomo, Azul", "precio": 42, "activo": 1},
-  {"codigo": "1028 H", "colores": "Plomo, Azul, Kaki, Negro", "precio": 48, "activo": 1},
-  {"codigo": "915 H6", "colores": "Plomo, Negro, Blanco, Azul", "precio": 48, "activo": 1},
-  {"codigo": "856 N8", "colores": "Plomo, Negro, Blanco, Azul", "precio": 49, "activo": 1},
-  {"codigo": "915 H2", "colores": "Plomo, Negro, Blanco, Azul, Beige", "precio": 48, "activo": 1},
-  {"codigo": "V 1032", "colores": "Negro todo, Negro/Blanco, Blanco/Negro, Beige, Azul", "precio": 45, "activo": 1},
-  {"codigo": "V 133", "colores": "Kaki, Negro, Plomo, Azul", "precio": 40, "activo": 1},
-  {"codigo": "610", "colores": "Negro, Plomo, Azul, Verde", "precio": 46, "activo": 1},
-  {"codigo": "915 H1", "colores": "Plomo, Negro, Blanco, Azul", "precio": 48, "activo": 1},
-  {"codigo": "1020", "colores": "Plomo, Negro, Blanco, Azul, Beige", "precio": 53, "activo": 1},
-  {"codigo": "915 H", "colores": "Negro, Kaki, Beige, Verde", "precio": 46, "activo": 1},
-  {"codigo": "852 H", "colores": "Negro, Blanco", "precio": 39, "activo": 1},
-  {"codigo": "915 H9", "colores": "Negro, Verde, Kaki, Beige", "precio": 48, "activo": 1},
-  {"codigo": "1006", "colores": "Plomo, Negro, Verde, Azul", "precio": 46, "activo": 1},
-  {"codigo": "612 A1", "colores": "Plomo, Negro/Blanco, Negro, Blanco, Azul", "precio": 48, "activo": 0},
-  {"codigo": "915 H8", "colores": "Beige, Amarillo, Verde", "precio": 48, "activo": 1},
-  {"codigo": "851 H", "colores": "Blanco, Negro", "precio": 40, "activo": 1},
-  {"codigo": "872", "colores": "Negro, Azul, Plomo", "precio": 48, "activo": 1},
-  {"codigo": "V 131", "colores": "Plomo, Beige, Azul, Negro", "precio": 48, "activo": 1},
-  {"codigo": "1033", "colores": "Plomo, Azul, Negro, Kaki, Beige", "precio": 43, "activo": 1}
+ {
+  "codigo": "1021",
+  "tallas": "18-23",
+  "colores": "P. Rosa, Lila, Negro, Verde",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1036",
+  "tallas": "18-23",
+  "colores": "P. Rosa, Lila, Salmón, Verde",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "1027 Y",
+  "tallas": "18-23",
+  "colores": "Rosa, Lila, Salmón, Menta",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1025 M",
+  "tallas": "18-23",
+  "colores": "Menta, Lila, Rosa, Fucsia",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "856Y2",
+  "tallas": "18-24",
+  "colores": "Rosa, Lila, Negro, Fucsia",
+  "precio": 33,
+  "activo": 1
+ },
+ {
+  "codigo": "885 M9",
+  "tallas": "18-24",
+  "colores": "Lila, Rosa, Turquesa, Fucsia",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "885 M7",
+  "tallas": "18-23",
+  "colores": "Lila, Rosa, Turquesa, Fucsia",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "1003",
+  "tallas": "18-24",
+  "colores": "Morado, P. Rosa, Fucsia, Rosa, Turquesa",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1016",
+  "tallas": "18-23",
+  "colores": "Lila, Rosa, Negro, Kaki, Azul eléctrico, Azul oscuro, Beige",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1002 Y",
+  "tallas": "18-24",
+  "colores": "Fucsia, Lila, Turquesa, Rosa, P. Rosa",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "916 M",
+  "tallas": "18-24",
+  "colores": "Rosa, Lila, Fucsia, Turquesa",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "1022",
+  "tallas": "22-27",
+  "colores": "Rosa, Lila",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "1022 2",
+  "tallas": "22-27",
+  "colores": "Lila, Kaki",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "1022 6",
+  "tallas": "22-27",
+  "colores": "Negro, Plomo, Azul oscuro, Azul eléctrico, Azul",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1027 B",
+  "tallas": "18-43",
+  "colores": "Negro, Beige, Rojo, Azul, Verde",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1025",
+  "tallas": "18-23",
+  "colores": "Azul oscuro, Negro, Beige, Azul eléctrico",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "916 H",
+  "tallas": "18-23",
+  "colores": "Negro, Rojo, Azul, Azul eléctrico",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "885C3",
+  "tallas": "18-23",
+  "colores": "Azul eléctrico, Negro/Plomo, Rojo/Negro",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "890 B5",
+  "tallas": "22-27",
+  "colores": "Negro, Azul, Azul eléctrico, Plomo, Rojo",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "1002 B",
+  "tallas": "18-23",
+  "colores": "Rojo, Negro, Azul eléctrico, Azul oscuro",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1003 B",
+  "tallas": "18-23",
+  "colores": "Rojo, Negro, Azul eléctrico, Azul oscuro",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "856 W6",
+  "tallas": "18-23",
+  "colores": "Rojo, Negro, Azul eléctrico, Azul oscuro",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "1022 1",
+  "tallas": "22-27",
+  "colores": "Celeste, Rosa",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "V 150S",
+  "tallas": "24-29",
+  "colores": "Rosa, Fucsia, Lila, Negro, Menta",
+  "precio": 45,
+  "activo": 1
+ },
+ {
+  "codigo": "1030 Y",
+  "tallas": "24-29",
+  "colores": "Fucsia, Rosado, Menta, Lila",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "1022 3",
+  "tallas": "22-27",
+  "colores": "Kaki, Rosa",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "915 B6",
+  "tallas": "24-29",
+  "colores": "Lila, Beige, Menta, Turquesa, Rosa",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1003 S",
+  "tallas": "24-29",
+  "colores": "Coral, Menta, Lila, Rosa",
+  "precio": 43,
+  "activo": 1
+ },
+ {
+  "codigo": "915 B",
+  "tallas": "24-29",
+  "colores": "Lila, Beige, Amarillo, Rosa, Menta, Verde",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "915 B1",
+  "tallas": "24-29",
+  "colores": "Lila, Beige, Menta, Verde, Rosa",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "919S1",
+  "tallas": "24-29",
+  "colores": "Lila, Rosa, Turquesa, Fucsia",
+  "precio": 58,
+  "activo": 0
+ },
+ {
+  "codigo": "912-1",
+  "tallas": "24-29",
+  "colores": "Rosa, Lila, Turquesa, P. Rosa, Fucsia, Morado",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "915 B2",
+  "tallas": "24-29",
+  "colores": "Lila, Rosa, Beige, Turquesa",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1017 S",
+  "tallas": "24-29",
+  "colores": "Lila/Morado, Blanco/Fucsia, Turquesa, Fucsia",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1002 S",
+  "tallas": "24-29",
+  "colores": "Lila, Rosa, P. Rosa, Fucsia, Turquesa",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1010 Y",
+  "tallas": "24-29",
+  "colores": "Lila, Rosa, Fucsia, Verde limón, Menta",
+  "precio": 37,
+  "activo": 0
+ },
+ {
+  "codigo": "1010Y1",
+  "tallas": "24-29",
+  "colores": "Lila, Rosa, Fucsia, Celeste",
+  "precio": 40,
+  "activo": 0
+ },
+ {
+  "codigo": "1018",
+  "tallas": "24-29",
+  "colores": "Blanco, Rosa, Azul, Lila",
+  "precio": 36,
+  "activo": 1
+ },
+ {
+  "codigo": "890 S",
+  "tallas": "24-29",
+  "colores": "Rosa, Fucsia, Lila, Menta",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1005",
+  "tallas": "24-29",
+  "colores": "Rosa, Lila, Turquesa, Fucsia",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "915 B3",
+  "tallas": "24-29",
+  "colores": "Lila, Fucsia, Rosa, Verde",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1002 C",
+  "tallas": "24-29",
+  "colores": "Negro, Rojo, Azul eléctrico, Azul oscuro",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1027 D",
+  "tallas": "24-29",
+  "colores": "Negro, Azul, Verde, Beige, Rojo",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "919-1",
+  "tallas": "24-29",
+  "colores": "Azul, Negro, Verde, Plomo",
+  "precio": 58,
+  "activo": 0
+ },
+ {
+  "codigo": "1010B1",
+  "tallas": "24-29",
+  "colores": "Negro, Verde, Plomo, Azul, Azul eléctrico",
+  "precio": 40,
+  "activo": 0
+ },
+ {
+  "codigo": "856 D7",
+  "tallas": "24-33",
+  "colores": "Negro, Azul oscuro, Azul eléctrico, Rojo",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "912 B",
+  "tallas": "22-27",
+  "colores": "Rojo, Verde, Azul oscuro, Azul eléctrico, Negro",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "915 B5",
+  "tallas": "24-29",
+  "colores": "Negro, Azul, Azul oscuro, Blanco",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "890 C",
+  "tallas": "28-33",
+  "colores": "Negro, Azul oscuro, Azul eléctrico, Rojo",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "885 P2",
+  "tallas": "24-29",
+  "colores": "Negro, Negro/Rojo, Plomo, Azul, Azul eléctrico",
+  "precio": 43,
+  "activo": 1
+ },
+ {
+  "codigo": "1017 B",
+  "tallas": "24-29",
+  "colores": "Azul oscuro, Azul eléctrico, Negro, Negro/Blanco",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "1030 B",
+  "tallas": "24-29",
+  "colores": "Plomo, Azul eléctrico, Azul oscuro, Negro",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "919S1",
+  "tallas": "30-35",
+  "colores": "Lila, Rosa, Turquesa, Fucsia",
+  "precio": 59,
+  "activo": 0
+ },
+ {
+  "codigo": "919M1",
+  "tallas": "30-35",
+  "colores": "Café, Lila, Rosa",
+  "precio": 59,
+  "activo": 1
+ },
+ {
+  "codigo": "1027 S",
+  "tallas": "30-35",
+  "colores": "Negro, Café, Lila, Rosa",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1030 S",
+  "tallas": "30-35",
+  "colores": "Fucsia, Rosa, Lila, Menta",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1017 S",
+  "tallas": "30-35",
+  "colores": "Negro, Blanco, Rosa, Lila",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "915 D2",
+  "tallas": "30-35",
+  "colores": "Turquesa, Rosa, Beige, Blanco, Lila",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1023 2",
+  "tallas": "28-33",
+  "colores": "Morado, Kaki, Rosa",
+  "precio": 43,
+  "activo": 0
+ },
+ {
+  "codigo": "915 D6",
+  "tallas": "30-35",
+  "colores": "Lila, Beige, Menta, Turquesa, Rosa",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1023 3",
+  "tallas": "28-33",
+  "colores": "",
+  "precio": 43,
+  "activo": 0
+ },
+ {
+  "codigo": "1023 1",
+  "tallas": "28-33",
+  "colores": "",
+  "precio": 43,
+  "activo": 0
+ },
+ {
+  "codigo": "1023",
+  "tallas": "28-33",
+  "colores": "Lila, Rosa",
+  "precio": 43,
+  "activo": 0
+ },
+ {
+  "codigo": "1002",
+  "tallas": "30-35",
+  "colores": "Lila, Rosa, Fucsia, P. Rosa",
+  "precio": 43,
+  "activo": 1
+ },
+ {
+  "codigo": "856 K",
+  "tallas": "24-33",
+  "colores": "Fucsia, Negro, Rosa, Lila",
+  "precio": 35,
+  "activo": 1
+ },
+ {
+  "codigo": "915 D",
+  "tallas": "30-35",
+  "colores": "Amarillo, Verde, Lila, Rosa, Beige",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "915 D1",
+  "tallas": "30-35",
+  "colores": "Rosa, Lila, Turquesa, Beige, Verde",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1007",
+  "tallas": "30-35",
+  "colores": "Negro, Fucsia, Rosa, Turquesa, Verde, Lila",
+  "precio": 40,
+  "activo": 0
+ },
+ {
+  "codigo": "1018S",
+  "tallas": "28-33",
+  "colores": "Azul, Rosa, Blanco, Lila",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "1010 S",
+  "tallas": "30-35",
+  "colores": "Lila, Rosa, Amarillo, Azul",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "919 H1",
+  "tallas": "30-35",
+  "colores": "Azul, Plomo, Azul eléctrico, Negro, Azul marino",
+  "precio": 59,
+  "activo": 0
+ },
+ {
+  "codigo": "1027 C",
+  "tallas": "30-34",
+  "colores": "Negro, Kaki, Azul oscuro, Azul eléctrico",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "912 C",
+  "tallas": "28-33",
+  "colores": "Negro, Azul eléctrico, Azul marino, Rojo",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1017 C",
+  "tallas": "30-35",
+  "colores": "Negro, Negro/Blanco, Azul eléctrico, Azul marino",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "915 D5",
+  "tallas": "30-35",
+  "colores": "Negro, Beige, Azul, Azul oscuro",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1023 6",
+  "tallas": "28-33",
+  "colores": "Negro, Plomo, Azul oscuro, Azul eléctrico",
+  "precio": 43,
+  "activo": 1
+ },
+ {
+  "codigo": "1010C1",
+  "tallas": "30-35",
+  "colores": "Negro, Verde, Plomo, Azul marino, Azul eléctrico",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "1010C",
+  "tallas": "30-35",
+  "colores": "Negro, Azul, Azul eléctrico, Plomo",
+  "precio": 38,
+  "activo": 0
+ },
+ {
+  "codigo": "1030 C",
+  "tallas": "30-35",
+  "colores": "Plomo, Negro, Azul eléctrico, Azul oscuro",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1031",
+  "tallas": "35-40",
+  "colores": "P. Rosa, Negro, Beige, Café",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "1028 M",
+  "tallas": "35-40",
+  "colores": "Rosa, Fucsia, Lila, Negro",
+  "precio": 47,
+  "activo": 1
+ },
+ {
+  "codigo": "V 132",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Rosa, Kaki",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "E 136",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Kaki",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "E 888",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Rosa, Rosa/Lila",
+  "precio": 48,
+  "activo": 0
+ },
+ {
+  "codigo": "V 131 M",
+  "tallas": "35-40",
+  "colores": "Fucsia, Negro, Rosa, Lila, Celeste",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "V 139",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Rosa, Lila, Blanco",
+  "precio": 47,
+  "activo": 1
+ },
+ {
+  "codigo": "1027 M",
+  "tallas": "35-40",
+  "colores": "Lila, Rosa, Café, Negro",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "V 138",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Rosa, Lila",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "V 137",
+  "tallas": "35-40",
+  "colores": "Café oscuro, Café claro, Beige oscuro, Beige claro",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "V 137 M",
+  "tallas": "35-40",
+  "colores": "Negro, Rosa, Beige, Celeste",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "915 M9",
+  "tallas": "35-40",
+  "colores": "Blanco, Fucsia, P. Rosa, Beige, Rosa",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "1019",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Rosa, Rosa/Lila, Plomo, Azul",
+  "precio": 50,
+  "activo": 1
+ },
+ {
+  "codigo": "852 M",
+  "tallas": "35-40",
+  "colores": "Negro, Blanco",
+  "precio": 38,
+  "activo": 1
+ },
+ {
+  "codigo": "612 M1",
+  "tallas": "35-40",
+  "colores": "Fucsia, Rosa, Menta, Lila, Negro/Blanco",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "1002 M",
+  "tallas": "35-40",
+  "colores": "Turquesa, Lila, Negro, P. Rosa, Rosa",
+  "precio": 45,
+  "activo": 1
+ },
+ {
+  "codigo": "V 129",
+  "tallas": "35-40",
+  "colores": "Negro, P. Rosa, Lila, Beige",
+  "precio": 45,
+  "activo": 1
+ },
+ {
+  "codigo": "851 M",
+  "tallas": "35-40",
+  "colores": "Blanco, Negro",
+  "precio": 45,
+  "activo": 1
+ },
+ {
+  "codigo": "V 127",
+  "tallas": "35-40",
+  "colores": "Beige, P. Rosa, Negro",
+  "precio": 32,
+  "activo": 1
+ },
+ {
+  "codigo": "V 130",
+  "tallas": "35-40",
+  "colores": "Rosa, Beige, Lila, Negro",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "1008",
+  "tallas": "35-40",
+  "colores": "Rosa, Menta, Lila, Negro",
+  "precio": 45,
+  "activo": 0
+ },
+ {
+  "codigo": "918 M1",
+  "tallas": "35-40",
+  "colores": "Negro, P. Rosa, Beige, Plomo",
+  "precio": 69,
+  "activo": 0
+ },
+ {
+  "codigo": "V 128",
+  "tallas": "35-40",
+  "colores": "Beige, Verde, Lila, Negro",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "V 126",
+  "tallas": "35-40",
+  "colores": "P. Rosa, Verde, Negro, Lila",
+  "precio": 46,
+  "activo": 0
+ },
+ {
+  "codigo": "1013",
+  "tallas": "35-40",
+  "colores": "Beige, Lila, Negro, Rosa, P. Rosa",
+  "precio": 45,
+  "activo": 1
+ },
+ {
+  "codigo": "915",
+  "tallas": "35-40",
+  "colores": "Negro, Beige, Verde, Kaki",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "890 M3",
+  "tallas": "35-40",
+  "colores": "Lila, Morado, Negro, Beige",
+  "precio": 42,
+  "activo": 0
+ },
+ {
+  "codigo": "915 M6",
+  "tallas": "35-40",
+  "colores": "Turquesa, Rosa, Negro, Blanco, Lila",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "915 M2",
+  "tallas": "35-40",
+  "colores": "Beige, Lila, Turquesa, Rosa, Verde",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "915 M3",
+  "tallas": "35-40",
+  "colores": "Amarillo, Rosa, Lila, Beige, Verde",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "612 M",
+  "tallas": "35-40",
+  "colores": "Negro, P. Rosa, Rosa, Lila",
+  "precio": 40,
+  "activo": 0
+ },
+ {
+  "codigo": "912 M",
+  "tallas": "35-40",
+  "colores": "Negro/Fucsia, P. Rosa, Turquesa, Rosa, Verde",
+  "precio": 43,
+  "activo": 0
+ },
+ {
+  "codigo": "915 M7",
+  "tallas": "35-40",
+  "colores": "Negro, Lila, Blanco, Rosa",
+  "precio": 46,
+  "activo": 0
+ },
+ {
+  "codigo": "915 M1",
+  "tallas": "35-40",
+  "colores": "Café, Rosa, Verde, Neón, Lila",
+  "precio": 46,
+  "activo": 0
+ },
+ {
+  "codigo": "1015 M",
+  "tallas": "35-40",
+  "colores": "Negro, P. Rosa, Beige",
+  "precio": 40,
+  "activo": 0
+ },
+ {
+  "codigo": "612 H1",
+  "tallas": "35-40",
+  "colores": "Plomo, Blanco, Negro, Azul, Negro/Blanco",
+  "precio": 46,
+  "activo": 0
+ },
+ {
+  "codigo": "1028",
+  "tallas": "35-40",
+  "colores": "Verde, Azul, Negro",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "E 156",
+  "tallas": "35-40",
+  "colores": "Azul, Negro, Plomo, Kaki",
+  "precio": 41,
+  "activo": 1
+ },
+ {
+  "codigo": "1012",
+  "tallas": "35-39",
+  "colores": "Verde, Blanco, Azul, Plomo, Negro",
+  "precio": 43,
+  "activo": 0
+ },
+ {
+  "codigo": "915 C2",
+  "tallas": "35-40",
+  "colores": "Negro, Plomo, Azul",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "915 C3",
+  "tallas": "35-40",
+  "colores": "Negro, Plomo, Azul",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "905",
+  "tallas": "35-40",
+  "colores": "Verde, Plomo, Azul, Negro",
+  "precio": 46,
+  "activo": 0
+ },
+ {
+  "codigo": "890 H",
+  "tallas": "35-40",
+  "colores": "Azul, Plomo, Negro",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "131 H",
+  "tallas": "35-40",
+  "colores": "Beige, Azul, Negro, Plomo",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "1027 H",
+  "tallas": "35-40",
+  "colores": "Kaki, Negro, Plomo, Azul",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1028 H",
+  "tallas": "40-44",
+  "colores": "Plomo, Azul, Kaki, Negro",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "E 156H",
+  "tallas": "40-44",
+  "colores": "Negro, Plomo, Azul, Kaki",
+  "precio": 42,
+  "activo": 1
+ },
+ {
+  "codigo": "1028 H1",
+  "tallas": "40-44",
+  "colores": "Plomo/Azul, Plomo/Negro, Negro/Verde, Plomo/Kaki",
+  "precio": 52,
+  "activo": 1
+ },
+ {
+  "codigo": "1035",
+  "tallas": "39-43",
+  "colores": "Plomo, Azul, Beige, Kaki",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "915 H3",
+  "tallas": "40-44",
+  "colores": "Plomo, Azul, Negro, Beige, Verde",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "915 H6",
+  "tallas": "40-44",
+  "colores": "Plomo, Negro, Blanco, Azul",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "856 N8",
+  "tallas": "40-44",
+  "colores": "Plomo, Negro, Blanco, Azul",
+  "precio": 49,
+  "activo": 1
+ },
+ {
+  "codigo": "915 H2",
+  "tallas": "40-44",
+  "colores": "Plomo, Negro, Blanco, Azul, Beige",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "V 1032",
+  "tallas": "40-44",
+  "colores": "Negro todo, Negro/Blanco, Blanco/Negro, Beige, Azul",
+  "precio": 45,
+  "activo": 1
+ },
+ {
+  "codigo": "V 133",
+  "tallas": "40-44",
+  "colores": "Kaki, Negro, Plomo, Azul",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "610",
+  "tallas": "40-44",
+  "colores": "Negro, Plomo, Azul, Verde",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "915 H1",
+  "tallas": "40-44",
+  "colores": "Plomo, Negro, Blanco, Azul",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "1020",
+  "tallas": "40-44",
+  "colores": "Plomo, Negro, Blanco, Azul",
+  "precio": 53,
+  "activo": 0
+ },
+ {
+  "codigo": "915 H",
+  "tallas": "40-44",
+  "colores": "Negro, Kaki, Beige, Verde",
+  "precio": 46,
+  "activo": 1
+ },
+ {
+  "codigo": "852 H",
+  "tallas": "40-44",
+  "colores": "Negro, Blanco",
+  "precio": 39,
+  "activo": 1
+ },
+ {
+  "codigo": "915 H9",
+  "tallas": "40-44",
+  "colores": "Negro, Verde, Kaki, Beige",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "1006",
+  "tallas": "39-44",
+  "colores": "Plomo, Negro, Verde, Azul",
+  "precio": 46,
+  "activo": 0
+ },
+ {
+  "codigo": "612 A1",
+  "tallas": "39-44",
+  "colores": "Plomo, Negro/Blanco, Negro, Blanco, Azul",
+  "precio": 48,
+  "activo": 0
+ },
+ {
+  "codigo": "915 H8",
+  "tallas": "39-44",
+  "colores": "Beige, Amarillo, Verde",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "851 H",
+  "tallas": "40-44",
+  "colores": "Blanco, Negro",
+  "precio": 40,
+  "activo": 1
+ },
+ {
+  "codigo": "872",
+  "tallas": "39-44",
+  "colores": "Negro, Azul, Plomo",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "V 131",
+  "tallas": "39-44",
+  "colores": "Plomo, Beige, Azul, Negro",
+  "precio": 48,
+  "activo": 1
+ },
+ {
+  "codigo": "1020",
+  "tallas": "39-44",
+  "colores": "Plomo, Azul, Negro, Beige",
+  "precio": 52,
+  "activo": 0
+ },
+ {
+  "codigo": "1033",
+  "tallas": "39-44",
+  "colores": "Plomo, Azul, Negro, Kaki, Beige",
+  "precio": 43,
+  "activo": 1
+ }
 ]

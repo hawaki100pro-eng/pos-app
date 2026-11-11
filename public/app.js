@@ -3125,7 +3125,7 @@ const MUESTRAS_COLOR = {
   dorado: '#d4a017', plateado: '#c0c4cc',
   kaki: '#b5a36a', plomo: '#8a8f98', rosado: '#f4a6c1', 'azul electrico': '#1a3cff', 'azul oscuro': '#16307a',
   'beige claro': '#f1e6cf', 'beige oscuro': '#c9b089', 'cafe claro': '#a9744a', 'cafe oscuro': '#4e2f1b',
-  'verde limon': '#a6d82b', neon: '#c6ff1a', 'negro todo': '#111111',
+  'verde limon': '#a6d82b', neon: '#c6ff1a', 'negro todo': '#111111', salmon: '#f6a08a',
   multicolor: 'conic-gradient(#e0218a, #f8d33a, #30c5c5, #7e3fb2, #e0218a)',
 };
 const COLORES_SUGERIDOS = ['Negro', 'Blanco', 'Rosa', 'Fucsia', 'Lila', 'Menta', 'Turquesa', 'Celeste', 'Azul', 'Rojo', 'Beige', 'Café'];
@@ -3218,19 +3218,32 @@ pintarColoresNuevos();
 
 function aplicarModoCategoria() {
   const suelta = chkSinStock.checked;
+  const porDocena = suelta && document.getElementById('prod-por-docena').checked;
   // Los colores son solo de la categoría suelta
   document.getElementById('colores-fila').classList.toggle('hidden', !suelta);
-  for (const id of ['prod-talla', 'prod-color', 'prod-stock']) {
+  for (const id of ['prod-color', 'prod-stock']) {
     const campo = document.getElementById(id);
     campo.disabled = suelta;
     if (suelta) campo.value = '';
   }
+  // La talla: la del par; en un código por docena, su rango de tallas ("24-29"),
+  // que no es un número y por eso la casilla pasa a texto
+  const talla = document.getElementById('prod-talla');
+  const tipo = porDocena ? 'text' : 'number';
+  if (talla.type !== tipo) {
+    talla.value = '';
+    talla.type = tipo;
+  }
+  talla.disabled = suelta && !porDocena;
+  if (talla.disabled) talla.value = '';
+  talla.placeholder = porDocena ? 'Tallas (ej: 24-29)' : 'Talla (ej: 36)';
   document.getElementById('prod-modelo').placeholder = suelta
     ? 'Nombre (ej: Zapatilla de dama)'
     : 'Modelo (ej: Sandalia Roma)';
 }
 
 chkSinStock.addEventListener('change', aplicarModoCategoria);
+document.getElementById('prod-por-docena').addEventListener('change', aplicarModoCategoria);
 aplicarModoCategoria();
 
 // La hoja con los códigos de las categorías, para imprimir y dejar en la caja
@@ -3460,7 +3473,7 @@ function crearFilaProducto(p) {
     // talla, precio y stock en una sola línea, por eso cada celda lleva su clase.
     tr.innerHTML = `
       <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
-      <td class="celda-talla">${suelta ? '—' : p.talla}</td>
+      <td class="celda-talla">${suelta ? (p.por_docena && p.talla ? p.talla : '—') : p.talla}</td>
       <td class="celda-color">${suelta ? (p.colores ? pastillasColores(p.colores) : '—') : p.color}</td>
       <td class="celda-precio">$${p.precio.toFixed(2)}${p.por_docena ? '<small class="precio-docena">la docena</small>' : ''}</td>
       <td class="celda-stock${stockClase}">${suelta ? '—' : p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
@@ -3587,6 +3600,10 @@ async function editarProducto(p) {
     const docena = window.prompt('¿Se vende por docena? Escribe sí o no:', p.por_docena ? 'sí' : 'no');
     if (docena === null) return;
     por_docena = /^s/i.test(docena.trim());
+    if (por_docena) {
+      talla = window.prompt('Tallas que trae la docena (ej: 24-29):', p.talla || '');
+      if (talla === null) return;
+    }
   }
 
   const precioStr = window.prompt('Precio:', p.precio);
@@ -3698,6 +3715,7 @@ document.getElementById('crear-producto-btn').addEventListener('click', async ()
   } else {
     document.getElementById('prod-modelo').value = '';
     document.getElementById('prod-precio').value = '';
+    tallaInput.value = '';
     coloresNuevos = [];
     pintarColoresNuevos();
     document.getElementById('prod-modelo').focus();
