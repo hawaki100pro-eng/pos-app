@@ -114,7 +114,7 @@ function contenidoEtiqueta(p, sku, codigoBarras) {
   const datosX = izq + 10 + 1.5;
   const datosAncho = (der - datosX) * PT_MM; // en puntos, para medir el texto
   s += texto(datosX, 3.79, 5.4, 'F1', recortarTexto(p.modelo, datosAncho, 5.4, true));
-  s += texto(datosX, 6.11, 4.8, 'F2', recortarTexto(`T${p.talla} · ${p.color}`, datosAncho, 4.8, false));
+  s += texto(datosX, 6.11, 4.8, 'F2', recortarTexto(p.por_docena ? String(p.talla || '').replace(/\s*-\s*/g, ' - ') : `T${p.talla} · ${p.color}`, datosAncho, 4.8, false));
   s += texto(datosX, 8.99, 7, 'F1', `$${Number(p.precio).toFixed(2)}`);
 
   // --- Código de barras, a todo lo ancho ---

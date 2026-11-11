@@ -1007,9 +1007,16 @@ function mensajeVenta(texto, esError) {
 // y color ("Cabuya Alta T38 Yute"); una categoría suelta no tiene ninguno de los
 // dos y se queda solo con su nombre ("Zapatilla de dama").
 // El servidor tiene la misma función: si se cambia una, cambiar la otra.
+// "18-24" → "18 - 24", como se escribe en el catálogo
+function rangoTallas(talla) {
+  return String(talla || '').trim().replace(/\s*-\s*/g, ' - ');
+}
+
 function nombreProducto(p) {
   const talla = String(p.talla || '').trim();
   const color = String(p.color || '').trim();
+  // Un código por docena lleva su rango sin la T y con espacios: "1002 Y 18 - 24"
+  if (p.por_docena) return [p.modelo, rangoTallas(talla), color].filter(Boolean).join(' ');
   return [p.modelo, talla && `T${talla}`, color].filter(Boolean).join(' ');
 }
 
@@ -3358,7 +3365,7 @@ btnLimpiarBusqueda.addEventListener('click', () => {
 });
 
 async function marcarSinEtiquetar(p) {
-  const nombre = `${p.modelo} T${p.talla} ${p.color}`;
+  const nombre = nombreProducto(p);
   if (!confirm(`¿Marcar "${nombre}" como no etiquetado?\n\nSus ${p.stock} par(es) volverán a aparecer como pendientes de imprimir.`)) return;
   const res = await fetch(`/api/productos/${p.id}/etiquetas-pendientes`, { method: 'POST' });
   if (!res.ok) {
@@ -3572,7 +3579,7 @@ function crearFilaProducto(p) {
     // talla, precio y stock en una sola línea, por eso cada celda lleva su clase.
     tr.innerHTML = `
       <td class="celda-modelo"><span class="celda-modelo-texto">${p.modelo}</span>${notaEliminado}</td>
-      <td class="celda-talla">${suelta ? (p.por_docena && p.talla ? p.talla : '—') : p.talla}</td>
+      <td class="celda-talla">${suelta ? (p.por_docena && p.talla ? rangoTallas(p.talla) : '—') : p.talla}</td>
       <td class="celda-color">${suelta ? (p.colores ? pastillasColores(p.colores) : '—') : p.color}</td>
       <td class="celda-precio">$${p.precio.toFixed(2)}${p.por_docena ? '<small class="precio-docena">la docena</small>' : ''}</td>
       <td class="celda-stock${stockClase}">${suelta ? '—' : p.stock}${stockRojo || stockAzul ? ' ⚠' : ''}</td>
@@ -3653,14 +3660,14 @@ function crearFilaProducto(p) {
 }
 
 async function eliminarProductoDefinitivo(p) {
-  if (!confirm(`¿Eliminar "${p.modelo} T${p.talla} ${p.color}" PERMANENTEMENTE? Se borra de la base de datos y no se puede recuperar.`)) return;
+  if (!confirm(`¿Eliminar "${nombreProducto(p)}" PERMANENTEMENTE? Se borra de la base de datos y no se puede recuperar.`)) return;
   const res = await fetch(`/api/productos/${p.id}`, { method: 'DELETE' });
   if (!res.ok) { const d = await res.json(); alert(d.error); return; }
   cargarProductos();
 }
 
 async function eliminarProducto(p) {
-  const motivo = window.prompt(`¿Por qué eliminas "${p.modelo} T${p.talla} ${p.color}"? (el dueño verá este motivo)`);
+  const motivo = window.prompt(`¿Por qué eliminas "${nombreProducto(p)}"? (el dueño verá este motivo)`);
   if (motivo === null) return;
   if (!motivo.trim()) {
     alert('Debes escribir el motivo');

@@ -1209,9 +1209,16 @@ function limpiarColores(valor) {
   return limpios.length ? limpios.slice(0, MAX_COLORES).join(', ') : null;
 }
 
+// "18-24" → "18 - 24", como se escribe en el catálogo
+function rangoTallas(talla) {
+  return String(talla || '').trim().replace(/\s*-\s*/g, ' - ');
+}
+
 function nombreProducto(p) {
   const talla = String(p.talla || '').trim();
   const color = String(p.color || '').trim();
+  // Un código por docena lleva su rango sin la T y con espacios: "1002 Y 18 - 24"
+  if (p.por_docena) return [p.modelo, rangoTallas(talla), color].filter(Boolean).join(' ');
   return [p.modelo, talla && `T${talla}`, color].filter(Boolean).join(' ');
 }
 
