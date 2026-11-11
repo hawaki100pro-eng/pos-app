@@ -129,6 +129,8 @@
         </button>
       </div>
 
+      <!-- Descuento al total (de 5% a 16%), con − y +. app.js lo arma -->
+      <div id="desc-total-venta" class="hidden"></div>
       <p id="descuento-resumen" class="descuento-resumen"></p>
       <!-- Total en tarjeta grande que toma el color del método de pago (verde
            efectivo, azul transferencia): así el método se nota antes de confirmar
@@ -638,6 +640,7 @@
           <option value="">Elige el banco</option>
         </select>
       </div>
+      <div id="desc-total-hk" class="hk-desc-total"></div>
       <div class="hk-totales">
         <div class="hk-fila-total"><span>SUBTOTAL</span><span id="hk-subtotal">$0.00</span></div>
         <div class="hk-fila-total hidden" id="hk-fila-descuento"><span>DESCUENTO</span><span id="hk-descuento">$0.00</span></div>

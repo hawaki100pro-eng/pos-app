@@ -509,6 +509,32 @@ th, td {
 
 .descuento-resumen:empty { display: none; }
 
+/* Descuento al total: una fila con − 10% + y el botón de quitarlo */
+.desc-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--superficie-2);
+}
+.desc-total-titulo { font-weight: 700; margin-right: auto; }
+.desc-total .paso-cantidad output {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 44px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.desc-total-quitar { min-height: 44px; }
+.desc-total-quitar:disabled { opacity: 0.45; cursor: default; }
+.desc-total.con-descuento { background: var(--acento-suave); }
+
 /* Solo el de Quitar va en rojo: los de − y + de la cantidad son otra cosa y
    antes esta regla los pintaba a ellos también. */
 .item-row .quitar-item-btn {
@@ -2495,6 +2521,8 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 #hk-banco { padding: 6px 8px; border: 1px solid #ccc; background: #fff; color: #111; }
 
 .hk-totales { flex: 1; min-width: 210px; background: #1e293b; color: #fff; font-weight: bold; }
+.hk-desc-total { flex-basis: 100%; padding: 0 12px 10px; }
+.hk-desc-total .desc-total { margin-top: 0; }
 .hk-fila-total { display: flex; justify-content: space-between; gap: 10px; padding: 7px 12px; }
 .hk-fila-total.hk-total { border-top: 1px solid rgba(255, 255, 255, 0.25); font-size: 1.15rem; }
 

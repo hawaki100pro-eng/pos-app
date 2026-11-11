@@ -7,6 +7,12 @@ const logoHawaki = document.getElementById('logo-hawaki');
 let items = []; // { producto, cantidad, precio_unitario }
 let editandoItems = []; // ítems en edición dentro del modal de editar venta
 let editandoVentaId = null;
+let editandoDescuento = 0; // descuento al total de la venta en edición (se conserva)
+// Descuento al total de la nota (ver controlDescuento)
+const DESC_MIN = 5;
+const DESC_MAX = 16;
+let descuentoVenta = 0;
+let descuentoHawaki = 0;
 let rolActual = null;
 let usuarioActual = null;
 
@@ -116,6 +122,7 @@ async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   detenerRefrescoAuto();
   items = [];
+  descuentoVenta = 0;
   // Que el próximo usuario no herede la campana del anterior
   ventasNuevas = [];
   campanaYaCargada = false;
@@ -401,6 +408,7 @@ function hkMensaje(texto, esError) {
 
 function abrirNotaHawaki() {
   hkFilas = Array.from({ length: HK_FILAS_INICIALES }, hkFilaVacia);
+  descuentoHawaki = 0;
   ['nombre', 'direccion', 'ruc', 'telefono'].forEach((c) => {
     document.getElementById(`hk-cliente-${c}`).value = '';
   });
@@ -463,11 +471,16 @@ function calcularTotalesHawaki() {
     const celda = document.querySelector(`#hk-items tr[data-i="${i}"] .hk-subtotal`);
     if (celda) celda.textContent = cantidad * precio ? `$${(cantidad * precio).toFixed(2)}` : '';
   });
-  const descuento = subtotal - total;
+  // Al total se le resta además el descuento al total (de 5% a 16%)
+  pintarControlDescuento(document.getElementById('desc-total-hk'), descuentoHawaki);
+  const cobrar = conDescuento(total, descuentoHawaki);
+  const descuento = subtotal - cobrar;
   document.getElementById('hk-subtotal').textContent = `$${subtotal.toFixed(2)}`;
   document.getElementById('hk-descuento').textContent = `-$${Math.max(descuento, 0).toFixed(2)}`;
+  document.querySelector('#hk-fila-descuento span').textContent = descuentoHawaki && Math.abs(subtotal - total) < 0.005
+    ? `DESCUENTO ${descuentoHawaki}%` : 'DESCUENTO';
   document.getElementById('hk-fila-descuento').classList.toggle('hidden', descuento <= 0.004);
-  document.getElementById('hk-total').textContent = `$${total.toFixed(2)}`;
+  document.getElementById('hk-total').textContent = `$${cobrar.toFixed(2)}`;
 }
 
 // Busca el código de una fila en el inventario y llena descripción y precio
@@ -517,6 +530,15 @@ function escanearEnHawaki(codigo) {
 }
 
 const hkTabla = document.getElementById('hk-items');
+
+controlDescuento(document.getElementById('desc-total-hk'), () => descuentoHawaki, (n) => {
+  descuentoHawaki = n;
+  calcularTotalesHawaki();
+});
+controlDescuento(document.getElementById('desc-total-venta'), () => descuentoVenta, (n) => {
+  descuentoVenta = n;
+  renderItems();
+});
 
 hkTabla.addEventListener('input', (e) => {
   const tr = e.target.closest('tr');
@@ -745,6 +767,7 @@ document.getElementById('hk-guardar').addEventListener('click', async () => {
       cliente_telefono: valor('telefono'),
       metodo_pago,
       banco,
+      descuento_pct: descuentoHawaki,
       items: usadas.map((f) => ({
         producto: f.producto.trim(),
         cantidad: leerCantidad(f.cantidad),
@@ -998,6 +1021,43 @@ const MAX_DOCENAS = 6;
 
 function nombreVenta(p, nombre = nombreProducto(p)) {
   return p.por_docena ? `${nombre} (docena)` : nombre;
+}
+
+// --- Descuento al total de la nota ---
+// De 5% a 16%, de uno en uno con − y + (lo mismo valida el servidor). El primer
+// + pone 5%; desde 5% el − lo quita.
+
+// Lo que se cobra con el descuento, redondeado al centavo como en el servidor
+function conDescuento(total, pct) {
+  return Math.round(total * (100 - pct)) / 100;
+}
+
+// Arma el control dentro de `caja`. leer() da el % actual y fijar(n) lo cambia.
+function controlDescuento(caja, leer, fijar) {
+  caja.innerHTML = `<div class="desc-total">
+      <span class="desc-total-titulo">Descuento al total</span>
+      <div class="paso-cantidad">
+        <button type="button" class="paso" data-d="-1" aria-label="Un por ciento menos de descuento">−</button>
+        <output aria-live="polite"></output>
+        <button type="button" class="paso" data-d="1" aria-label="Un por ciento más de descuento">+</button>
+      </div>
+      <button type="button" class="btn-secundario desc-total-quitar">Quitar descuento</button>
+    </div>`;
+  caja.querySelectorAll('.paso').forEach((b) => b.addEventListener('click', () => {
+    const pct = leer();
+    if (Number(b.dataset.d) > 0) fijar(pct < DESC_MIN ? DESC_MIN : Math.min(DESC_MAX, pct + 1));
+    else fijar(pct <= DESC_MIN ? 0 : pct - 1);
+  }));
+  caja.querySelector('.desc-total-quitar').addEventListener('click', () => fijar(0));
+}
+
+function pintarControlDescuento(caja, pct) {
+  if (!caja.firstElementChild) return;
+  caja.querySelector('output').textContent = pct ? `${pct}%` : 'Sin';
+  caja.querySelector('.paso[data-d="-1"]').disabled = pct === 0;
+  caja.querySelector('.paso[data-d="1"]').disabled = pct >= DESC_MAX;
+  caja.querySelector('.desc-total-quitar').disabled = pct === 0;
+  caja.firstElementChild.classList.toggle('con-descuento', pct > 0);
 }
 
 // La cantidad como se dice en el mostrador: media docena es "½" y una y media
@@ -1443,18 +1503,26 @@ function renderItems() {
     cont.appendChild(row);
   });
 
+  // Descuento al total: solo se ve con algo en la venta
+  const cajaDesc = document.getElementById('desc-total-venta');
+  if (!items.length) descuentoVenta = 0;
+  cajaDesc.classList.toggle('hidden', !items.length);
+  pintarControlDescuento(cajaDesc, descuentoVenta);
+  const cobrar = conDescuento(total, descuentoVenta);
+
   // Resumen del descuento de toda la venta, para que la vendedora vea lo que
-  // está regalando antes de confirmar
-  const rebaja = items.reduce((a, i) => a + (descuentoDe(i)?.dolares || 0), 0);
+  // está regalando antes de confirmar: el de cada línea más el del total
+  const rebaja = items.reduce((a, i) => a + (descuentoDe(i)?.dolares || 0), 0) + (total - cobrar);
   const resumen = document.getElementById('descuento-resumen');
   if (rebaja > 0.004) {
-    const sinRebaja = total + rebaja;
-    resumen.textContent = `Descuento: $${rebaja.toFixed(2)} (${((rebaja / sinRebaja) * 100).toFixed(1)}%) · antes $${sinRebaja.toFixed(2)}`;
+    const sinRebaja = cobrar + rebaja;
+    const pct = descuentoVenta && rebaja - (total - cobrar) < 0.005 ? `${descuentoVenta}%` : `${((rebaja / sinRebaja) * 100).toFixed(1)}%`;
+    resumen.textContent = `Descuento: $${rebaja.toFixed(2)} (${pct}) · antes $${sinRebaja.toFixed(2)}`;
   } else {
     resumen.textContent = '';
   }
 
-  document.getElementById('carrito-total').textContent = total.toFixed(2);
+  document.getElementById('carrito-total').textContent = cobrar.toFixed(2);
   const pares = items.reduce((acc, item) => acc + Number(item.cantidad) * (item.por_docena ? 12 : 1), 0);
   document.getElementById('total-pares').textContent = `${pares} ${pares === 1 ? 'par' : 'pares'}`;
   actualizarMetodoPago();
@@ -1597,7 +1665,7 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items, metodo_pago, banco }),
+    body: JSON.stringify({ cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items, metodo_pago, banco, descuento_pct: descuentoVenta }),
   });
   const data = await res.json();
 
@@ -1612,6 +1680,7 @@ document.getElementById('confirmar-venta-btn').addEventListener('click', async (
   mostrarVentaRegistrada(data);
 
   items = [];
+  descuentoVenta = 0;
   resetTipoCliente();
   document.querySelector('input[name="metodo-pago"][value="efectivo"]').checked = true;
   document.querySelectorAll('input[name="banco"]').forEach((radio) => { radio.checked = false; });
@@ -2283,6 +2352,7 @@ async function eliminarVenta(ventaId) {
 function abrirEditarVenta(venta) {
   editandoVentaId = venta.id;
   editandoItems = venta.detalle.map((d) => ({ ...d }));
+  editandoDescuento = venta.descuento_pct || 0;
   document.getElementById('editar-cliente-nombre').value = venta.cliente || '';
   document.getElementById('editar-cliente-direccion').value = venta.cliente_direccion || '';
   document.getElementById('editar-cliente-ruc').value = venta.cliente_ruc || '';
@@ -2343,7 +2413,9 @@ function renderEditarItems() {
     });
     cont.appendChild(row);
   });
-  document.getElementById('editar-total').textContent = total.toFixed(2);
+  document.getElementById('editar-total').textContent = editandoDescuento
+    ? `${conDescuento(total, editandoDescuento).toFixed(2)} (con ${editandoDescuento}% de descuento al total)`
+    : total.toFixed(2);
 }
 
 document.getElementById('guardar-edicion-btn').addEventListener('click', async () => {

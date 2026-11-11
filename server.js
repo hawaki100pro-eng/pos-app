@@ -691,6 +691,21 @@ function avisoCedulaRuc(valor) {
   return `${cuantos}. Deben ser 10 (cédula) o 13 (RUC).`;
 }
 
+// Descuento al total de la nota: sin descuento (0) o de 5% a 16%, de uno en uno.
+// Devuelve null si el valor no es uno de esos.
+const DESCUENTO_MIN = 5;
+const DESCUENTO_MAX = 16;
+function descuentoValido(valor) {
+  if (valor == null || valor === '' || Number(valor) === 0) return 0;
+  const n = Number(valor);
+  return Number.isInteger(n) && n >= DESCUENTO_MIN && n <= DESCUENTO_MAX ? n : null;
+}
+// Lo que se cobra: la suma de las líneas menos el descuento, redondeado al centavo
+function totalConDescuento(items, pct) {
+  const suma = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
+  return Math.round(suma * (100 - pct)) / 100;
+}
+
 app.post('/api/ventas', requireLogin, async (req, res) => {
   const { cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, items } = req.body;
   const metodoPago = req.body.metodo_pago === 'transferencia' ? 'transferencia' : 'efectivo';
@@ -713,6 +728,10 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
   if (problema) {
     return res.status(400).json({ error: problema });
   }
+  const descuentoPct = descuentoValido(req.body.descuento_pct);
+  if (descuentoPct === null) {
+    return res.status(400).json({ error: `El descuento al total va de ${DESCUENTO_MIN}% a ${DESCUENTO_MAX}%` });
+  }
 
   let turno = await getTurnoAbierto();
   // En caja libre la caja nunca frena una venta: si no hay turno, se abre solo
@@ -727,16 +746,16 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const total = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
+    const total = totalConDescuento(items, descuentoPct);
 
     const contador = await client.query("SELECT valor FROM configuracion WHERE clave = 'ultimo_numero_proforma'");
     const numeroProforma = parseInt(contador.rows[0].valor, 10) + 1;
     await client.query("UPDATE configuracion SET valor = $1 WHERE clave = 'ultimo_numero_proforma'", [String(numeroProforma)]);
 
     const ventaResult = await client.query(
-      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago, banco)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
-      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago, banco]
+      `INSERT INTO ventas (turno_id, usuario_id, cliente, cliente_direccion, cliente_ruc, cliente_telefono, cliente_email, total, numero_proforma, metodo_pago, banco, descuento_pct)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      [turno.id, req.session.user.id, cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, total, numeroProforma, metodoPago, banco, descuentoPct]
     );
     const ventaId = ventaResult.rows[0].id;
 
@@ -781,7 +800,7 @@ app.post('/api/ventas', requireLogin, async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ ventaId, total, numero_proforma: formatNumeroProforma(numeroProforma), metodo_pago: metodoPago, banco });
+    res.status(201).json({ ventaId, total, descuento_pct: descuentoPct, numero_proforma: formatNumeroProforma(numeroProforma), metodo_pago: metodoPago, banco });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(400).json({ error: err.message });
@@ -1033,7 +1052,12 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     }
   }
 
-  const nuevoTotal = items.reduce((acc, i) => acc + i.cantidad * i.precio_unitario, 0);
+  // El descuento al total se conserva si la edición no lo cambia
+  const nuevoDescuento = req.body.descuento_pct === undefined ? (venta.descuento_pct || 0) : descuentoValido(req.body.descuento_pct);
+  if (nuevoDescuento === null) {
+    return res.status(400).json({ error: `El descuento al total va de ${DESCUENTO_MIN}% a ${DESCUENTO_MAX}%` });
+  }
+  const nuevoTotal = totalConDescuento(items, nuevoDescuento);
   // El ajuste a la caja depende de cuánto aportaba ANTES (solo si era efectivo) vs cuánto aporta AHORA (solo si sigue siendo efectivo)
   const aportabaCajaAntes = venta.metodo_pago === 'efectivo' ? venta.total : 0;
   const aportaCajaAhora = nuevoMetodoPago === 'efectivo' ? nuevoTotal : 0;
@@ -1044,8 +1068,8 @@ app.put('/api/ventas/:id', requireLogin, requireDueño, async (req, res) => {
     await client.query('BEGIN');
 
     await client.query(
-      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7, banco = $8 WHERE id = $9`,
-      [cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, nuevoBanco, venta.id]
+      `UPDATE ventas SET cliente = $1, cliente_direccion = $2, cliente_ruc = $3, cliente_telefono = $4, cliente_email = $5, total = $6, metodo_pago = $7, banco = $8, descuento_pct = $9 WHERE id = $10`,
+      [cliente || null, cliente_direccion || null, ruc || null, cliente_telefono || null, email || null, nuevoTotal, nuevoMetodoPago, nuevoBanco, nuevoDescuento, venta.id]
     );
 
     await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [venta.id]);

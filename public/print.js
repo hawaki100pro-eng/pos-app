@@ -79,7 +79,10 @@ function cantidadImpresa(cantidad) {
 
   if (descuento > 0.004) {
     document.getElementById('descuento-valor').textContent = `-$${descuento.toFixed(2)}`;
-    document.getElementById('descuento-pct').textContent = `(${((descuento / subtotal) * 100).toFixed(1)}%)`;
+    // Si todo el descuento es el del total, sale tal cual ("10%"); si no, con un decimal
+    const pct = (descuento / subtotal) * 100;
+    const soloDelTotal = venta.descuento_pct && Math.abs(pct - venta.descuento_pct) < 0.05;
+    document.getElementById('descuento-pct').textContent = `(${soloDelTotal ? venta.descuento_pct : pct.toFixed(1)}%)`;
     document.getElementById('fila-descuento').classList.remove('hidden');
   }
   const metodoEl = document.getElementById('metodo-pago-valor');

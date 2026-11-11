@@ -175,6 +175,9 @@ async function init() {
   // efectivo lo dejan vacío, igual que las transferencias registradas antes de
   // este cambio. La lista de bancos vive en BANCOS de server.js.
   await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS banco TEXT`);
+  // Descuento al total de la nota (0 = sin descuento; si no, de 5 a 16 por ciento).
+  // ventas.total ya es lo cobrado con el descuento hecho; esto queda para saber cuánto fue.
+  await pool.query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS descuento_pct INTEGER NOT NULL DEFAULT 0`);
 
   // Migración: cuadre de caja. Al cerrar se guarda cuánto debía haber, lo que se
   // contó (billete por billete), la diferencia y su motivo, quién cerró, cuánto
