@@ -726,6 +726,7 @@ hkBuscar.addEventListener('focus', () => { if (hkBuscar.value.trim()) actualizar
 
 document.getElementById('nota-hawaki-btn').addEventListener('click', abrirNotaHawaki);
 document.getElementById('hk-cancelar').addEventListener('click', cerrarNotaHawaki);
+document.getElementById('hk-cerrar').addEventListener('click', cerrarNotaHawaki);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !hkModal.classList.contains('hidden')) cerrarNotaHawaki();
 });
