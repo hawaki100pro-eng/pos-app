@@ -397,7 +397,31 @@ const hkFondo = document.getElementById('hk-fondo');
 const hkFilaVacia = () => ({
   codigo: '', cantidad: 1, producto: '', precio_unitario: '', precio_lista: null,
   producto_id: null, stock_max: null, por_docena: false, aviso: '',
+  // Para elegir el color: los que trae el producto, el elegido y el nombre sin color
+  colores: [], color: '', nombre_base: '',
 });
+
+// Lo que va en la descripción: el nombre, el color elegido y "(docena)"
+function descripcionHawaki(f) {
+  const nombre = [f.nombre_base, f.color].filter(Boolean).join(' ');
+  return f.por_docena ? `${nombre} (docena)` : nombre;
+}
+
+// Los datos de una fila que salen del producto elegido
+function datosFilaHawaki(p) {
+  return {
+    codigo: codigoVisible(p),
+    producto_id: p.id,
+    precio_unitario: Number(p.precio),
+    precio_lista: Number(p.precio),
+    stock_max: p.controla_stock ? p.stock : null,
+    por_docena: !!p.por_docena,
+    colores: p.controla_stock ? [] : listaColores(p.colores),
+    color: '',
+    nombre_base: p.nombre || nombreProducto(p),
+    aviso: '',
+  };
+}
 const hkFilaUsada = (f) => f.codigo.trim() !== '' || f.producto.trim() !== '' || f.precio_unitario !== '';
 
 function hkMensaje(texto, esError) {
@@ -450,6 +474,10 @@ function pintarFilasHawaki() {
       <td><input type="text" class="hk-codigo" data-campo="codigo" value="${escaparHtml(f.codigo)}" title="${escaparHtml(f.codigo)}" placeholder="Código" autocomplete="off"></td>
       <td><input type="${f.por_docena ? 'text' : 'number'}" class="hk-cantidad" data-campo="cantidad" value="${escaparHtml(f.por_docena ? textoCantidad(f.cantidad) : f.cantidad)}" min="${f.por_docena ? 0.5 : 1}" step="${f.por_docena ? 0.5 : 1}"${f.por_docena ? ' inputmode="decimal"' : ''}></td>
       <td><input type="text" class="hk-descripcion" data-campo="producto" value="${escaparHtml(f.producto)}" placeholder="Descripción">
+        ${f.colores && f.colores.length ? `<select class="hk-color" aria-label="Color de ${escaparHtml(f.nombre_base)}">
+          <option value="">Elige el color…</option>
+          ${f.colores.map((c) => `<option value="${escaparHtml(c)}"${c === f.color ? ' selected' : ''}>${escaparHtml(c)}</option>`).join('')}
+        </select>` : ''}
         ${f.aviso ? `<small class="hk-aviso">${escaparHtml(f.aviso)}</small>` : ''}</td>
       <td><input type="number" class="hk-precio" data-campo="precio_unitario" value="${escaparHtml(f.precio_unitario)}" min="0" step="0.01" placeholder="0.00"></td>
       <td class="hk-subtotal">${subtotal ? `$${subtotal.toFixed(2)}` : ''}</td>
@@ -489,7 +517,7 @@ async function buscarCodigoHawaki(i) {
   const codigo = fila.codigo.trim();
   if (!codigo) {
     // Sin código la fila queda como escrita a mano
-    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, aviso: '' });
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, aviso: '', colores: [], color: '' });
     pintarFilasHawaki();
     return;
   }
@@ -497,17 +525,10 @@ async function buscarCodigoHawaki(i) {
   const data = await res.json().catch(() => ({}));
   if (hkFilas[i] !== fila || fila.codigo.trim() !== codigo) return; // cambió mientras se buscaba
   if (!res.ok) {
-    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, aviso: data.error || 'Código no encontrado' });
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, colores: [], color: '', aviso: data.error || 'Código no encontrado' });
   } else {
-    Object.assign(fila, {
-      producto: nombreVenta(data, data.nombre),
-      precio_unitario: Number(data.precio),
-      precio_lista: Number(data.precio),
-      producto_id: data.id,
-      stock_max: data.controla_stock ? data.stock : null,
-      por_docena: !!data.por_docena,
-      aviso: '',
-    });
+    Object.assign(fila, datosFilaHawaki(data));
+    fila.producto = descripcionHawaki(fila);
     // Con la última fila ocupada se agrega otra vacía, para seguir escribiendo
     if (hkFilas.every(hkFilaUsada)) hkFilas.push(hkFilaVacia());
   }
@@ -548,7 +569,7 @@ hkTabla.addEventListener('input', (e) => {
   fila[campo] = e.target.value;
   // Si se borra el código, deja de ser un producto del inventario
   if (campo === 'codigo' && fila.producto_id) {
-    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false });
+    Object.assign(fila, { producto_id: null, precio_lista: null, stock_max: null, por_docena: false, colores: [], color: '' });
     tr.classList.remove('hk-del-inventario');
   }
   if (campo === 'cantidad' || campo === 'precio_unitario') calcularTotalesHawaki();
@@ -557,6 +578,14 @@ hkTabla.addEventListener('input', (e) => {
 // El código se busca al salir del campo o con Enter (la pistola lectora da Enter)
 hkTabla.addEventListener('change', (e) => {
   if (e.target.classList.contains('hk-codigo')) buscarCodigoHawaki(Number(e.target.closest('tr').dataset.i));
+  if (e.target.classList.contains('hk-color')) {
+    const tr = e.target.closest('tr');
+    const fila = hkFilas[tr.dataset.i];
+    fila.color = e.target.value;
+    fila.producto = descripcionHawaki(fila);
+    tr.querySelector('.hk-descripcion').value = fila.producto;
+    e.target.classList.toggle('hk-color-pendiente', !fila.color);
+  }
   if (e.target.classList.contains('hk-cantidad')) {
     const fila = hkFilas[e.target.closest('tr').dataset.i];
     const n = leerCantidad(fila.cantidad);
@@ -609,6 +638,9 @@ const hkCajaResultados = document.getElementById('hk-resultados');
 // El código que se escribe en la fila: el de la etiqueta (SKU) o, si no tiene,
 // el número del código de barras (el id en 6 dígitos), que también se acepta
 const codigoDe = (p) => p.sku || String(p.id).padStart(6, '0');
+// En la nota, un código del catálogo por docena se escribe como en el catálogo
+// ("915", "V 136", "E 156H"), sin el rango de la etiqueta; los demás, su etiqueta
+const codigoVisible = (p) => (p.por_docena ? p.modelo : codigoDe(p));
 
 async function cargarCatalogoHawaki() {
   const res = await fetch('/api/productos/disponibles');
@@ -618,9 +650,16 @@ async function cargarCatalogoHawaki() {
 function actualizarBusquedaHawaki() {
   const texto = normalizarTexto(hkBuscar.value.trim());
   const palabras = texto.split(/\s+/).filter(Boolean);
+  // Primero el código escrito tal cual ("e 156h" → E 156H antes que E 156),
+  // después los que empiezan así, y luego el resto
+  const junto = texto.replace(/\s+/g, '');
+  const cercania = (p) => {
+    const codigo = normalizarTexto(p.modelo).replace(/\s+/g, '');
+    return codigo === junto ? 0 : codigo.startsWith(junto) ? 1 : 2;
+  };
   hkResultados = !palabras.length ? [] : hkCatalogo.filter((p) =>
     coincideEnCatalogo(p, palabras) || normalizarTexto(codigoDe(p)).includes(texto)
-  ).slice(0, HK_MAX_RESULTADOS);
+  ).sort((a, b) => cercania(a) - cercania(b)).slice(0, HK_MAX_RESULTADOS);
   hkActivo = 0;
   pintarResultadosHawaki(palabras.length > 0);
 }
@@ -637,7 +676,7 @@ function pintarResultadosHawaki(abierto) {
   hkCajaResultados.innerHTML = hkResultados.map((p, i) => `
     <button type="button" role="option" class="hk-resultado${i === hkActivo ? ' activo' : ''}" data-i="${i}" aria-selected="${i === hkActivo}">
       <span class="hk-res-nombre">${escaparHtml(nombreProducto(p))}${!p.controla_stock && p.colores ? `<span class="hk-res-colores">${escaparHtml(p.colores)}</span>` : ''}</span>
-      <span class="hk-res-codigo">${escaparHtml(codigoDe(p))}</span>
+      <span class="hk-res-codigo">${escaparHtml(codigoVisible(p))}</span>
       <span class="hk-res-stock">${p.controla_stock ? `${p.stock} en stock` : p.por_docena ? 'la docena' : 'categoría'}</span>
       <span class="hk-res-precio">$${Number(p.precio).toFixed(2)}</span>
     </button>`).join('');
@@ -645,8 +684,11 @@ function pintarResultadosHawaki(abierto) {
 
 function agregarDesdeBuscadorHawaki(p) {
   const stockMax = p.controla_stock ? p.stock : null;
-  // Si ya está en la nota, se suma uno a esa fila en vez de repetirla
-  const yaEsta = hkFilas.find((f) => f.producto_id === p.id);
+  // Si ya está en la nota, se suma uno a esa fila en vez de repetirla. Con
+  // colores para elegir va en otra fila: cada fila lleva su color.
+  const conColores = !p.controla_stock && listaColores(p.colores).length > 0;
+  const yaEsta = !conColores && hkFilas.find((f) => f.producto_id === p.id);
+  let filaNueva; // la fila que se llenó, si es nueva
   if (yaEsta) {
     const nueva = (leerCantidad(yaEsta.cantidad) || 0) + 1;
     if (p.por_docena && nueva > MAX_DOCENAS) {
@@ -664,21 +706,25 @@ function agregarDesdeBuscadorHawaki(p) {
       hkFilas.push(hkFilaVacia());
       i = hkFilas.length - 1;
     }
-    Object.assign(hkFilas[i], {
-      codigo: codigoDe(p),
-      cantidad: 1,
-      producto: nombreVenta(p),
-      precio_unitario: Number(p.precio),
-      precio_lista: Number(p.precio),
-      producto_id: p.id,
-      stock_max: stockMax,
-      por_docena: !!p.por_docena,
-      aviso: '',
-    });
+    Object.assign(hkFilas[i], datosFilaHawaki(p), { cantidad: 1 });
+    hkFilas[i].producto = descripcionHawaki(hkFilas[i]);
+    filaNueva = i;
   }
   // Siempre queda una fila libre al final, para seguir escribiendo a mano
   if (hkFilas.every(hkFilaUsada)) hkFilas.push(hkFilaVacia());
   pintarFilasHawaki();
+  // Si tiene colores, se abre la lista para elegirlo
+  if (filaNueva !== undefined && conColores) {
+    const sel = document.querySelector(`#hk-items tr[data-i="${filaNueva}"] .hk-color`);
+    if (sel) {
+      sel.classList.add('hk-color-pendiente');
+      hkMensaje(`Agregado: ${nombreProducto(p)}. Elige el color en la fila.`, false);
+      hkBuscar.value = '';
+      actualizarBusquedaHawaki();
+      sel.focus();
+      return;
+    }
+  }
   hkMensaje(`Agregado: ${nombreProducto(p)}`, false);
   hkBuscar.value = '';
   actualizarBusquedaHawaki();
