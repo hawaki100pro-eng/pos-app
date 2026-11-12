@@ -127,4 +127,20 @@ table { width: 100%; border-collapse: collapse; }
   body { padding: 0; }
   #proforma { border: 2px solid #000; max-width: 100%; }
   .no-print { display: none !important; }
+
+  /* Impresora térmica: solo imprime negro. Los colores (el azul de HAWAKI, el
+     rojo del número, el gris de la serie) y el texto blanco sobre fondo oscuro
+     (encabezado de la tabla, totales) los imprime como puntitos y salen
+     borrosos. Al imprimir, todo va en negro puro sobre blanco, y en negrita. */
+  * { color: #000 !important; background: #fff !important; text-shadow: none !important; opacity: 1 !important; }
+  body, #proforma { -webkit-print-color-adjust: economy; print-color-adjust: economy; }
+  .empresa h1, .nombre-titular, .serie, .numero { color: #000 !important; }
+  .empresa p, .serie, .datos-cliente td, .items-tabla td { font-weight: bold; }
+  .items-tabla th { border-bottom: 2px solid #000; font-weight: bold; }
+  .items-tabla td { border-bottom: 1px solid #000; }
+  .datos-cliente .valor { border-bottom: 1px solid #000; }
+  .totales { border-left: 2px solid #000; }
+  .fila-total small { opacity: 1; font-weight: bold; }
+  .fila-descuento { border-top: 1px solid #000; border-bottom: 1px solid #000; }
+  .fila-granTotal { border-top: 2px solid #000; }
 }
