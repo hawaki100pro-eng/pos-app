@@ -2413,7 +2413,7 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
   line-height: 1.1;
   letter-spacing: 0.5px;
 }
-.hk-marca .sandalia { width: 52px; height: 28px; flex: none; }
+.hk-marca .sandalia { width: 58px; height: auto; flex: none; }
 .hk-empresa .hk-aviso-proforma {
   margin-top: 6px;
   padding: 5px 8px;

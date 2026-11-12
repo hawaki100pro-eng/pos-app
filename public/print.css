@@ -54,7 +54,7 @@ table { width: 100%; border-collapse: collapse; }
   color: #111;
   line-height: 1.1;
 }
-.marca .sandalia { width: 54px; height: 29px; flex: none; }
+.marca .sandalia { width: 62px; height: auto; flex: none; }
 /* El aviso de que la proforma no es factura */
 .aviso-proforma {
   margin: 6px 0 0 !important;
