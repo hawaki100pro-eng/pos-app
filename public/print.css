@@ -159,7 +159,10 @@ table { width: 100%; border-collapse: collapse; }
   * { color: #000 !important; background: #fff !important; text-shadow: none !important; opacity: 1 !important; }
   body, #proforma { -webkit-print-color-adjust: economy; print-color-adjust: economy; }
   .empresa h1, .nombre-titular, .serie, .numero { color: #000 !important; }
-  .aviso-proforma { border-color: #000; font-weight: bold; }
+  /* En el papel térmico la letra chica y la cursiva salen como puntitos: el
+     aviso va más grande, derecho y en negrita, y la marca con el trazo engrosado */
+  .aviso-proforma { border: 1.5px solid #000; font-weight: bold; font-style: normal; font-size: 0.8rem !important; line-height: 1.25; }
+  .empresa h1.marca { -webkit-text-stroke: 0.9px #000; }
   .empresa p, .serie, .datos-cliente td, .items-tabla td { font-weight: bold; }
   .items-tabla th { border-bottom: 2px solid #000; font-weight: bold; }
   .items-tabla td { border-bottom: 1px solid #000; }
