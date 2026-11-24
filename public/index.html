@@ -351,26 +351,7 @@
     <!-- Aquí se inserta el formulario de Nota de venta cuando entra un admin o el dueño -->
     <div id="venta-slot-admin"></div>
 
-    <!-- Aquí se inserta la sección de Días libres cuando entra un admin o el dueño -->
-    <div id="dias-libres-slot-admin"></div>
-
-    <h2>Gastos</h2>
-    <div class="item-row-nueva">
-      <input type="text" id="gasto-descripcion" placeholder="Descripción (ej: adelanto a vendedor1, compra de agua)">
-      <input type="number" id="gasto-monto" placeholder="Monto" min="0.01" step="0.01">
-      <button id="registrar-gasto-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        Registrar gasto
-      </button>
-    </div>
-    <p id="gasto-msg"></p>
-    <div class="table-wrap">
-      <table id="gastos-tabla">
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Registrado por</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
+    <!-- El historial va justo debajo de la nota de venta (de Confirmar venta), para encontrarlo rápido -->
     <h2 class="titulo-con-boton">
       Historial de ventas
       <button id="toggle-historial-btn" type="button" class="btn-toggle-seccion">👁 Mostrar</button>
@@ -395,6 +376,26 @@
           <tbody></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Aquí se inserta la sección de Días libres cuando entra un admin o el dueño -->
+    <div id="dias-libres-slot-admin"></div>
+
+    <h2>Gastos</h2>
+    <div class="item-row-nueva">
+      <input type="text" id="gasto-descripcion" placeholder="Descripción (ej: adelanto a vendedor1, compra de agua)">
+      <input type="number" id="gasto-monto" placeholder="Monto" min="0.01" step="0.01">
+      <button id="registrar-gasto-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Registrar gasto
+      </button>
+    </div>
+    <p id="gasto-msg"></p>
+    <div class="table-wrap">
+      <table id="gastos-tabla">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Registrado por</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
     <!-- Sección de usuarios: exclusiva del dueño (ver mostrarPantalla en app.js) -->
