@@ -393,6 +393,7 @@ document.getElementById('general-btn').addEventListener('click', () => abrirCata
 // Al guardar se registra como una venta normal y se imprime.
 const HK_FILAS_INICIALES = 5;
 let hkFilas = [];
+let hkCorreoCliente = ''; // el correo que viene de la nota de venta («Con datos»)
 
 const hkModal = document.getElementById('hk-modal');
 const hkFondo = document.getElementById('hk-fondo');
@@ -453,10 +454,17 @@ function hkMensaje(texto, esError) {
 function abrirNotaHawaki() {
   hkFilas = Array.from({ length: HK_FILAS_INICIALES }, hkFilaVacia);
   descuentoHawaki = 0;
+  // Si en la nota de venta ya se escribieron los datos del cliente («Con
+  // datos»), pasan a la nota Hawaki para no llenarlos dos veces. El correo no
+  // tiene casilla aquí, pero se guarda con la venta y sale en la proforma.
+  const conDatos = document.getElementById('btn-consumidor-datos').classList.contains('activo');
   ['nombre', 'direccion', 'ruc', 'telefono'].forEach((c) => {
-    document.getElementById(`hk-cliente-${c}`).value = '';
+    document.getElementById(`hk-cliente-${c}`).value = conDatos
+      ? document.getElementById(`cliente-${c}`).value.trim() : '';
   });
+  hkCorreoCliente = conDatos ? document.getElementById('cliente-email').value.trim() : '';
   limpiarAvisosCliente('hk-');
+  if (conDatos) revisarDatosCliente('hk-');
   document.querySelector('input[name="hk-metodo"][value="efectivo"]').checked = true;
   const banco = document.getElementById('hk-banco');
   banco.innerHTML = '<option value="">Elige el banco</option>' + Object.entries(BANCOS)
@@ -926,6 +934,7 @@ document.getElementById('hk-guardar').addEventListener('click', async () => {
       cliente_direccion: valor('direccion'),
       cliente_ruc: valor('ruc'),
       cliente_telefono: valor('telefono'),
+      cliente_email: hkCorreoCliente || undefined,
       metodo_pago,
       banco,
       descuento_pct: descuentoHawaki,
