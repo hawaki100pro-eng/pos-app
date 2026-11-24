@@ -405,13 +405,21 @@ const fechaLarga = (fechaIso) => `${DIAS_SEMANA[diaDeSemana(fechaIso)]} ${fechaI
 
 const DIA_LIBRE_COLUMNAS = `d.id, d.usuario_id, u.usuario, to_char(d.fecha, 'YYYY-MM-DD') AS fecha, d.estado`;
 
-// El calendario de un mes. Todos ven los días pedidos y aprobados de todos (para
-// no chocar); los rechazados solo los ve su dueño y el admin.
+// El calendario: un mes (?mes=AAAA-MM) o un rango de semanas que puede cruzar de
+// mes (?desde=AAAA-MM-DD&hasta=AAAA-MM-DD, hasta sin incluir, máximo 62 días).
+// Todos ven los días pedidos y aprobados de todos (para no chocar); los
+// rechazados solo los ve su dueño y el admin.
 app.get('/api/dias-libres', requireLogin, async (req, res) => {
   const hoy = hoyEcuador();
   const mes = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.mes)) ? req.query.mes : hoy.slice(0, 7);
-  const desde = `${mes}-01`;
-  const hasta = sumarDias(desde, 32).slice(0, 7) + '-01';
+  let desde = `${mes}-01`;
+  let hasta = sumarDias(desde, 32).slice(0, 7) + '-01';
+  const rDesde = String(req.query.desde || '');
+  const rHasta = String(req.query.hasta || '');
+  if (diaDeSemana(rDesde) !== null && diaDeSemana(rHasta) !== null && rHasta > rDesde && rHasta <= sumarDias(rDesde, 62)) {
+    desde = rDesde;
+    hasta = rHasta;
+  }
   const esVendedor = req.session.user.rol === 'vendedor';
 
   const dias = await pool.query(
@@ -433,6 +441,8 @@ app.get('/api/dias-libres', requireLogin, async (req, res) => {
 
   res.json({
     mes,
+    desde,
+    hasta,
     hoy,
     primera_fecha: sumarDias(hoy, DIAS_ANTELACION),
     antelacion: DIAS_ANTELACION,

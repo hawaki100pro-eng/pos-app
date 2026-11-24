@@ -2143,15 +2143,40 @@ function dlMensaje(texto, esError) {
   msg.className = esError ? 'error' : '';
 }
 
+// Vista del calendario: 'semanas' (las próximas DL_SEMANAS semanas desde la
+// actual, para que ocupe poco) o 'mes' (el mes completo con sus flechas). Las
+// dos muestran solo de lunes a jueves: viernes a domingo no se pueden pedir.
+const DL_SEMANAS = 3;
+let dlVista = (() => {
+  try { return localStorage.getItem('dlVista') === 'mes' ? 'mes' : 'semanas'; } catch { return 'semanas'; }
+})();
+let dlPeticion = 0;
+
+function dlSumarDias(iso, dias) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+const dlLunesDe = (iso) => dlSumarDias(iso, -((new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7));
+const dlHoy = () => (dlDatos ? dlDatos.hoy : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' }));
+
 async function cargarDiasLibres() {
-  const pedido = dlMes;
-  const res = await fetch('/api/dias-libres' + (pedido ? `?mes=${pedido}` : ''));
+  let url = '/api/dias-libres';
+  if (dlVista === 'semanas') {
+    const lunes = dlLunesDe(dlHoy());
+    url += `?desde=${lunes}&hasta=${dlSumarDias(lunes, 7 * DL_SEMANAS)}`;
+  } else if (dlMes) {
+    url += `?mes=${dlMes}`;
+  }
+  const peticion = ++dlPeticion;
+  const res = await fetch(url);
   if (!res.ok) return;
   const datos = await res.json();
-  // Si mientras tanto se cambió de mes, esta respuesta ya no sirve
-  if (pedido !== dlMes) return;
+  // Si mientras tanto se cambió de mes o de vista, esta respuesta ya no sirve
+  if (peticion !== dlPeticion) return;
   dlDatos = datos;
-  dlMes = datos.mes;
+  if (dlVista === 'mes') dlMes = datos.mes;
   pintarDiasLibres();
 }
 
@@ -2213,31 +2238,64 @@ function pintarDiasLibres() {
     `<span class="dl-leyenda-item"><span class="dl-punto aprobado" style="background:${color(v)};border-color:${color(v)}"></span>${escaparHtml(v)}</span>`
   ).join('') + '<span class="dl-leyenda-item dl-leyenda-clave"><span class="dl-punto aprobado"></span>aceptado <span class="dl-punto pendiente"></span>pendiente</span>';
 
-  // --- Calendario del mes, de lunes a domingo ---
-  const [anio, mesNum] = dlDatos.mes.split('-').map(Number);
-  document.getElementById('dl-mes').textContent = `${DL_MESES[mesNum - 1]} ${anio}`;
-  const diasDelMes = new Date(Date.UTC(anio, mesNum, 0)).getUTCDate();
-  const huecos = (new Date(Date.UTC(anio, mesNum - 1, 1)).getUTCDay() + 6) % 7;
-  let html = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((l, i) =>
-    `<div class="dl-cabecera${i >= 4 ? ' dl-finde' : ''}">${l}</div>`).join('');
-  html += '<div class="dl-hueco"></div>'.repeat(huecos);
-  for (let dia = 1; dia <= diasDelMes; dia++) {
-    const iso = `${dlDatos.mes}-${String(dia).padStart(2, '0')}`;
-    const semana = new Date(`${iso}T00:00:00Z`).getUTCDay();
-    const pedidos = dlDatos.dias.filter((d) => d.fecha === iso);
-    const mio = pedidos.find((d) => d.usuario === usuarioActual);
-    const motivo = [5, 6, 0].includes(semana) ? 'finde'
-      : iso < dlDatos.hoy ? 'pasado'
-      : iso < dlDatos.primera_fecha ? 'antelacion' : '';
-    const clases = ['dl-dia', motivo ? 'dl-bloqueado' : 'dl-libre', motivo === 'finde' ? 'dl-finde' : '',
-      iso === dlDatos.hoy ? 'dl-hoy' : '', mio && mio.estado !== 'rechazado' ? 'dl-mio' : ''].filter(Boolean).join(' ');
-    const contenido = `<span class="dl-numero">${dia}</span><span class="dl-puntos">${pedidos.map(punto).join('')}</span>`;
-    html += encargado
-      ? `<div class="${clases}">${contenido}</div>`
-      : `<button type="button" class="${clases}" data-fecha="${iso}" data-motivo="${motivo}">${contenido}</button>`;
+  // --- Calendario: solo lunes a jueves (viernes a domingo no se pueden pedir) ---
+  const enSemanas = dlVista === 'semanas';
+  document.getElementById('dl-vista-btn').textContent = enSemanas ? 'Ver mes completo' : 'Ver próximas semanas';
+  document.getElementById('dl-anterior').classList.toggle('dl-oculto', enSemanas);
+  document.getElementById('dl-siguiente').classList.toggle('dl-oculto', enSemanas);
+
+  let lunes;
+  let semanas;
+  let delMes = null; // en la vista de mes, los días de otro mes quedan como hueco
+  if (enSemanas) {
+    document.getElementById('dl-mes').textContent = `Próximas ${DL_SEMANAS} semanas`;
+    lunes = dlDatos.desde;
+    semanas = DL_SEMANAS;
+  } else {
+    const [anio, mesNum] = dlDatos.mes.split('-').map(Number);
+    const nombreMes = DL_MESES[mesNum - 1];
+    document.getElementById('dl-mes').textContent = `${nombreMes[0].toUpperCase()}${nombreMes.slice(1)} ${anio}`;
+    delMes = dlDatos.mes;
+    lunes = dlLunesDe(`${dlDatos.mes}-01`);
+    const ultimo = `${dlDatos.mes}-${String(new Date(Date.UTC(anio, mesNum, 0)).getUTCDate()).padStart(2, '0')}`;
+    semanas = Math.floor((new Date(`${ultimo}T00:00:00Z`) - new Date(`${lunes}T00:00:00Z`)) / (7 * 864e5)) + 1;
+  }
+
+  let html = ['LUN', 'MAR', 'MIÉ', 'JUE'].map((l) => `<div class="dl-cabecera">${l}</div>`).join('');
+  for (let s = 0; s < semanas; s++) {
+    const fechas = [0, 1, 2, 3].map((d) => dlSumarDias(lunes, s * 7 + d));
+    // Una semana cuyo lunes a jueves cae todo en otro mes no se dibuja
+    if (delMes && fechas.every((iso) => !iso.startsWith(delMes))) continue;
+    for (const iso of fechas) {
+      if (delMes && !iso.startsWith(delMes)) {
+        html += '<div class="dl-hueco"></div>';
+        continue;
+      }
+      const dia = Number(iso.slice(8));
+      // Al cruzar de mes en la vista de semanas, el día 1 lleva el mes: "1 dic"
+      const numero = enSemanas && dia === 1 ? `1 ${DL_MESES[Number(iso.slice(5, 7)) - 1].slice(0, 3)}` : dia;
+      const pedidos = dlDatos.dias.filter((d) => d.fecha === iso);
+      const mio = pedidos.find((d) => d.usuario === usuarioActual);
+      const motivo = iso < dlDatos.hoy ? 'pasado' : iso < dlDatos.primera_fecha ? 'antelacion' : '';
+      const clases = ['dl-dia', motivo ? 'dl-bloqueado' : 'dl-libre',
+        iso === dlDatos.hoy ? 'dl-hoy' : '', mio && mio.estado !== 'rechazado' ? 'dl-mio' : ''].filter(Boolean).join(' ');
+      const contenido = `<span class="dl-numero">${numero}</span><span class="dl-puntos">${pedidos.map(punto).join('')}</span>`;
+      html += encargado
+        ? `<div class="${clases}">${contenido}</div>`
+        : `<button type="button" class="${clases}" data-fecha="${iso}" data-motivo="${motivo}">${contenido}</button>`;
+    }
   }
   document.getElementById('dl-calendario').innerHTML = html;
 }
+
+document.getElementById('dl-vista-btn').addEventListener('click', () => {
+  dlVista = dlVista === 'semanas' ? 'mes' : 'semanas';
+  try { localStorage.setItem('dlVista', dlVista); } catch { /* sin almacenamiento: solo esta vez */ }
+  // El mes completo arranca en el mes de hoy
+  if (dlVista === 'mes') dlMes = dlHoy().slice(0, 7);
+  dlMensaje('', false);
+  cargarDiasLibres();
+});
 
 // Toque en un día del calendario (solo el vendedor: el del encargado no se toca)
 document.getElementById('dl-calendario').addEventListener('click', async (e) => {

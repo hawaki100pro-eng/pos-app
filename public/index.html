@@ -232,10 +232,13 @@
         <!-- Solo lo ve el vendedor (app.js): el recordatorio de pedir con tiempo -->
         <p id="dl-aviso" class="dl-aviso hidden">Escoge tu día con antelación o el sistema no lo validará.</p>
         <div id="dl-lista" class="dl-lista"></div>
+        <!-- Por defecto solo las próximas semanas; "Ver mes completo" cambia al mes
+             con sus flechas (app.js, se recuerda en cada dispositivo) -->
         <div class="dl-nav">
           <button type="button" id="dl-anterior" class="btn-secundario" aria-label="Mes anterior">‹</button>
           <strong id="dl-mes"></strong>
           <button type="button" id="dl-siguiente" class="btn-secundario" aria-label="Mes siguiente">›</button>
+          <button type="button" id="dl-vista-btn" class="btn-secundario dl-vista-btn">Ver mes completo</button>
         </div>
         <div id="dl-leyenda" class="dl-leyenda"></div>
         <div id="dl-calendario" class="dl-calendario"></div>
