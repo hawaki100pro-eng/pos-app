@@ -91,6 +91,9 @@ function mostrarPantalla(user) {
   dlMes = null;
   dlDatos = null;
   dlMensaje('', false);
+  // Arranca siempre minimizada, también al cambiar de usuario sin recargar
+  dlMinimizado = true;
+  aplicarMinimizadoDiasLibres();
   cargarDiasLibres();
 
   if (rol === 'admin' || rol === 'dueno') {
@@ -2289,10 +2292,10 @@ function pintarDiasLibres() {
 }
 
 // Minimizar / Expandir la sección, como la tarjeta de la caja. Minimizada quedan
-// el título y el aviso rojo de pedidos por revisar. Se recuerda en cada dispositivo.
-let dlMinimizado = (() => {
-  try { return localStorage.getItem('dlMinimizado') === '1'; } catch { return false; }
-})();
+// el título y el aviso rojo de pedidos por revisar. Pedido del dueño: arranca
+// SIEMPRE minimizada (al abrir el POS y en cada inicio de sesión, ver
+// mostrarPantalla); si se expande, queda abierta solo hasta salir o recargar.
+let dlMinimizado = true;
 
 function aplicarMinimizadoDiasLibres() {
   document.getElementById('dl-cuerpo').classList.toggle('hidden', dlMinimizado);
@@ -2305,7 +2308,6 @@ function aplicarMinimizadoDiasLibres() {
 
 document.getElementById('dl-toggle-btn').addEventListener('click', () => {
   dlMinimizado = !dlMinimizado;
-  try { localStorage.setItem('dlMinimizado', dlMinimizado ? '1' : '0'); } catch { /* solo esta vez */ }
   aplicarMinimizadoDiasLibres();
 });
 
