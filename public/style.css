@@ -2655,3 +2655,14 @@ button.dl-dia.dl-bloqueado { cursor: not-allowed; }
 .dl-nav strong { flex: 1; text-align: center; }
 .dl-nav .dl-vista-btn { padding: 5px 12px; font-size: 0.82rem; line-height: 1.3; }
 .dl-nav .dl-oculto { visibility: hidden; }
+
+/* Chao Bahía: el botón Minimizar / Expandir va a la derecha del título */
+.dl-toggle-btn { margin-left: auto; min-width: 0; padding: 7px 14px; font-size: 0.9rem; font-weight: 600; }
+/* Minimizada: una barra delgada con el título y el aviso de pedidos */
+.dias-libres.dl-minimizada {
+  padding: 8px 12px;
+  border: 1px solid var(--borde-suave);
+  border-radius: 8px;
+  background: var(--superficie-2);
+}
+.dias-libres.dl-minimizada h2 { margin: 0; font-size: 1.1rem; }

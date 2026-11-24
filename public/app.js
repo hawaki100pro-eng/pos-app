@@ -2288,6 +2288,29 @@ function pintarDiasLibres() {
   document.getElementById('dl-calendario').innerHTML = html;
 }
 
+// Minimizar / Expandir la sección, como la tarjeta de la caja. Minimizada quedan
+// el título y el aviso rojo de pedidos por revisar. Se recuerda en cada dispositivo.
+let dlMinimizado = (() => {
+  try { return localStorage.getItem('dlMinimizado') === '1'; } catch { return false; }
+})();
+
+function aplicarMinimizadoDiasLibres() {
+  document.getElementById('dl-cuerpo').classList.toggle('hidden', dlMinimizado);
+  document.getElementById('dias-libres').classList.toggle('dl-minimizada', dlMinimizado);
+  document.getElementById('dl-toggle-texto').textContent = dlMinimizado ? 'Expandir' : 'Minimizar';
+  const boton = document.getElementById('dl-toggle-btn');
+  boton.classList.toggle('dinero-oculto', dlMinimizado); // muestra el dibujo de expandir
+  boton.setAttribute('aria-expanded', dlMinimizado ? 'false' : 'true');
+}
+
+document.getElementById('dl-toggle-btn').addEventListener('click', () => {
+  dlMinimizado = !dlMinimizado;
+  try { localStorage.setItem('dlMinimizado', dlMinimizado ? '1' : '0'); } catch { /* solo esta vez */ }
+  aplicarMinimizadoDiasLibres();
+});
+
+aplicarMinimizadoDiasLibres();
+
 document.getElementById('dl-vista-btn').addEventListener('click', () => {
   dlVista = dlVista === 'semanas' ? 'mes' : 'semanas';
   try { localStorage.setItem('dlVista', dlVista); } catch { /* sin almacenamiento: solo esta vez */ }

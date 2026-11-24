@@ -227,7 +227,16 @@
         <h2 class="titulo-con-boton">
           Chao Bahía 🏖️
           <span id="dl-badge" class="dl-badge hidden"></span>
+          <!-- Minimizar / Expandir, como la tarjeta de la caja. Minimizada quedan
+               solo el título y el aviso rojo de pedidos (app.js, se recuerda en
+               cada dispositivo). Lleva los dos dibujos y el CSS muestra el que va. -->
+          <button id="dl-toggle-btn" type="button" class="tipo-btn btn-dinero dl-toggle-btn" aria-controls="dl-cuerpo">
+            <svg class="icono-ocultar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 11l-5-5-5 5M17 18l-5-5-5 5"/></svg>
+            <svg class="icono-ver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+            <span id="dl-toggle-texto">Minimizar</span>
+          </button>
         </h2>
+        <div id="dl-cuerpo">
         <p id="dl-ayuda" class="dl-ayuda"></p>
         <!-- Solo lo ve el vendedor (app.js): el recordatorio de pedir con tiempo -->
         <p id="dl-aviso" class="dl-aviso hidden">Escoge tu día con antelación o el sistema no lo validará.</p>
@@ -243,6 +252,7 @@
         <div id="dl-leyenda" class="dl-leyenda"></div>
         <div id="dl-calendario" class="dl-calendario"></div>
         <p id="dl-msg"></p>
+        </div>
       </section>
     </div>
 
